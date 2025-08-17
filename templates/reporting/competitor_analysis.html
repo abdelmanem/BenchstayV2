@@ -1,0 +1,224 @@
+{% extends 'dashboard_base.html' %}
+{% load reporting_filters %}
+{% load custom_tags %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Competitor Analysis Report</h1>
+
+    <!-- Report Generation Card -->
+    <div class="card mb-4 shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Report Parameters</h5>
+        </div>
+        <div class="card-body">
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="date" class="form-control" id="start_date" name="start_date" 
+                                   value="{{ start_date|date:'Y-m-d' }}" required>
+                            <label for="start_date">Start Date</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="date" class="form-control" id="end_date" name="end_date"
+                                   value="{{ end_date|date:'Y-m-d' }}" required>
+                            <label for="end_date">End Date</label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="border p-3 rounded">
+                            <h6 class="mb-3">Select Competitors</h6>
+                            <div class="row row-cols-1 row-cols-md-3 g-2">
+                                {% for competitor in competitors %}
+                                <div class="col">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               name="competitors" value="{{ competitor.id }}" 
+                                               id="competitor_{{ competitor.id }}" 
+                                               {% if competitor in selected_competitors %}checked{% endif %}>
+                                        <label class="form-check-label" for="competitor_{{ competitor.id }}">
+                                            {{ competitor.name }}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="report_name" name="report_name">
+                            <label for="report_name">Report Name (optional)</label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check form-switch pt-3">
+                            <input class="form-check-input" type="checkbox" role="switch" 
+                                   id="save_report" name="save_report">
+                            <label class="form-check-label" for="save_report">Save Report</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-between">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-file-earmark-bar-graph me-2"></i>Generate Report
+                    </button>
+                    <a href="{% url 'reporting:competitor_advanced_analytics' %}" 
+                       class="btn btn-outline-info">
+                        <i class="bi bi-graph-up me-2"></i>Advanced Analytics
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Performance Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Your Hotel Performance Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <div class="card bg-light h-100">
+                                <div class="card-body text-center py-4">
+                                    <h3 class="text-success">{{ hotel_summary.avg_occupancy|floatformat:2 }}%</h3>
+                                    <p class="mb-0 text-muted">Average Occupancy</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light h-100">
+                                <div class="card-body text-center py-4">
+                                    <h3 class="text-success">EGP {{ hotel_summary.avg_rate|floatformat:2 }}</h3>
+                                    <p class="mb-0 text-muted">Average Daily Rate</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light h-100">
+                                <div class="card-body text-center py-4">
+                                    <h3 class="text-success">EGP {{ hotel_summary.avg_revpar|floatformat:2 }}</h3>
+                                    <p class="mb-0 text-muted">Average RevPAR</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Competitor Summary Table -->
+    <div class="card mb-4 shadow">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">Competitor Performance Overview</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Competitor</th>
+                            <th>Avg. Occupancy</th>
+                            <th>Avg. Rate</th>
+                            <th>Rate Difference</th>
+                            <th>Occupancy Difference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for competitor_id, data in competitor_summaries.items %}
+                        <tr>
+                            <td>{{ data.name }}</td>
+                            <td>{{ data.avg_occupancy|floatformat:2 }}%</td>
+                            <td>EGP {{ data.avg_rate|floatformat:2 }}</td>
+                            <td class="{% if data.avg_rate > hotel_summary.avg_rate %}text-danger{% else %}text-success{% endif %}">
+                                {{ data.avg_rate|subtract:hotel_summary.avg_rate|floatformat:2 }}
+                            </td>
+                            <td class="{% if data.avg_occupancy > hotel_summary.avg_occupancy %}text-danger{% else %}text-success{% endif %}">
+                                {{ data.avg_occupancy|subtract:hotel_summary.avg_occupancy|floatformat:2 }}%
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No competitor data available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Daily Comparison -->
+    <div class="card shadow">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="card-title mb-0">Daily Performance Comparison</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th colspan="2" class="text-center">Your Hotel</th>
+                            {% for competitor in selected_competitors %}
+                            <th colspan="2" class="text-center">{{ competitor.name }}</th>
+                            {% endfor %}
+                        </tr>
+                        <tr>
+                            <th></th>
+                            <th>Occupancy</th>
+                            <th>ADR</th>
+                            {% for competitor in selected_competitors %}
+                            <th>Occupancy</th>
+                            <th>ADR</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for data in hotel_data %}
+                        <tr>
+                            <td>{{ data.date|date:"M j" }}</td>
+                            <td>{{ data.occupancy_percentage|floatformat:2 }}%</td>
+                            <td>EGP {{ data.average_rate|floatformat:2 }}</td>
+                            {% for competitor in selected_competitors %}
+                                {% get_competitor_data competitor_data data.date competitor as comp_data %}
+                                {% if comp_data %}
+                                    <td class="{% if comp_data.estimated_occupancy > data.occupancy_percentage %}table-danger{% elif comp_data.estimated_occupancy < data.occupancy_percentage %}table-success{% endif %}">
+                                        {{ comp_data.estimated_occupancy|floatformat:2 }}%
+                                    </td>
+                                    <td class="{% if comp_data.estimated_average_rate > data.average_rate %}table-danger{% elif comp_data.estimated_average_rate < data.average_rate %}table-success{% endif %}">
+                                        EGP {{ comp_data.estimated_average_rate|floatformat:2 }}
+                                    </td>
+                                {% else %}
+                                    <td>-</td>
+                                    <td>-</td>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{{ 3|add:selected_competitors|length|multiply:2 }}" 
+                                class="text-center text-muted py-4">
+                                No daily data available for selected period
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

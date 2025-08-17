@@ -1,0 +1,183 @@
+{% extends 'dashboard_base.html' %}
+{% load reporting_filters %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/competitor_analytics.css' %}">
+<style>
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 30px;
+    }
+    
+    .chart-card {
+        transition: all 0.3s ease;
+    }
+    
+    .chart-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .metric-selector {
+        margin-bottom: 20px;
+    }
+    
+    .chart-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+    
+    .period-badge {
+        font-size: 0.8rem;
+        padding: 5px 10px;
+        border-radius: 20px;
+        margin-left: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1>Competitor Performance Charts</h1>
+    
+    <!-- Date Filter Form -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Custom Date Range Filter</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="date-filter-form" class="row g-3 align-items-end">
+                        {% csrf_token %}
+                        <div class="col-md-4">
+                            <label for="start_date" class="form-label">From Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="end_date" class="form-label">To Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary w-100">Apply Filter</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Metric Selector -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">Select Metrics to Display</h5>
+                </div>
+                <div class="card-body">
+                    <div class="metric-selector">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-primary active" data-metric="occupancy_percentage">Occupancy %</button>
+                            <button type="button" class="btn btn-outline-primary" data-metric="average_rate">Average Rate</button>
+                            <button type="button" class="btn btn-outline-primary" data-metric="revpar">RevPAR</button>
+                            <button type="button" class="btn btn-outline-primary" data-metric="mpi">Market Penetration Index</button>
+                            <button type="button" class="btn btn-outline-primary" data-metric="ari">Average Rate Index</button>
+                            <button type="button" class="btn btn-outline-primary" data-metric="rgi">Revenue Generation Index</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Section -->
+    <div class="row">
+        <!-- Custom Date Range Chart -->
+        <div class="col-md-12 mb-4">
+            <div class="card chart-card">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        Custom Date Range Performance
+                        <span class="period-badge bg-light text-dark">{{ start_date|date:'M d, Y' }} - {{ end_date|date:'M d, Y' }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="daily-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- MTD Chart -->
+        <div class="col-md-6 mb-4">
+            <div class="card chart-card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">MTD Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="mtd-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- YTD Chart -->
+        <div class="col-md-6 mb-4">
+            <div class="card chart-card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">YTD Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="ytd-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Comparison Charts Section -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card chart-card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Period Comparison</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="comparison-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Link to Tabular Data -->
+    <div class="row mb-4">
+        <div class="col-md-12 text-center">
+            <a href="{% url 'reporting:competitor_advanced_analytics' %}" class="btn btn-outline-primary">
+                <i class="bi bi-table"></i> View Tabular Data
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script id="ytd-data" type="application/json">
+    {{ ytd_data|safe }}
+</script>
+<script id="daily-data" type="application/json">
+    {{ daily_data|safe }}
+</script>
+<script id="mtd-data" type="application/json">
+    {{ mtd_data|safe }}
+</script>
+<script src="{% static 'js/cache_control.js' %}"></script>
+<script src="{% static 'js/competitor_charts.js' %}"></script>
+{% endblock %}

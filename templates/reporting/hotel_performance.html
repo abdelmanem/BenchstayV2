@@ -1,0 +1,122 @@
+{% extends 'dashboard_base.html' %}
+{% load humanize %}
+
+{% block title %}Hotel Performance Report - Benchstay{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Hotel Details & Branding -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-3">{{ hotel.name }} - Performance Report</h2>
+            <p class="text-muted">Report Period: {{ start_date|date:"F j, Y" }} - {{ end_date|date:"F j, Y" }}</p>
+        </div>
+    </div>
+
+    <!-- Snapshot Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Current Occupancy</h6>
+                    <h3 class="card-title mb-0">{{ summary.current_occ|floatformat:1 }}%</h3>
+                    <p class="card-text mt-2 {% if summary.occ_change > 0 %}text-success{% elif summary.occ_change < 0 %}text-danger{% endif %}">
+                        <i class="bi {% if summary.occ_change > 0 %}bi-arrow-up{% elif summary.occ_change < 0 %}bi-arrow-down{% else %}bi-dash{% endif %}"></i>
+                        {{ summary.occ_change|floatformat:1 }}% YoY
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Average Daily Rate</h6>
+                    <h3 class="card-title mb-0">${{ summary.avg_rate|floatformat:2|intcomma }}</h3>
+                    <p class="card-text mt-2 {% if summary.rate_change > 0 %}text-success{% elif summary.rate_change < 0 %}text-danger{% endif %}">
+                        <i class="bi {% if summary.rate_change > 0 %}bi-arrow-up{% elif summary.rate_change < 0 %}bi-arrow-down{% else %}bi-dash{% endif %}"></i>
+                        {{ summary.rate_change|floatformat:1 }}% YoY
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">RevPAR</h6>
+                    <h3 class="card-title mb-0">${{ summary.avg_revpar|floatformat:2|intcomma }}</h3>
+                    <p class="card-text mt-2 {% if summary.revpar_change > 0 %}text-success{% elif summary.revpar_change < 0 %}text-danger{% endif %}">
+                        <i class="bi {% if summary.revpar_change > 0 %}bi-arrow-up{% elif summary.revpar_change < 0 %}bi-arrow-down{% else %}bi-dash{% endif %}"></i>
+                        {{ summary.revpar_change|floatformat:1 }}% YoY
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Total Revenue</h6>
+                    <h3 class="card-title mb-0">${{ summary.total_revenue|floatformat:0|intcomma }}</h3>
+                    <p class="card-text mt-2 {% if summary.revenue_change > 0 %}text-success{% elif summary.revenue_change < 0 %}text-danger{% endif %}">
+                        <i class="bi {% if summary.revenue_change > 0 %}bi-arrow-up{% elif summary.revenue_change < 0 %}bi-arrow-down{% else %}bi-dash{% endif %}"></i>
+                        {{ summary.revenue_change|floatformat:1 }}% YoY
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Trend Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Performance Trends</h5>
+                    {{ trend_chart|safe }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Market Comparison Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Market Comparison</h5>
+                    {{ comparison_chart|safe }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Indices Chart -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Performance Indices</h5>
+                    {{ indices_chart|safe }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border: none;
+        transition: transform 0.2s;
+    }
+    .card:hover {
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+{% endblock %}

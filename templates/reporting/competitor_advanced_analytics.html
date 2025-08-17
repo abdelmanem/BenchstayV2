@@ -1,0 +1,1226 @@
+{% extends 'dashboard_base.html' %}
+{% load reporting_filters %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/competitor_analytics.css' %}">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+<style>
+    :root {
+        --primary-blue: #2563eb;
+        --success-green: #059669;
+        --warning-orange: #d97706;
+        --danger-red: #dc2626;
+        --light-gray: #f8fafc;
+        --dark-gray: #1e293b;
+        --text-dark: #1f2937;
+        --text-medium: #374151;
+        --text-light: #6b7280;
+    }
+
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: var(--text-dark) !important;
+    }
+
+    .main-content {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        margin: 20px;
+        padding: 30px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        color: var(--text-dark) !important;
+    }
+
+    .page-title {
+        background: linear-gradient(45deg, var(--primary-blue), var(--success-green));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: black;
+        background-clip: text;
+        font-weight: 700;
+        font-size: 2.5rem;
+        text-align: center;
+        margin-bottom: 2rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+    }
+
+   
+
+    .enhanced-table-container {
+        overflow-x: auto;
+        border-radius: 10px;
+        box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+        max-height: 600px;
+        
+    }
+
+    .enhanced-table {
+        margin: 0;
+        font-size: 0.85rem;
+        border-collapse: black;
+        border-spacing: 0;
+        width: 100%;
+       
+    }
+
+    .enhanced-table thead th {
+        background: linear-gradient(135deg, var(--dark-gray), #374151);
+        
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 0.2rem 0.8rem;
+        border-bottom: 1px solid #ccc;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        font-size: 0.75rem;
+    }
+
+    .enhanced-table thead th:first-child {
+        border-top-left-radius: 10px;
+    }
+
+    .enhanced-table thead th:last-child {
+        border-top-right-radius: 10px;
+    }
+
+    .enhanced-table tbody tr {
+        transition: all 0.3s ease;
+        background: rgb(116, 112, 112) !important;
+    }
+
+    .enhanced-table tbody tr:hover {
+        background: linear-gradient(90deg, rgba(37, 99, 235, 0.1), rgba(5, 150, 105, 0.1)) !important;
+        transform: scale(1.005);
+    }
+
+    /* FIXED: Table cell text colors */
+    .enhanced-table tbody td {
+        padding: 0.8rem 0.6rem;
+    
+        vertical-align: middle;
+        font-size: 0.8rem;
+       
+        
+    }
+
+    .enhanced-table tbody td strong {
+        
+        font-weight: 700;
+    }
+
+    .table-primary-custom {
+        background: linear-gradient(90deg, rgba(37, 99, 235, 0.15), rgba(59, 130, 246, 0.15)) !important;
+        border-left: 4px solid var(--primary-blue);
+        font-weight: 600;
+    }
+
+    .table-primary-custom td {
+        
+        font-weight: 600;
+    }
+
+    .table-total {
+        background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(55, 65, 81, 0.95)) !important;
+        
+        font-weight: 700;
+    }
+
+    .table-total td {
+        
+        font-weight: 700;
+    }
+
+    .export-buttons {
+        display: flex;
+        color: black;
+        gap: 1rem;
+        justify-content: flex-end;
+        margin-bottom: 2rem;
+    }
+
+    .btn-enhanced {
+        padding: 0.8rem 1.5rem;
+        border-radius: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+        border-bottom: 1px solid #131313;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        color: white !important;
+        text-decoration: none;
+    }
+
+    .btn-enhanced:hover {
+        background: linear-gradient(135deg, #f87171, #ef4444, #dc2626);
+        box-shadow: 
+            0 15px 35px rgba(239, 68, 68, 0.4),
+            0 8px 15px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-pdf {
+        background: linear-gradient(135deg, #ef4444, #dc2626, #b91c1c);
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-excel {
+        background: linear-gradient(135deg, #10b981, #059669, #047857);
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-primary.btn-enhanced {
+        background: linear-gradient(135deg, #3b82f6, #2563eb, #1d4ed8);
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* FIXED: Metric badges */
+    .metric-badge {
+        display: inline-block;
+        padding: 0.3rem 0.6rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        min-width: 60px;
+        text-align: center;
+        color: white !important;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+
+    .metric-high {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white !important;
+    }
+
+    .metric-medium {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white !important;
+    }
+
+    .metric-low {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white !important;
+    }
+
+    /* FIXED: Bootstrap badge colors */
+    .badge.bg-secondary {
+        background: linear-gradient(135deg, #6b7280, #4b5563) !important;
+        color: white !important;
+        font-weight: 600;
+        padding: 0.4rem 0.6rem;
+        border-radius: 12px;
+    }
+
+    .loading-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .loading-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        text-align: center;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        color: var(--text-dark) !important;
+    }
+
+    .loading-content h5 {
+        color: var(--text-dark) !important;
+        margin-bottom: 1rem;
+    }
+
+    .loading-content p {
+        color: var(--text-medium) !important;
+    }
+
+    /* FIXED: Date range info */
+    .date-range-info {
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(5, 150, 105, 0.1));
+        border: 2px solid rgba(37, 99, 235, 0.3);
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        text-align: center;
+        font-weight: 600;
+        color: var(--text-dark) !important;
+    }
+
+    .date-range-info i {
+        color: var(--primary-blue) !important;
+        margin-right: 0.5rem;
+    }
+
+    .date-range-info strong {
+        color: var(--primary-blue) !important;
+    }
+
+    /* FIXED: Text colors for empty states */
+    .text-muted {
+        color: var(--text-light) !important;
+    }
+
+    .text-center {
+        color: var(--text-medium) !important;
+    }
+
+    /* FIXED: Icon colors */
+    .bi {
+        color: currentColor !important;
+    }
+
+    /* Ensure all text in cards is dark */
+    .enhanced-card p,
+    .enhanced-card span:not(.metric-badge):not(.badge),
+    .enhanced-card div,
+    .enhanced-card label,
+    .enhanced-card input::placeholder {
+        color: var(--text-dark) !important;
+    }
+
+    /* Fix button text in cards */
+    .enhanced-card .btn:not(.btn-enhanced) {
+        color: white !important;
+    }
+
+    @media (max-width: 768px) {
+        .main-content {
+            margin: 10px;
+            padding: 15px;
+        }
+        
+        .page-title {
+            font-size: 1.8rem;
+        }
+        
+        .export-buttons {
+            flex-direction: column;
+        }
+        
+        .enhanced-table {
+            font-size: 0.7rem;
+        }
+        
+        .enhanced-table thead th,
+        .enhanced-table tbody td {
+            padding: 0.5rem 0.3rem;
+        }
+    }
+
+    @media print {
+        body {
+            background: white !important;
+            color: black !important;
+        }
+        
+        .main-content {
+            background: white !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            color: black !important;
+        }
+        
+        .export-buttons,
+        .btn,
+        .card-header {
+            display: none !important;
+        }
+
+        .enhanced-table tbody td,
+        .enhanced-table tbody td strong {
+            color: black !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <h1 class="page-title">{{ hotel.name }} - Classic Market Share Report</h1>
+    
+    <!-- Date Filter Form -->
+    <div class="enhanced-card">
+        <div class="card-header gradient-primary">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-calendar-range"></i>
+            </h5>
+        </div>
+        <div class="card-body p-4">
+            <form method="POST" id="date-filter-form" class="row g-3 align-items-end">
+                {% csrf_token %}
+                <div class="col-md-4">
+                    <label for="start_date" class="form-label fw-semibold">From:</label>
+                    <input type="date" class="form-control form-control-lg" id="start_date" 
+                           name="start_date" value="{{ start_date|date:'Y-m-d' }}" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="end_date" class="form-label fw-semibold">To:</label>
+                    <input type="date" class="form-control form-control-lg" id="end_date" 
+                           name="end_date" value="{{ end_date|date:'Y-m-d' }}" required>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary btn-enhanced w-100">
+                        <i class="bi bi-funnel"></i> GO!!
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Current Date Range Info -->
+    <div class="date-range-info">
+        <i class="bi bi-info-circle"></i>
+        The selected date range is: from <strong>{{ start_date|date:'M d, Y' }}</strong> to <strong>{{ end_date|date:'M d, Y' }}</strong>
+    </div>
+
+    <!-- Export Buttons -->
+    <div class="export-buttons">
+        <a href="{% url 'reporting:export_competitor_analytics_pdf' hotel.id %}?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}"
+        class="btn btn-enhanced btn-pdf">
+            <i class="bi bi-file-pdf"></i> Export PDF
+        </a>
+        <a href="{% url 'reporting:export_competitor_analytics' %}?format=excel&start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}" 
+           class="btn btn-enhanced btn-excel">
+            <i class="bi bi-file-excel"></i> Excel Export
+        </a>
+    </div>
+
+    <!-- Custom Date Range Analytics -->
+    <div class="enhanced-card">
+        <div class="card-header gradient-warning">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-graph-up"></i> Daily Performance Metrics
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="enhanced-table-container">
+                <table class="enhanced-table table table-hover" id="daily-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">Hotel</th>
+                            <th rowspan="2">Total Rooms</th>
+                            <th rowspan="2">Occupancy %</th>
+                            <th rowspan="2">Average Rate</th>
+                            <th rowspan="2">Sold Rooms</th>
+                            <th rowspan="2">Room Revenue</th>
+                            <th rowspan="2">RevPAR (Yield)</th>
+                            <th rowspan="2">Fair Market Share</th>
+                            <th rowspan="2">Actual Market Share</th>
+                            <th colspan="2">Market Penetration Index</th>
+                            <th colspan="2">Average Rate Index</th>
+                            <th colspan="2">Revenue Generation Index</th>
+                        </tr>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Index</th>
+                            <th>Rank</th>
+                            <th>Index</th>
+                            <th>Rank</th>
+                            <th>Index</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for hotel_name, data in daily_data.items %}
+                        <tr class="{% if hotel_name == hotel.name %}table-primary-custom{% endif %}">
+                            <td><strong>{{ hotel_name }}</strong></td>
+                            <td>{{ data.rooms_available }}</td>
+                            <td>
+                                <span class="metric-badge {% if data.occupancy_percentage >= 80 %}metric-high{% elif data.occupancy_percentage >= 60 %}metric-medium{% else %}metric-low{% endif %}">
+                                    {{ data.occupancy_percentage|floatformat:2 }}%
+                                </span>
+                            </td>
+                            <td>EGP {{ data.average_rate|floatformat:2 }}</td>
+                            <td>{{ data.rooms_sold }}</td>
+                            <td>EGP {{ data.room_revenue|floatformat:2 }}</td>
+                            <td>EGP {{ data.revpar|floatformat:2 }}</td>
+                            <td>{{ data.fair_market_share|floatformat:2 }}%</td>
+                            <td>{{ data.actual_market_share|floatformat:2 }}%</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ data.mpi_rank }}</span>
+                            </td>
+                            <td>
+                                <span class="metric-badge {% if data.mpi >= 110 %}metric-high{% elif data.mpi >= 95 %}metric-medium{% else %}metric-low{% endif %}">
+                                    {{ data.mpi|floatformat:2 }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ data.ari_rank }}</span>
+                            </td>
+                            <td>
+                                <span class="metric-badge {% if data.ari >= 110 %}metric-high{% elif data.ari >= 95 %}metric-medium{% else %}metric-low{% endif %}">
+                                    {{ data.ari|floatformat:2 }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ data.rgi_rank }}</span>
+                            </td>
+                            <td>
+                                <span class="metric-badge {% if data.rgi >= 110 %}metric-high{% elif data.rgi >= 95 %}metric-medium{% else %}metric-low{% endif %}">
+                                    {{ data.rgi|floatformat:2 }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="15" class="text-center text-muted py-4">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                No data available for the selected date range
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if daily_totals %}
+                        <tr class="table-total">
+                            <td><strong>TOTAL MARKET</strong></td>
+                            <td><strong>{{ daily_totals.rooms_available }}</strong></td>
+                            <td><strong>{{ daily_totals.occupancy_percentage|floatformat:2 }}%</strong></td>
+                            <td><strong>EGP {{ daily_totals.average_rate|floatformat:2 }}</strong></td>
+                            <td><strong>{{ daily_totals.rooms_sold }}</strong></td>
+                            <td><strong>EGP {{ daily_totals.room_revenue|floatformat:2 }}</strong></td>
+                            <td><strong>EGP {{ daily_totals.revpar|floatformat:2 }}</strong></td>
+                            <td><strong>100.00%</strong></td>
+                            <td><strong>100.00%</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MTD Analytics -->
+    <div class="enhanced-card">
+        <div class="card-header gradient-success">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-calendar-month"></i> Month-to-Date Performance Metrics
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="enhanced-table-container">
+                <table class="enhanced-table table table-hover" id="mtd-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">Hotel</th>
+                            <th rowspan="2">Total Rooms</th>
+                            <th rowspan="2">Occupancy %</th>
+                            <th rowspan="2">Average Rate</th>
+                            <th rowspan="2">Sold Rooms</th>
+                            <th rowspan="2">Room Revenue</th>
+                            <th rowspan="2">RevPAR (Yield)</th>
+                            <th rowspan="2">Fair Market Share</th>
+                            <th rowspan="2">Actual Market Share</th>
+                            <th colspan="2">Market Penetration Index</th>
+                            <th colspan="2">Average Rate Index</th>
+                            <th colspan="2">Revenue Generation Index</th>
+                        </tr>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Index</th>
+                            <th>Rank</th>
+                            <th>Index</th>
+                            <th>Rank</th>
+                            <th>Index</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for hotel_name, data in mtd_data.items %}
+                        <tr class="{% if hotel_name == hotel.name %}table-primary-custom{% endif %}">
+                            <td><strong>{{ hotel_name }}</strong></td>
+                            <td>{{ data.rooms_available }}</td>
+                            <td>
+                                <span class="metric-badge {% if data.occupancy_percentage >= 80 %}metric-high{% elif data.occupancy_percentage >= 60 %}metric-medium{% else %}metric-low{% endif %}">
+                                    {{ data.occupancy_percentage|floatformat:2 }}%
+                                </span>
+                            </td>
+                            <td>EGP {{ data.average_rate|floatformat:2 }}</td>
+                            <td>{{ data.rooms_sold }}</td>
+                            <td>EGP {{ data.room_revenue|floatformat:2 }}</td>
+                            <td>EGP {{ data.revpar|floatformat:2 }}</td>
+                            <td>{{ data.fair_market_share|floatformat:2 }}%</td>
+                            <td>{{ data.actual_market_share|floatformat:2 }}%</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ data.mpi_rank }}</span>
+                            </td>
+                            <td>
+                                <span class="metric-badge {% if data.mpi >= 110 %}metric-high{% elif data.mpi >= 95 %}metric-medium{% else %}metric-low{% endif %}">
+                                    {{ data.mpi|floatformat:2 }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ data.ari_rank }}</span>
+                            </td>
+                            <td>
+                                <span class="metric-badge {% if data.ari >= 110 %}metric-high{% elif data.ari >= 95 %}metric-medium{% else %}metric-low{% endif %}">
+                                    {{ data.ari|floatformat:2 }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ data.rgi_rank }}</span>
+                            </td>
+                            <td>
+                                <span class="metric-badge {% if data.rgi >= 110 %}metric-high{% elif data.rgi >= 95 %}metric-medium{% else %}metric-low{% endif %}">
+                                    {{ data.rgi|floatformat:2 }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="15" class="text-center text-muted py-4">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                No data available for month-to-date
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if mtd_totals %}
+                        <tr class="table-total">
+                            <td><strong>TOTAL MARKET</strong></td>
+                            <td><strong>{{ mtd_totals.rooms_available }}</strong></td>
+                            <td><strong>{{ mtd_totals.occupancy_percentage|floatformat:2 }}%</strong></td>
+                            <td><strong>EGP {{ mtd_totals.average_rate|floatformat:2 }}</strong></td>
+                            <td><strong>{{ mtd_totals.rooms_sold }}</strong></td>
+                            <td><strong>EGP {{ mtd_totals.room_revenue|floatformat:2 }}</strong></td>
+                            <td><strong>EGP {{ mtd_totals.revpar|floatformat:2 }}</strong></td>
+                            <td><strong>100.00%</strong></td>
+                            <td><strong>100.00%</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- YTD Analytics -->
+    <div class="enhanced-card">
+        <div class="card-header gradient-primary">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-calendar-year"></i> Year-to-Date Performance Metrics
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="enhanced-table-container">
+                <table class="enhanced-table table table-hover" id="ytd-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">Hotel</th>
+                            <th rowspan="2">Total Rooms</th>
+                            <th rowspan="2">Occupancy %</th>
+                            <th rowspan="2">Average Rate</th>
+                            <th rowspan="2">Sold Rooms</th>
+                            <th rowspan="2">Room Revenue</th>
+                            <th rowspan="2">RevPAR (Yield)</th>
+                            <th rowspan="2">Fair Market Share</th>
+                            <th rowspan="2">Actual Market Share</th>
+                            <th colspan="2">Market Penetration Index</th>
+                            <th colspan="2">Average Rate Index</th>
+                            <th colspan="2">Revenue Generation Index</th>
+                        </tr>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Index</th>
+                            <th>Rank</th>
+                            <th>Index</th>
+                            <th>Rank</th>
+                            <th>Index</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for hotel_name, data in ytd_data.items %}
+                        <tr class="{% if hotel_name == hotel.name %}table-primary-custom{% endif %}">
+                            <td><strong>{{ hotel_name }}</strong></td>
+                            <td>{{ data.rooms_available }}</td>
+                            <td>
+                                <span class="metric-badge {% if data.occupancy_percentage >= 80 %}metric-high{% elif data.occupancy_percentage >= 60 %}metric-medium{% else %}metric-low{% endif %}">
+                                    {{ data.occupancy_percentage|floatformat:2 }}%
+                                </span>
+                            </td>
+                            <td>EGP {{ data.average_rate|floatformat:2 }}</td>
+                            <td>{{ data.rooms_sold }}</td>
+                            <td>EGP {{ data.room_revenue|floatformat:2 }}</td>
+                            <td>EGP {{ data.revpar|floatformat:2 }}</td>
+                            <td>{{ data.fair_market_share|floatformat:2 }}%</td>
+                            <td>{{ data.actual_market_share|floatformat:2 }}%</td>
+                            <td>
+                                <span class="badge bg-secondary">{{ data.mpi_rank }}</span>
+                            </td>
+                            <td>
+                                <span class="metric-badge {% if data.mpi >= 110 %}metric-high{% elif data.mpi >= 95 %}metric-medium{% else %}metric-low{% endif %}">
+                                    {{ data.mpi|floatformat:2 }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ data.ari_rank }}</span>
+                            </td>
+                            <td>
+                                <span class="metric-badge {% if data.ari >= 110 %}metric-high{% elif data.ari >= 95 %}metric-medium{% else %}metric-low{% endif %}">
+                                    {{ data.ari|floatformat:2 }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ data.rgi_rank }}</span>
+                            </td>
+                            <td>
+                                <span class="metric-badge {% if data.rgi >= 110 %}metric-high{% elif data.rgi >= 95 %}metric-medium{% else %}metric-low{% endif %}">
+                                    {{ data.rgi|floatformat:2 }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="15" class="text-center text-muted py-4">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                No data available for year-to-date
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if ytd_totals %}
+                        <tr class="table-total">
+                            <td><strong>TOTAL MARKET</strong></td>
+                            <td><strong>{{ ytd_totals.rooms_available }}</strong></td>
+                            <td><strong>{{ ytd_totals.occupancy_percentage|floatformat:2 }}%</strong></td>
+                            <td><strong>EGP {{ ytd_totals.average_rate|floatformat:2 }}</strong></td>
+                            <td><strong>{{ ytd_totals.rooms_sold }}</strong></td>
+                            <td><strong>EGP {{ ytd_totals.room_revenue|floatformat:2 }}</strong></td>
+                            <td><strong>EGP {{ ytd_totals.revpar|floatformat:2 }}</strong></td>
+                            <td><strong>100.00%</strong></td>
+                            <td><strong>100.00%</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                            <td><strong>-</strong></td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+        <div class="spinner-border text-primary mb-3" role="status"></div>
+        <h5>Updating Report...</h5>
+        <p>Please wait while we fetch the latest data for your selected date range.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- Data for Charts -->
+<script id="daily-data" type="application/json">{{ daily_data|safe }}</script>
+<script id="mtd-data" type="application/json">{{ mtd_data|safe }}</script>
+<script id="ytd-data" type="application/json">{{ ytd_data|safe }}</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Initialize animations
+    initializeAnimations();
+    
+    // Initialize charts if data exists
+    initializeCharts();
+    
+    // Setup form handlers
+    setupFormHandlers();
+    
+    // Add responsive table handling
+    handleResponsiveTables();
+});
+
+function initializeAnimations() {
+    // Animate cards on scroll
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.transform = 'translateY(0)';
+                entry.target.style.opacity = '1';
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.enhanced-card').forEach(card => {
+        card.style.transform = 'translateY(20px)';
+        card.style.opacity = '0';
+        card.style.transition = 'transform 0.6s ease, opacity 0.6s ease';
+        observer.observe(card);
+    });
+}
+
+function initializeCharts() {
+    try {
+        const dailyDataElement = document.getElementById("daily-data");
+        const mtdDataElement = document.getElementById("mtd-data");
+        const ytdDataElement = document.getElementById("ytd-data");
+        
+        if (!dailyDataElement) return;
+        
+        const dailyData = JSON.parse(dailyDataElement.textContent || '{}');
+        const mtdData = JSON.parse(mtdDataElement.textContent || '{}');
+        const ytdData = JSON.parse(ytdDataElement.textContent || '{}');
+        
+        // Create charts if containers exist
+        createOccupancyChart(dailyData);
+        createRevenueChart(dailyData);
+        createComparisonChart(dailyData, mtdData, ytdData);
+        
+    } catch (error) {
+        console.error("Error initializing charts:", error);
+    }
+}
+
+function createOccupancyChart(data) {
+    const chartContainer = document.getElementById("occupancyChart");
+    if (!chartContainer || !data) return;
+    
+    const labels = Object.keys(data);
+    const occupancyValues = labels.map(hotel => data[hotel]?.occupancy_percentage || 0);
+
+    new Chart(chartContainer, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Occupancy %",
+                data: occupancyValues,
+                backgroundColor: "rgba(37, 99, 235, 0.8)",
+                borderColor: "rgba(37, 99, 235, 1)",
+                borderWidth: 2,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.parsed.y.toFixed(2)}%`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createRevenueChart(data) {
+    const chartContainer = document.getElementById("revenueChart");
+    if (!chartContainer || !data) return;
+    
+    const labels = Object.keys(data);
+    const revenueValues = labels.map(hotel => data[hotel]?.room_revenue || 0);
+
+    new Chart(chartContainer, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Revenue (EGP)",
+                data: revenueValues,
+                backgroundColor: "rgba(5, 150, 105, 0.8)",
+                borderColor: "rgba(5, 150, 105, 1)",
+                borderWidth: 2,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: EGP ${context.parsed.y.toLocaleString()}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'EGP ' + value.toLocaleString();
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0,0,0,0.1)'
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createComparisonChart(dailyData, mtdData, ytdData) {
+    const chartContainer = document.getElementById("comparisonChart");
+    if (!chartContainer) return;
+    
+    // Implementation for comparison chart would go here
+    console.log("Comparison chart data ready:", { dailyData, mtdData, ytdData });
+}
+
+function setupFormHandlers() {
+    const form = document.getElementById('date-filter-form');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    
+    if (!form) return;
+    
+    form.addEventListener('submit', function(e) {
+        const startDate = document.getElementById('start_date').value;
+        const endDate = document.getElementById('end_date').value;
+        
+        // Validate date range
+        if (new Date(startDate) > new Date(endDate)) {
+            e.preventDefault();
+            alert('Start date cannot be later than end date.');
+            return false;
+        }
+        
+        // Calculate date difference
+        const diffTime = Math.abs(new Date(endDate) - new Date(startDate));
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays > 365) {
+            const confirm = window.confirm('You have selected a date range longer than one year. This may take longer to load. Continue?');
+            if (!confirm) {
+                e.preventDefault();
+                return false;
+            }
+        }
+        
+        // Show loading overlay
+        if (loadingOverlay) {
+            loadingOverlay.style.display = 'flex';
+        }
+        
+        // Let form submit naturally
+        return true;
+    });
+}
+
+function handleResponsiveTables() {
+    const tables = document.querySelectorAll('.enhanced-table');
+    
+    tables.forEach(table => {
+        // Add touch scrolling for mobile
+        if ('ontouchstart' in window) {
+            table.parentElement.style.webkitOverflowScrolling = 'touch';
+        }
+        
+        // Add scroll indicators
+        const container = table.parentElement;
+        const scrollIndicator = document.createElement('div');
+        scrollIndicator.className = 'scroll-indicator';
+        scrollIndicator.innerHTML = '<i class="bi bi-arrow-right"></i> Scroll to see more';
+        scrollIndicator.style.cssText = `
+            position: sticky;
+            right: 0;
+            top: 50%;
+            background: linear-gradient(90deg, transparent, rgba(0,0,0,0.1));
+            padding: 10px;
+            border-radius: 5px 0 0 5px;
+            font-size: 12px;
+            color: #666;
+            z-index: 5;
+        `;
+        
+        // Show/hide scroll indicator based on scroll position
+        container.addEventListener('scroll', function() {
+            const scrollLeft = container.scrollLeft;
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            
+            if (scrollLeft < maxScroll - 10) {
+                scrollIndicator.style.display = 'block';
+            } else {
+                scrollIndicator.style.display = 'none';
+            }
+        });
+        
+        if (container.scrollWidth > container.clientWidth) {
+            container.appendChild(scrollIndicator);
+        }
+    });
+}
+
+
+// Server-side PDF Export - No longer needed
+function exportToPDF() {
+    // This function is no longer used since we're using server-side PDF generation
+    // The PDF export button now links directly to the Django view
+    console.log('PDF export handled by server-side view');
+}
+
+// Helper function to extract table data with proper formatting
+function extractTableData(table) {
+    const headers = [];
+    const rows = [];
+    
+    // Extract headers - handle multi-row headers
+    const headerRows = table.querySelectorAll('thead tr');
+    if (headerRows.length > 1) {
+        // Multi-row header - combine them
+        const topRow = headerRows[0].querySelectorAll('th');
+        const bottomRow = headerRows[1].querySelectorAll('th');
+        
+        let bottomIndex = 0;
+        topRow.forEach(th => {
+            const colspan = parseInt(th.getAttribute('colspan')) || 1;
+            const rowspan = parseInt(th.getAttribute('rowspan')) || 1;
+            
+            if (rowspan > 1) {
+                // Single column header
+                headers.push(th.textContent.trim());
+            } else if (colspan > 1) {
+                // Multi-column header - add sub-headers
+                for (let i = 0; i < colspan; i++) {
+                    const subHeader = bottomRow[bottomIndex] ? bottomRow[bottomIndex].textContent.trim() : '';
+                    headers.push(`${th.textContent.trim()} ${subHeader}`);
+                    bottomIndex++;
+                }
+            }
+        });
+    } else {
+        // Single row header
+        table.querySelectorAll('thead th').forEach(th => {
+            headers.push(th.textContent.trim());
+        });
+    }
+    
+    // Extract body rows
+    table.querySelectorAll('tbody tr').forEach(tr => {
+        const row = [];
+        tr.querySelectorAll('td').forEach(td => {
+            let text = td.textContent.trim();
+            
+            // Clean up text - remove extra whitespace and format numbers
+            text = text.replace(/\s+/g, ' ');
+            
+            // Format currency values
+            if (text.includes('EGP')) {
+                text = text.replace(/EGP\s*/, 'EGP ');
+            }
+            
+            // Format percentages
+            if (text.includes('%')) {
+                text = text.replace(/\s*%/, '%');
+            }
+            
+            row.push(text);
+        });
+        
+        if (row.length > 0 && !row[0].includes('No data available')) {
+            rows.push(row);
+        }
+    });
+    
+    return { headers, rows };
+}
+// Enhanced Excel Export Function
+function exportToExcel() {
+    if (typeof XLSX === 'undefined') {
+        alert('Excel export library not loaded. Please try again.');
+        return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    
+    // Add summary sheet
+    const summaryData = [
+        ['Hotel Market Share Report'],
+        ['Hotel:', '{{ hotel.name }}'],
+        ['Date Range:', '{{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}'],
+        ['Generated:', new Date().toLocaleDateString()],
+        [''],
+        ['Report Sections:'],
+        ['1. Custom Date Range Performance'],
+        ['2. Month-to-Date Performance'], 
+        ['3. Year-to-Date Performance']
+    ];
+    
+    const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
+    
+    // Export each table
+    const tables = [
+        { id: 'daily-table', name: 'Custom Range' },
+        { id: 'mtd-table', name: 'Month to Date' },
+        { id: 'ytd-table', name: 'Year to Date' }
+    ];
+    
+    tables.forEach(tableInfo => {
+        const table = document.getElementById(tableInfo.id);
+        if (table) {
+            const ws = XLSX.utils.table_to_sheet(table);
+            
+            // Set column widths
+            const colWidths = [
+                { wch: 25 }, // Hotel name
+                { wch: 12 }, // Total Rooms
+                { wch: 12 }, // Occupancy
+                { wch: 15 }, // Average Rate
+                { wch: 12 }, // Sold Rooms
+                { wch: 20 }, // Room Revenue
+                { wch: 18 }, // RevPAR
+                { wch: 18 }, // Fair Market Share
+                { wch: 18 }, // Actual Market Share
+                { wch: 8 },  // MPI Rank
+                { wch: 12 }, // MPI Index
+                { wch: 8 },  // ARI Rank
+                { wch: 12 }, // ARI Index
+                { wch: 8 },  // RGI Rank
+                { wch: 12 }  // RGI Index
+            ];
+            ws['!cols'] = colWidths;
+            
+            // Add conditional formatting info (as comments since Excel format is complex)
+            if (ws['A1']) {
+                ws['A1'].c = [{
+                    a: 'System',
+                    t: 'Performance indicators: Green = High performance, Orange = Medium, Red = Low'
+                }];
+            }
+            
+            XLSX.utils.book_append_sheet(wb, ws, tableInfo.name);
+        }
+    });
+    
+    // Save the file
+    const fileName = `{{ hotel.name|slugify }}_Market_Report_{{ start_date|date:"Y-m-d" }}_to_{{ end_date|date:"Y-m-d" }}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+}
+
+// Add ripple effect to buttons
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.btn-enhanced').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            const ripple = document.createElement('span');
+            const rect = this.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = e.clientX - rect.left - size / 2;
+            const y = e.clientY - rect.top - size / 2;
+            
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            ripple.classList.add('ripple');
+            
+            this.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    });
+});
+
+// Add CSS for ripple effect
+const style = document.createElement('style');
+style.textContent = `
+    .btn-enhanced {
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .ripple {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.6);
+        transform: scale(0);
+        animation: ripple-animation 0.6s linear;
+        pointer-events: none;
+    }
+    
+    @keyframes ripple-animation {
+        to {
+            transform: scale(4);
+            opacity: 0;
+        }
+    }
+    
+    .scroll-indicator {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

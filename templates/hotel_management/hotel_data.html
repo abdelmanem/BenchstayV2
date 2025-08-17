@@ -1,0 +1,80 @@
+{% extends 'dashboard_base.html' %}
+
+
+{% block page_title %}{{ hotel.name }}{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h1>Hotel Information</h1>
+    
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">{% if hotel %}Edit{% else %}Add{% endif %} Hotel Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="form-group mb-3">
+                            <label for="name">Hotel Name</label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ hotel.name }}" required>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="address">Address</label>
+                            <textarea class="form-control" id="address" name="address" rows="3" required>{{ hotel.address }}</textarea>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="phone">Phone Number</label>
+                            <input type="text" class="form-control" id="phone" name="phone" value="{{ hotel.phone }}" required>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="email">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ hotel.email }}" required>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="total_rooms">Total Rooms</label>
+                            <input type="number" class="form-control" id="total_rooms" name="total_rooms" min="1" value="{{ hotel.total_rooms }}" required>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label for="logo">Hotel Logo</label>
+                            <input type="file" class="form-control" id="logo" name="logo" accept="image/*">
+                            {% if hotel.logo %}
+                            <div class="mt-2">
+                                <img src="{{ hotel.logo.url }}" alt="Hotel Logo" class="img-thumbnail" style="max-width: 200px;">
+                            </div>
+                            {% endif %}
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Information</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if hotel %}
+    <div class="row mt-4">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Current Hotel Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Name:</strong> {{ hotel.name }}</p>
+                            <p><strong>Address:</strong> {{ hotel.address }}</p>
+                            <p><strong>Total Rooms:</strong> {{ hotel.total_rooms }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Phone:</strong> {{ hotel.phone }}</p>
+                            <p><strong>Email:</strong> {{ hotel.email }}</p>
+                            <p><strong>Last Updated:</strong> {{ hotel.updated_at|date:"F j, Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,67 @@
+.analytics-container {
+    position: relative;
+    width: 100%;
+    margin: 0 auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.analytics-table {
+    width: 100%;
+    min-width: 800px;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: auto;
+}
+
+.analytics-table thead th {
+    position: sticky;
+    top: 0;
+    background-color: #343a40;
+    z-index: 1;
+    white-space: nowrap;
+    padding: 12px 8px;
+}
+
+.analytics-table tbody td {
+    padding: 8px;
+    white-space: normal;
+    word-wrap: break-word;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.analytics-table th[rowspan="2"] {
+    vertical-align: middle;
+}
+
+.chart-container {
+    margin-bottom: 2rem;
+}
+
+.card {
+    margin-bottom: 2rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    padding: 1rem;
+}
+
+.table-container {
+    margin: 1rem 0;
+    border-radius: 0.25rem;
+    overflow: hidden;
+}
+
+@media (max-width: 768px) {
+    .analytics-table {
+        font-size: 0.875rem;
+    }
+    
+    .analytics-table thead th,
+    .analytics-table tbody td {
+        padding: 6px 4px;
+    }
+}

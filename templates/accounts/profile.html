@@ -1,0 +1,45 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}User Profile - Benchstay{% endblock %}
+
+{% block page_title %}User Profile{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Your Profile</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'accounts:profile' %}">
+                    {% csrf_token %}
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="first_name" class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="first_name" name="first_name" value="{{ user.first_name }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="last_name" class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="last_name" name="last_name" value="{{ user.last_name }}">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="email" name="email" value="{{ user.email }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="position" class="form-label">Position</label>
+                        <input type="text" class="form-control" id="position" name="position" value="{{ user_profile.position }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="phone_number" class="form-label">Phone Number</label>
+                        <input type="text" class="form-control" id="phone_number" name="phone_number" value="{{ user_profile.phone_number }}">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update Profile</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

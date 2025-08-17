@@ -1,0 +1,284 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}Dashboard - {{ hotel.name }} - Benchstay{% endblock %}
+
+{% block content %}
+<!-- Enhanced Hotel Info Header -->
+<div class="dashboard-header">
+    <div class="hotel-info d-flex align-items-center">
+        <div class="me-4">
+            <img src="{{ hotel.logo.url|default:'https://via.placeholder.com/90x90/667eea/ffffff?text=HOTEL' }}" 
+                 alt="Hotel Logo" class="hotel-logo">
+        </div>
+        <div>
+            <h1 class="mb-2 fw-bold">{{ hotel.name }}</h1>
+            <p class="mb-1 opacity-90">
+                <i class="fas fa-map-marker-alt me-2"></i>
+                {{ hotel.address }}
+            </p>
+            <div class="date-range">
+                <i class="fas fa-calendar-alt me-2"></i>
+                {{ start_date|date:"F j, Y" }} - {{ end_date|date:"F j, Y" }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Key Performance Metrics -->
+<div class="row g-4 mb-5">
+    <!-- Occupancy -->
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="metric-label">
+                    <i class="fas fa-bed me-2"></i>Occupancy Rate
+                </div>
+                <div class="change-badge {% if summary.occ_change > 0 %}positive{% else %}negative{% endif %}">
+                    <i class="fas fa-arrow-{% if summary.occ_change > 0 %}up{% else %}down{% endif %}"></i>
+                    {{ summary.occ_change|floatformat:1 }}%
+                </div>
+            </div>
+            <div class="metric-value">{{ summary.current_occ|floatformat:1 }}%</div>
+            <div class="text-muted small">
+                Prior Year: {{ summary.prior_year_occ|floatformat:1 }}%
+            </div>
+        </div>
+    </div>
+    <!-- ADR -->
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="metric-label">
+                    <i class="fas fa-dollar-sign me-2"></i>ADR (Average Daily Rate)
+                </div>
+                <div class="change-badge {% if summary.adr_change > 0 %}positive{% else %}negative{% endif %}">
+                    <i class="fas fa-arrow-{% if summary.adr_change > 0 %}up{% else %}down{% endif %}"></i>
+                    {{ summary.adr_change|floatformat:1 }}%
+                </div>
+            </div>
+            <div class="metric-value">EGP {{ summary.current_adr|floatformat:2 }}</div>
+            <div class="text-muted small">
+                Prior Year: EGP {{ summary.prior_year_adr|floatformat:2 }}
+            </div>
+        </div>
+    </div>
+    <!-- RevPAR -->
+    <div class="col-md-4">
+        <div class="metric-card">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="metric-label">
+                    <i class="fas fa-chart-line me-2"></i>RevPAR
+                </div>
+                <div class="change-badge {% if summary.revpar_change > 0 %}positive{% else %}negative{% endif %}">
+                    <i class="fas fa-arrow-{% if summary.revpar_change > 0 %}up{% else %}down{% endif %}"></i>
+                    {{ summary.revpar_change|floatformat:1 }}%
+                </div>
+            </div>
+            <div class="metric-value">EGP {{ summary.current_revpar|floatformat:2 }}</div>
+            <div class="text-muted small">
+                Prior Year: EGP {{ summary.prior_year_revpar|floatformat:2 }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Performance Indices -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Performance Indices
+                    </h5>
+                    <span class="badge bg-primary">Market Analysis</span>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table performance-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Performance Index</th>
+                            <th class="text-center">Current Period</th>
+                            <th class="text-center">Prior Year</th>
+                            <th class="text-center">Change</th>
+                            <th class="text-center">Market Rank</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fw-semibold"><i class="fas fa-users text-primary me-2"></i>MPI</td>
+                            <td class="text-center fw-bold">{{ indices.current_mpi|floatformat:1 }}</td>
+                            <td class="text-center">{{ indices.prior_year_mpi|floatformat:1 }}</td>
+                            <td class="text-center">
+                                <span class="change-badge {% if indices.mpi_change > 0 %}positive{% else %}negative{% endif %}">
+                                    <i class="fas fa-arrow-{% if indices.mpi_change > 0 %}up{% else %}down{% endif %}"></i>{{ indices.mpi_change|floatformat:1 }}%
+                                </span>
+                            </td>
+                            <td class="text-center"><span class="rank-badge">{{ indices.mpi_rank }} of {{ indices.total_competitors }}</span></td>
+                        </tr>
+                        <tr>
+                            <td class="fw-semibold"><i class="fas fa-money-bill-wave text-success me-2"></i>ARI</td>
+                            <td class="text-center fw-bold">{{ indices.current_ari|floatformat:1 }}</td>
+                            <td class="text-center">{{ indices.prior_year_ari|floatformat:1 }}</td>
+                            <td class="text-center">
+                                <span class="change-badge {% if indices.ari_change > 0 %}positive{% else %}negative{% endif %}">
+                                    <i class="fas fa-arrow-{% if indices.ari_change > 0 %}up{% else %}down{% endif %}"></i>{{ indices.ari_change|floatformat:1 }}%
+                                </span>
+                            </td>
+                            <td class="text-center"><span class="rank-badge">{{ indices.ari_rank }} of {{ indices.total_competitors }}</span></td>
+                        </tr>
+                        <tr>
+                            <td class="fw-semibold"><i class="fas fa-trophy text-warning me-2"></i>RGI</td>
+                            <td class="text-center fw-bold">{{ indices.current_rgi|floatformat:1 }}</td>
+                            <td class="text-center">{{ indices.prior_year_rgi|floatformat:1 }}</td>
+                            <td class="text-center">
+                                <span class="change-badge {% if indices.rgi_change > 0 %}positive{% else %}negative{% endif %}">
+                                    <i class="fas fa-arrow-{% if indices.rgi_change > 0 %}up{% else %}down{% endif %}"></i>{{ indices.rgi_change|floatformat:1 }}%
+                                </span>
+                            </td>
+                            <td class="text-center"><span class="rank-badge">{{ indices.rgi_rank }} of {{ indices.total_competitors }}</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced RevPAR Positioning Matrix -->
+<div class="row mb-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start">
+                    <div>
+                        <h5 class="fw-bold mb-0">
+                            <i class="fas fa-crosshairs me-2"></i>RevPAR Positioning Matrix
+                        </h5>
+                        <p class="text-muted mb-0 mt-1">Competitive positioning analysis</p>
+                    </div>
+                    <div class="mt-3 mt-md-0">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-primary active" id="currentBtn">Current</button>
+                            <button type="button" class="btn btn-outline-primary" id="compareBtn">Compare</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-0">
+                <div class="col-md-6 border-end">
+                    <div class="chart-container">
+                        <div class="text-center mb-3">
+                            <h6 class="fw-bold">Current Period</h6>
+                            <small class="text-muted">{{ start_date|date:"F j, Y" }} - {{ end_date|date:"F j, Y" }}</small>
+                        </div>
+                        <canvas id="revparMatrix"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="chart-container">
+                        <div class="text-center mb-3">
+                            <h6 class="fw-bold">Previous Year</h6>
+                            <small class="text-muted">{{ prev_year_start_date|date:"F j, Y" }} - {{ prev_year_end_date|date:"F j, Y" }}</small>
+                        </div>
+                        <canvas id="revparMatrixPrevYear"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .date-range {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        display: inline-block;
+    }
+    .chart-container {
+        position: relative;
+        height: 40vh; /* 40% of viewport height */
+        width: 100%;
+        padding: 1rem;
+    }
+    canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx1 = document.getElementById('revparMatrix').getContext('2d');
+    const ctx2 = document.getElementById('revparMatrixPrevYear').getContext('2d');
+
+    const chartConfig = {
+        type: 'scatter',
+        data: {
+            datasets: [{
+                label: 'Your Hotel',
+                data: [{x: 105, y: 98}],
+                backgroundColor: '#2563eb',
+                borderColor: '#2563eb',
+                pointRadius: 8,
+                pointHoverRadius: 10
+            }, {
+                label: 'Competitors',
+                data: [
+                    {x: 95, y: 102},
+                    {x: 108, y: 96},
+                    {x: 102, y: 104},
+                    {x: 98, y: 99},
+                    {x: 110, y: 101}
+                ],
+                backgroundColor: '#64748b',
+                borderColor: '#64748b',
+                pointRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    title: { display: true, text: 'Occupancy Index' },
+                    min: 90,
+                    max: 115
+                },
+                y: {
+                    title: { display: true, text: 'ADR Index' },
+                    min: 90,
+                    max: 110
+                }
+            },
+            plugins: {
+                legend: { display: true, position: 'bottom' }
+            }
+        }
+    };
+
+    new Chart(ctx1, chartConfig);
+
+    const prevYearConfig = JSON.parse(JSON.stringify(chartConfig));
+    prevYearConfig.data.datasets[0].data = [{x: 102, y: 96}];
+    prevYearConfig.data.datasets[1].data = [
+        {x: 98, y: 100},
+        {x: 105, y: 94},
+        {x: 100, y: 102},
+        {x: 96, y: 97},
+        {x: 107, y: 99}
+    ];
+
+    new Chart(ctx2, prevYearConfig);
+});
+</script>
+{% endblock %}
