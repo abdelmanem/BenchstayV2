@@ -29,10 +29,10 @@ sudo a2enmod wsgi ssl headers expires deflate rewrite
 
 ```bash
 # Create application directory
-sudo mkdir -p /opt/Benchstay/BenchstayV2
+sudo mkdir -p /opt/BenchstayV2
 
 # Set ownership (replace 'ubuntu' with your username)
-sudo chown -R ubuntu:ubuntu /opt/Benchstay
+sudo chown -R ubuntu:ubuntu /opt/BenchstayV2
 ```
 
 ### 3. Set Up the Application
@@ -40,13 +40,13 @@ sudo chown -R ubuntu:ubuntu /opt/Benchstay
 ```bash
 # Clone the repository or copy your application files
 # Example if using git:
-git clone https://your-repository-url.git /opt/Benchstay/BenchstayV2
+git clone https://your-repository-url.git /opt/BenchstayV2
 
 # Or copy files from another location
-# sudo cp -r /path/to/source/* /opt/Benchstay/BenchstayV2/
+# sudo cp -r /path/to/source/* /opt/BenchstayV2/
 
 # Navigate to the project directory
-cd /opt/Benchstay/BenchstayV2
+cd /opt/BenchstayV2
 
 # Create and activate virtual environment
 python3 -m venv venv
@@ -113,18 +113,18 @@ CACHES = {
 SECRET_KEY = 'your-secure-secret-key'
 
 # Static and media files configuration
-STATIC_ROOT = '/opt/Benchstay/BenchstayV2/staticfiles'
-MEDIA_ROOT = '/opt/Benchstay/BenchstayV2/media'
+STATIC_ROOT = '/opt/BenchstayV2/staticfiles'
+MEDIA_ROOT = '/opt/BenchstayV2/media'
 ```
 
 ### 6. Initialize the Django Application
 
 ```bash
 # Activate virtual environment if not already activated
-source /opt/Benchstay/BenchstayV2/venv/bin/activate
+source /opt/BenchstayV2/venv/bin/activate
 
 # Navigate to project directory
-cd /opt/Benchstay/BenchstayV2
+cd /opt/BenchstayV2
 
 # Apply migrations
 python manage.py migrate
@@ -141,8 +141,8 @@ python manage.py createsuperuser
 1. Copy the Apache configuration files to the appropriate location:
 
 ```bash
-sudo cp /opt/Benchstay/BenchstayV2/apache2-ubuntu.conf /etc/apache2/sites-available/benchstay.conf
-sudo cp /opt/Benchstay/BenchstayV2/apache2-ubuntu-ssl.conf /etc/apache2/sites-available/benchstay-ssl.conf
+sudo cp /opt/BenchstayV2/apache2-ubuntu.conf /etc/apache2/sites-available/benchstay.conf
+sudo cp /opt/BenchstayV2/apache2-ubuntu-ssl.conf /etc/apache2/sites-available/benchstay-ssl.conf
 ```
 
 2. Edit the configuration files if needed to update:
@@ -166,14 +166,14 @@ sudo a2dissite 000-default.conf
 
 ```bash
 # Set appropriate permissions for Apache
-sudo chown -R www-data:www-data /opt/Benchstay/BenchstayV2/media
-sudo chown -R www-data:www-data /opt/Benchstay/BenchstayV2/staticfiles
+sudo chown -R www-data:www-data /opt/BenchstayV2/media
+sudo chown -R www-data:www-data /opt/BenchstayV2/staticfiles
 
 # Make sure the wsgi.py file is accessible
-sudo chmod 664 /opt/Benchstay/BenchstayV2/benchstay/wsgi.py
+sudo chmod 664 /opt/BenchstayV2/benchstay/wsgi.py
 
 # Make sure directories are executable
-sudo find /opt/Benchstay/BenchstayV2 -type d -exec chmod 755 {} \;
+sudo find /opt/BenchstayV2 -type d -exec chmod 755 {} \;
 ```
 
 ### 9. Set Up SSL Certificates
@@ -219,14 +219,14 @@ sudo apache2ctl configtest
 
 ```bash
 # Verify that Apache can access the necessary files
-sudo -u www-data test -r /opt/Benchstay/BenchstayV2/benchstay/wsgi.py && echo "Readable" || echo "Not readable"
+sudo -u www-data test -r /opt/BenchstayV2/benchstay/wsgi.py && echo "Readable" || echo "Not readable"
 ```
 
 4. Check the virtual environment:
 
 ```bash
 # Verify that the virtual environment is correctly set up
-source /opt/Benchstay/BenchstayV2/venv/bin/activate
+source /opt/BenchstayV2/venv/bin/activate
 python -c "import django; print(django.__version__)"
 ```
 
@@ -236,7 +236,7 @@ python -c "import django; print(django.__version__)"
 
 ```bash
 # Navigate to the project directory
-cd /opt/Benchstay/BenchstayV2
+cd /opt/BenchstayV2
 
 # Pull the latest changes (if using git)
 git pull
@@ -266,7 +266,7 @@ Regularly backup your database and media files:
 sudo -u postgres pg_dump benchstay > /path/to/backup/benchstay_$(date +%Y%m%d).sql
 
 # Backup media files
-sudo tar -czf /path/to/backup/media_$(date +%Y%m%d).tar.gz /opt/Benchstay/BenchstayV2/media
+sudo tar -czf /path/to/backup/media_$(date +%Y%m%d).tar.gz /opt/BenchstayV2/media
 ```
 
 ## Security Considerations
