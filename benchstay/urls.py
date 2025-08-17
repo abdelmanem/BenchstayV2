@@ -24,7 +24,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls', namespace='accounts')),
     path('hotel/', include('hotel_management.urls', namespace='hotel_management')),
     path('reports/', include('reporting.urls')),
-    path('', include('hotel_management.urls'))  # Default to hotel_management app for root URL
+    #path('', include('hotel_management.urls'))  # Default to hotel_management app for root URL
 ]
 
 if settings.DEBUG:
