@@ -19,4 +19,6 @@ urlpatterns = [
     path('export-competitor-analytics/', views.export_competitor_analytics, name='export_competitor_analytics'),
     path('hotel-performance/<int:hotel_id>/', views_performance.hotel_performance_report, name='hotel_performance'),
     path('export-pdf/<int:hotel_id>/', views.export_competitor_analytics_pdf, name='export_competitor_analytics_pdf'),
+    path('hotel-performance/', views_performance.hotel_performance_report, name='hotel_performance_default'),
+
 ]
