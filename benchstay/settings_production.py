@@ -60,12 +60,6 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
 
-# Authentication backends
-AUTHENTICATION_BACKENDS = [
-    'accounts.backends.CaseInsensitiveModelBackend',
-    'django.contrib.auth.backends.ModelBackend',
-]
-
 ROOT_URLCONF = 'benchstay.urls'
 
 TEMPLATES = [

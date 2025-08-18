@@ -638,6 +638,9 @@
                                 <i class="fas fa-cog me-2"></i>Admin Settings
                             </a></li>
                             {% endif %}
+                            <li><a class="dropdown-item" href="{% url 'accounts:help' %}">
+                                <i class="fas fa-question-circle me-2"></i>Help & Info
+                            </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">
                                 <i class="fas fa-sign-out-alt me-2"></i>Logout
@@ -694,6 +697,12 @@
                         <a class="nav-link" href="{% url 'reporting:dashboard' %}" data-tooltip="Reports">
                             <i class="fas fa-chart-bar"></i>
                             <span class="nav-link-text">Reports</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'accounts:help' %}" data-tooltip="Help">
+                            <i class="fas fa-question-circle"></i>
+                            <span class="nav-link-text">Help & Info</span>
                         </a>
                     </li>
                     {% if user.profile.is_admin %}

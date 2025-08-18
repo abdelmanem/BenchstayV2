@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.models import User
 from django.conf import settings
 from .models import UserProfile
+import django
 
 # Debug view to check settings and templates
 def debug_info(request):
@@ -44,6 +45,35 @@ def debug_info(request):
         debug_info['base_template_error'] = base_template_error
         
     return HttpResponse(f"<pre>{debug_info}</pre>")
+
+def help_page(request):
+    """Help page with app information and version details"""
+    # Get Django version
+    django_version = django.get_version()
+    
+    # Get app information
+    app_info = {
+        'name': 'Benchstay',
+        'version': '2.0.0',  # You can update this with your actual version
+        'description': 'Hotel Benchmarking Platform',
+        'developer': 'Your Company Name',
+        'contact': 'support@example.com',
+        'django_version': django_version,
+        'python_version': settings.PYTHON_VERSION if hasattr(settings, 'PYTHON_VERSION') else 'Not specified',
+    }
+    
+    # Get database info (safely)
+    db_info = {
+        'engine': settings.DATABASES['default']['ENGINE'].split('.')[-1],
+        'name': settings.DATABASES['default']['NAME'],
+    }
+    
+    context = {
+        'app_info': app_info,
+        'db_info': db_info,
+    }
+    
+    return render(request, 'accounts/help.html', context)
 
 def home(request):
     """Home page view that redirects to login if not authenticated"""

@@ -1,0 +1,140 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}Help & Information - Benchstay{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="bi bi-info-circle me-2"></i>About Benchstay</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="border-bottom pb-2 mb-3">Application Information</h5>
+                            <table class="table table-hover">
+                                <tbody>
+                                    <tr>
+                                        <th scope="row" width="40%">Application Name</th>
+                                        <td>{{ app_info.name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Version</th>
+                                        <td>{{ app_info.version }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Description</th>
+                                        <td>{{ app_info.description }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Developer</th>
+                                        <td>{{ app_info.developer }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Contact</th>
+                                        <td><a href="mailto:{{ app_info.contact }}">{{ app_info.contact }}</a></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="border-bottom pb-2 mb-3">Technical Information</h5>
+                            <table class="table table-hover">
+                                <tbody>
+                                    <tr>
+                                        <th scope="row" width="40%">Django Version</th>
+                                        <td>{{ app_info.django_version }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Python Version</th>
+                                        <td>{{ app_info.python_version }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Database Engine</th>
+                                        <td>{{ db_info.engine }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th scope="row">Database Name</th>
+                                        <td>{{ db_info.name }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0"><i class="bi bi-question-circle me-2"></i>Help & Support</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="border-bottom pb-2 mb-3">Quick Start Guide</h5>
+                            <p>Benchstay is a hotel benchmarking platform that helps you track and compare your hotel's performance against competitors.</p>
+                            <ol class="list-group list-group-numbered mb-4">
+                                <li class="list-group-item">Set up your hotel profile in the system</li>
+                                <li class="list-group-item">Add your competitors for benchmarking</li>
+                                <li class="list-group-item">Enter daily performance data</li>
+                                <li class="list-group-item">View reports and analytics</li>
+                                <li class="list-group-item">Export data for presentations</li>
+                            </ol>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="border-bottom pb-2 mb-3">Support Resources</h5>
+                            <div class="list-group">
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <i class="bi bi-book me-2"></i>User Manual
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <i class="bi bi-play-btn me-2"></i>Video Tutorials
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <i class="bi bi-question-circle me-2"></i>FAQ
+                                </a>
+                                <a href="mailto:{{ app_info.contact }}" class="list-group-item list-group-item-action">
+                                    <i class="bi bi-envelope me-2"></i>Contact Support
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0"><i class="bi bi-gear me-2"></i>System Requirements</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="border-bottom pb-2 mb-3">Recommended Browser</h5>
+                            <ul class="list-group mb-4">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    Google Chrome
+                                    <span class="badge bg-primary rounded-pill">Recommended</span>
+                                </li>
+                                <li class="list-group-item">Mozilla Firefox</li>
+                                <li class="list-group-item">Microsoft Edge</li>
+                                <li class="list-group-item">Safari</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="border-bottom pb-2 mb-3">Other Requirements</h5>
+                            <ul class="list-group">
+                                <li class="list-group-item">JavaScript enabled</li>
+                                <li class="list-group-item">Cookies enabled</li>
+                                <li class="list-group-item">Minimum screen resolution: 1280x720</li>
+                                <li class="list-group-item">Stable internet connection</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
