@@ -56,8 +56,8 @@ def help_page(request):
         'name': 'Benchstay',
         'version': '2.0.0',  # You can update this with your actual version
         'description': 'Hotel Benchmarking Platform',
-        'developer': 'Your Company Name',
-        'contact': 'support@example.com',
+        'developer': 'Abdelmanem Samy',
+        'contact': 'Abdelmanem@msn.com',
         'django_version': django_version,
         'python_version': settings.PYTHON_VERSION if hasattr(settings, 'PYTHON_VERSION') else 'Not specified',
     }
