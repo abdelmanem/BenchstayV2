@@ -1,9 +1,49 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.conf import settings
 from .models import UserProfile
+
+# Debug view to check settings and templates
+def debug_info(request):
+    """Debug view to check settings and templates"""
+    from django.template.loader import get_template
+    
+    # Try to load the admin_settings template
+    try:
+        template = get_template('accounts/admin_settings.html')
+        template_exists = True
+    except Exception as e:
+        template_exists = False
+        template_error = str(e)
+    
+    # Check if dashboard_base.html exists
+    try:
+        base_template = get_template('dashboard_base.html')
+        base_template_exists = True
+    except Exception as e:
+        base_template_exists = False
+        base_template_error = str(e)
+    
+    debug_info = {
+        'DEBUG': settings.DEBUG,
+        'ALLOWED_HOSTS': settings.ALLOWED_HOSTS,
+        'TEMPLATE_DIRS': [t.get('DIRS', []) for t in settings.TEMPLATES],
+        'STATIC_URL': settings.STATIC_URL,
+        'MEDIA_URL': settings.MEDIA_URL,
+        'admin_settings_template_exists': template_exists,
+        'dashboard_base_template_exists': base_template_exists,
+    }
+    
+    if not template_exists:
+        debug_info['template_error'] = template_error
+    
+    if not base_template_exists:
+        debug_info['base_template_error'] = base_template_error
+        
+    return HttpResponse(f"<pre>{debug_info}</pre>")
 
 def home(request):
     """Home page view that redirects to login if not authenticated"""
@@ -68,11 +108,16 @@ def admin_settings(request):
     """Admin settings view - only accessible to admin users"""
     # Check if user is admin
     try:
-        if not request.user.profile.is_admin:
+        # Get or create the user profile
+        profile, created = UserProfile.objects.get_or_create(user=request.user)
+        
+        if not profile.is_admin:
             messages.error(request, 'You do not have permission to access this page')
             return redirect('hotel_management:home')
-    except UserProfile.DoesNotExist:
-        messages.error(request, 'You do not have permission to access this page')
+    except Exception as e:
+        # Log the error for debugging
+        print(f"Error in admin_settings view: {str(e)}")
+        messages.error(request, 'An error occurred. Please contact the administrator.')
         return redirect('hotel_management:home')
     
     users = User.objects.all()

@@ -19,7 +19,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'x$2ywe8je))utjw7k!h(lxkpb3)bnm
 DEBUG = False
 
 # Add your domain and server IP to allowed hosts
-ALLOWED_HOSTS = ['your-domain.com', 'www.your-domain.com', 'your-server-ip']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'your-domain.com', 'www.your-domain.com', 'your-server-ip']
 
 # Application definition
 INSTALLED_APPS = [
@@ -49,15 +49,22 @@ MIDDLEWARE = [
 ]
 
 # Security settings
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+# Only enable SSL redirect if SSL is properly configured
+SECURE_SSL_REDIRECT = False  # Set to True when SSL is configured
+SESSION_COOKIE_SECURE = False  # Set to True when SSL is configured
+CSRF_COOKIE_SECURE = False  # Set to True when SSL is configured
 SECURE_HSTS_SECONDS = 31536000  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
+
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.CaseInsensitiveModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 ROOT_URLCONF = 'benchstay.urls'
 
@@ -77,25 +84,33 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'benchstay.wsgi.application'
+WSGI_APPLICATION = 'benchstay.wsgi_production.application'
 
 # Database
-# Use environment variables for sensitive database credentials
+# For testing purposes, use SQLite instead of PostgreSQL
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'Benchstay'),
-        'USER': os.environ.get('DB_USER', 'Benchstaydbuser'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),  # Set this in environment variable
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
-        'CONN_MAX_AGE': 600,  # 10 minutes connection persistence
-        'OPTIONS': {
-            'connect_timeout': 10,
-            'sslmode': 'prefer',  # Use SSL if available
-        },
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# Uncomment this when ready to use PostgreSQL
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': os.environ.get('DB_NAME', 'Benchstay'),
+#         'USER': os.environ.get('DB_USER', 'Benchstaydbuser'),
+#         'PASSWORD': os.environ.get('DB_PASSWORD', ''),  # Set this in environment variable
+#         'HOST': os.environ.get('DB_HOST', 'localhost'),
+#         'PORT': os.environ.get('DB_PORT', '5432'),
+#         'CONN_MAX_AGE': 600,  # 10 minutes connection persistence
+#         'OPTIONS': {
+#             'connect_timeout': 10,
+#             'sslmode': 'prefer',  # Use SSL if available
+#         },
+#     }
+# }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -175,7 +190,7 @@ LOGGING = {
         'file': {
             'level': 'WARNING',
             'class': 'logging.handlers.RotatingFileHandler',
-            'filename': '/opt/BenchstayV2/logs/django.log',
+            'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
             'maxBytes': 10485760,  # 10MB
             'backupCount': 10,
             'formatter': 'verbose',
