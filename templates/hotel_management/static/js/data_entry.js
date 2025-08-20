@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="form-group mb-3">
                             <label for="edit_total_revenue">Total Revenue</label>
                             <div class="input-group">
-                                <span class="input-group-text">EGP</span>
+                                <span class="input-group-text">${document.getElementById('currency-symbol').dataset.symbol}</span>
                                 <input type="number" class="form-control" id="edit_total_revenue" name="total_revenue" value="${data.total_revenue}" min="0" step="0.01" required>
                             </div>
                         </div>
@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="form-group mb-3">
                             <label for="edit_estimated_average_rate">Estimated Average Rate</label>
                             <div class="input-group">
-                                <span class="input-group-text">EGP</span>
+                                <span class="input-group-text">${document.getElementById('currency-symbol').dataset.symbol}</span>
                                 <input type="number" class="form-control" id="edit_estimated_average_rate" name="estimated_average_rate" value="${data.estimated_average_rate}" min="0" step="0.01" required>
                             </div>
                         </div>

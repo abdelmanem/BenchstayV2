@@ -18,7 +18,9 @@ function formatValue(value, metric) {
     if (metric === 'occupancy_percentage') {
         return value.toFixed(2) + '%';
     } else if (metric === 'average_rate' || metric === 'revpar') {
-        return 'EGP' + value.toFixed(2);
+        // Get currency symbol from the data attribute we'll add to the page
+        const currencySymbol = document.getElementById('currency-symbol-data').dataset.symbol;
+        return currencySymbol + value.toFixed(2);
     } else {
         return value.toFixed(2);
     }

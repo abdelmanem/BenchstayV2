@@ -137,8 +137,18 @@
                         </li>
                         {% if user.profile.is_admin %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'accounts:admin_settings' %}">
+                            <a class="nav-link" href="{% url 'accounts:admin_settings' %}?tab=user_management">
                                 <i class="bi bi-people-fill me-2"></i> Users Portal
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:admin_settings' %}?tab=system_settings">
+                                <i class="bi bi-gear-fill me-2"></i> System Settings
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:admin_settings' %}?tab=system_info">
+                                <i class="bi bi-info-circle-fill me-2"></i> System Information
                             </a>
                         </li>
                         {% endif %}

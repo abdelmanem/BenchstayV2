@@ -10,3 +10,68 @@ class UserProfile(models.Model):
     
     def __str__(self):
         return f"{self.user.username}'s Profile"
+
+
+class SystemSettings(models.Model):
+    # Currency settings
+    CURRENCY_CHOICES = [
+        ('USD', 'US Dollar ($)'),
+        ('EUR', 'Euro (€)'),
+        ('GBP', 'British Pound (£)'),
+        ('JPY', 'Japanese Yen (¥)'),
+        ('AUD', 'Australian Dollar (A$)'),
+        ('CAD', 'Canadian Dollar (C$)'),
+        ('CHF', 'Swiss Franc (CHF)'),
+        ('CNY', 'Chinese Yuan (¥)'),
+        ('EGP', 'Egyptian Pound (E£)'),
+        ('SAR', 'Saudi Riyal (﷼)'),
+        ('AED', 'UAE Dirham (د.إ)'),
+    ]
+    
+    currency = models.CharField(max_length=3, choices=CURRENCY_CHOICES, default='USD')
+    currency_symbol = models.CharField(max_length=5, blank=True, help_text='Custom currency symbol if needed')
+    
+    # Date format settings
+    DATE_FORMAT_CHOICES = [
+        ('MM/DD/YYYY', 'MM/DD/YYYY'),
+        ('DD/MM/YYYY', 'DD/MM/YYYY'),
+        ('YYYY-MM-DD', 'YYYY-MM-DD'),
+    ]
+    date_format = models.CharField(max_length=10, choices=DATE_FORMAT_CHOICES, default='MM/DD/YYYY')
+    
+    # System settings
+    system_name = models.CharField(max_length=100, default='Benchstay')
+    system_version = models.CharField(max_length=20, default='2.0.0')
+    company_name = models.CharField(max_length=100, blank=True, null=True)
+    company_logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)
+    support_email = models.EmailField(blank=True, null=True)
+    
+    # Email settings
+    enable_email_notifications = models.BooleanField(default=True)
+    
+    # Performance settings
+    items_per_page = models.IntegerField(default=25, help_text='Number of items to display per page in tables')
+    
+    # Singleton pattern - only one instance of settings should exist
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'System Settings'
+        verbose_name_plural = 'System Settings'
+    
+    def save(self, *args, **kwargs):
+        # Ensure only one instance exists
+        if not self.pk and SystemSettings.objects.exists():
+            # Update existing settings instead of creating new ones
+            return SystemSettings.objects.first().save(*args, **kwargs)
+        return super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_settings(cls):
+        """Get or create system settings"""
+        settings, created = cls.objects.get_or_create(pk=1)
+        return settings
+    
+    def __str__(self):
+        return f"System Settings (Last updated: {self.updated_at})"

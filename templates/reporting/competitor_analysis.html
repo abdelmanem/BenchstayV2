@@ -3,113 +3,451 @@
 {% load custom_tags %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Competitor Analysis Report</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Competitor Analysis Report</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --info-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --danger-gradient: linear-gradient(135deg, #ff6b6b 0%, #ffa726 100%);
+            --card-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            --card-hover-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
 
-    <!-- Report Generation Card -->
-    <div class="card mb-4 shadow">
-        <div class="card-header bg-primary text-white">
-            <h5 class="card-title mb-0">Report Parameters</h5>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .enhanced-card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .enhanced-card:hover {
+            box-shadow: var(--card-hover-shadow);
+            transform: translateY(-5px);
+        }
+
+        .gradient-header {
+            background: var(--primary-gradient);
+            border: none;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .gradient-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .gradient-header * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .performance-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .performance-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: var(--success-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .form-control, .form-check-input {
+            border-radius: 10px;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-check-input:checked {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+        }
+
+        .btn-enhanced {
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-enhanced::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-enhanced:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary.btn-enhanced {
+            background: var(--primary-gradient);
+            border: none;
+        }
+
+        .btn-outline-info.btn-enhanced {
+            background: transparent;
+            border: 2px solid #43e97b;
+            color: #43e97b;
+        }
+
+        .btn-outline-info.btn-enhanced:hover {
+            background: var(--info-gradient);
+            border-color: transparent;
+            color: white;
+        }
+
+        .table-enhanced {
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .table-enhanced thead th {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border: none;
+            padding: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.85rem;
+        }
+
+        .table-enhanced tbody tr {
+            transition: all 0.3s ease;
+        }
+
+        .table-enhanced tbody tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+            transform: scale(1.01);
+        }
+
+        .competitor-checkbox {
+            background: rgba(255,255,255,0.9);
+            border-radius: 10px;
+            padding: 1rem;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .competitor-checkbox:hover {
+            background: rgba(102, 126, 234, 0.05);
+            border-color: rgba(102, 126, 234, 0.2);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-positive { background-color: #4facfe; }
+        .status-negative { background-color: #ff6b6b; }
+        .status-neutral { background-color: #ffa726; }
+
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 2rem 0;
+        }
+
+        .progress-enhanced {
+            height: 8px;
+            border-radius: 10px;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .progress-bar-enhanced {
+            background: var(--success-gradient);
+            border-radius: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .metric-value {
+                font-size: 2rem;
+            }
+            
+            .table-responsive {
+                border-radius: 15px;
+            }
+            
+            .competitor-checkbox {
+                margin-bottom: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid px-4 py-5">
+        <!-- Header -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="display-4 fw-bold text-dark mb-2">Competitor Analysis</h1>
+                        <p class="text-muted fs-5">Monitor your competitive position and market performance</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary btn-enhanced" onclick="exportData()">
+                            <i class="bi bi-download me-2"></i>Export
+                        </button>
+                        <button class="btn btn-outline-info btn-enhanced" onclick="toggleAutoRefresh()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Auto Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <form method="post" class="needs-validation" novalidate>
-                {% csrf_token %}
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input type="date" class="form-control" id="start_date" name="start_date" 
-                                   value="{{ start_date|date:'Y-m-d' }}" required>
-                            <label for="start_date">Start Date</label>
+
+        <!-- Report Generation Card -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="card enhanced-card fade-in">
+                    <div class="card-header gradient-header">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-gear-fill fs-4 me-3"></i>
+                            <h5 class="card-title mb-0 text-white">Report Configuration</h5>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input type="date" class="form-control" id="end_date" name="end_date"
-                                   value="{{ end_date|date:'Y-m-d' }}" required>
-                            <label for="end_date">End Date</label>
-                        </div>
-                    </div>
-                    
-                    <div class="col-12">
-                        <div class="border p-3 rounded">
-                            <h6 class="mb-3">Select Competitors</h6>
-                            <div class="row row-cols-1 row-cols-md-3 g-2">
-                                {% for competitor in competitors %}
-                                <div class="col">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" 
-                                               name="competitors" value="{{ competitor.id }}" 
-                                               id="competitor_{{ competitor.id }}" 
-                                               {% if competitor in selected_competitors %}checked{% endif %}>
-                                        <label class="form-check-label" for="competitor_{{ competitor.id }}">
-                                            {{ competitor.name }}
+                    <div class="card-body p-4">
+                        <form method="post" class="needs-validation" novalidate id="reportForm">
+                            {% csrf_token %}
+                            <div class="row g-4">
+                                <!-- Date Range -->
+                                <div class="col-lg-6">
+                                    <div class="row g-3">
+                                        <div class="col-6">
+                                            <div class="form-floating">
+                                                <input type="date" class="form-control" id="start_date" name="start_date" 
+                                                       value="{{ start_date|date:'Y-m-d' }}" required>
+                                                <label for="start_date"><i class="bi bi-calendar-event me-2"></i>Start Date</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="form-floating">
+                                                <input type="date" class="form-control" id="end_date" name="end_date"
+                                                       value="{{ end_date|date:'Y-m-d' }}" required>
+                                                <label for="end_date"><i class="bi bi-calendar-check me-2"></i>End Date</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Quick Date Presets -->
+                                <div class="col-lg-6">
+                                    <label class="form-label fw-bold mb-3">Quick Date Selection</label>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" onclick="setDateRange(7)">Last 7 Days</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" onclick="setDateRange(30)">Last 30 Days</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" onclick="setDateRange(90)">Last 3 Months</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" onclick="setDateRange('ytd')">Year to Date</button>
+                                    </div>
+                                </div>
+
+                                <!-- Competitor Selection -->
+                                <div class="col-12">
+                                    <label class="form-label fw-bold mb-3">
+                                        <i class="bi bi-building me-2"></i>Select Competitors
+                                        <span class="badge bg-primary rounded-pill ms-2" id="selectedCount">{{ selected_competitors|length }}</span>
+                                    </label>
+                                    <div class="row g-3" id="competitorGrid">
+                                        {% for competitor in competitors %}
+                                        <div class="col-md-4 col-sm-6">
+                                            <div class="competitor-checkbox">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" 
+                                                           name="competitors" value="{{ competitor.id }}" 
+                                                           id="competitor_{{ competitor.id }}" 
+                                                           {% if competitor in selected_competitors %}checked{% endif %}
+                                                           onchange="updateSelectedCount()">
+                                                    <label class="form-check-label fw-semibold" for="competitor_{{ competitor.id }}">
+                                                        <i class="bi bi-building me-2 text-primary"></i>{{ competitor.name }}
+                                                    </label>
+                                                    <div class="small text-muted mt-1">
+                                                        {% if competitor.star_rating %}{{ competitor.star_rating }}-star{% endif %}
+                                                        {% if competitor.room_count %} • {{ competitor.room_count }} rooms{% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-link text-decoration-none p-0" onclick="selectAllCompetitors(true)">
+                                            <i class="bi bi-check-all me-1"></i>Select All
+                                        </button>
+                                        <span class="mx-2">|</span>
+                                        <button type="button" class="btn btn-link text-decoration-none p-0" onclick="selectAllCompetitors(false)">
+                                            <i class="bi bi-x-lg me-1"></i>Clear All
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Report Options -->
+                                <div class="col-lg-6">
+                                    <div class="form-floating">
+                                        <input type="text" class="form-control" id="report_name" name="report_name" placeholder="Report Name">
+                                        <label for="report_name"><i class="bi bi-file-text me-2"></i>Report Name (optional)</label>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6 d-flex align-items-center">
+                                    <div class="form-check form-switch me-4">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="save_report" name="save_report">
+                                        <label class="form-check-label fw-semibold" for="save_report">
+                                            <i class="bi bi-bookmark me-2"></i>Save Report
                                         </label>
                                     </div>
                                 </div>
-                                {% endfor %}
                             </div>
-                        </div>
-                    </div>
 
-                    <div class="col-md-6">
-                        <div class="form-floating">
-                            <input type="text" class="form-control" id="report_name" name="report_name">
-                            <label for="report_name">Report Name (optional)</label>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="form-check form-switch pt-3">
-                            <input class="form-check-input" type="checkbox" role="switch" 
-                                   id="save_report" name="save_report">
-                            <label class="form-check-label" for="save_report">Save Report</label>
-                        </div>
+                            <!-- Action Buttons -->
+                            <div class="d-flex justify-content-between align-items-center mt-5">
+                                <div>
+                                    <button type="submit" class="btn btn-primary btn-enhanced me-3">
+                                        <div class="loading-spinner" id="loadingSpinner"></div>
+                                        <i class="bi bi-file-earmark-bar-graph me-2"></i>Generate Report
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-enhanced" onclick="previewReport()">
+                                        <i class="bi bi-eye me-2"></i>Preview
+                                    </button>
+                                </div>
+                                <a href="{% url 'reporting:competitor_advanced_analytics' %}" class="btn btn-outline-info btn-enhanced">
+                                    <i class="bi bi-graph-up me-2"></i>Advanced Analytics
+                                </a>
+                            </div>
+                        </form>
                     </div>
                 </div>
-
-                <div class="mt-4 d-flex justify-content-between">
-                    <button type="submit" class="btn btn-primary px-4">
-                        <i class="bi bi-file-earmark-bar-graph me-2"></i>Generate Report
-                    </button>
-                    <a href="{% url 'reporting:competitor_advanced_analytics' %}" 
-                       class="btn btn-outline-info">
-                        <i class="bi bi-graph-up me-2"></i>Advanced Analytics
-                    </a>
-                </div>
-            </form>
+            </div>
         </div>
-    </div>
 
-    <!-- Performance Summary Cards -->
-    <div class="row g-4 mb-4">
-        <div class="col-12">
-            <div class="card h-100 shadow">
-                <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0">Your Hotel Performance Summary</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row g-2">
-                        <div class="col-md-4">
-                            <div class="card bg-light h-100">
-                                <div class="card-body text-center py-4">
-                                    <h3 class="text-success">{{ hotel_summary.avg_occupancy|floatformat:2 }}%</h3>
-                                    <p class="mb-0 text-muted">Average Occupancy</p>
+        <!-- Performance Summary Cards -->
+        {% if hotel_summary %}
+        <div class="row g-4 mb-5">
+            <div class="col-12">
+                <div class="card enhanced-card fade-in">
+                    <div class="card-header" style="background: var(--success-gradient);">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-trophy-fill fs-4 me-3 text-white"></i>
+                                <h5 class="card-title mb-0 text-white">Your Hotel Performance</h5>
+                            </div>
+                            <span class="badge bg-white text-success px-3 py-2 rounded-pill">Live Data</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row g-4">
+                            <div class="col-lg-4">
+                                <div class="performance-card p-4 text-center h-100">
+                                    <div class="metric-value">{{ hotel_summary.avg_occupancy|floatformat:1 }}%</div>
+                                    <p class="mb-2 text-muted fw-semibold">Average Occupancy</p>
+                                    <div class="progress progress-enhanced">
+                                        <div class="progress-bar progress-bar-enhanced" style="width: {{ hotel_summary.avg_occupancy }}%"></div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card bg-light h-100">
-                                <div class="card-body text-center py-4">
-                                    <h3 class="text-success">EGP {{ hotel_summary.avg_rate|floatformat:2 }}</h3>
-                                    <p class="mb-0 text-muted">Average Daily Rate</p>
+                            <div class="col-lg-4">
+                                <div class="performance-card p-4 text-center h-100">
+                                    <div class="metric-value">{{ system_settings.currency_symbol }}{{ hotel_summary.avg_rate|floatformat:0 }}</div>
+                                    <p class="mb-2 text-muted fw-semibold">Average Daily Rate</p>
+                                    <div class="progress progress-enhanced">
+                                        <div class="progress-bar progress-bar-enhanced" style="width: 65%"></div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card bg-light h-100">
-                                <div class="card-body text-center py-4">
-                                    <h3 class="text-success">EGP {{ hotel_summary.avg_revpar|floatformat:2 }}</h3>
-                                    <p class="mb-0 text-muted">Average RevPAR</p>
+                            <div class="col-lg-4">
+                                <div class="performance-card p-4 text-center h-100">
+                                    <div class="metric-value">{{ system_settings.currency_symbol }}{{ hotel_summary.avg_revpar|floatformat:0 }}</div>
+                                    <p class="mb-2 text-muted fw-semibold">Revenue per Available Room</p>
+                                    <div class="progress progress-enhanced">
+                                        <div class="progress-bar progress-bar-enhanced" style="width: {% widthratio hotel_summary.avg_revpar hotel_summary.avg_rate 100 %}%"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -117,108 +455,589 @@
                 </div>
             </div>
         </div>
-    </div>
+        {% endif %}
 
-    <!-- Competitor Summary Table -->
-    <div class="card mb-4 shadow">
-        <div class="card-header bg-info text-white">
-            <h5 class="card-title mb-0">Competitor Performance Overview</h5>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Competitor</th>
-                            <th>Avg. Occupancy</th>
-                            <th>Avg. Rate</th>
-                            <th>Rate Difference</th>
-                            <th>Occupancy Difference</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for competitor_id, data in competitor_summaries.items %}
-                        <tr>
-                            <td>{{ data.name }}</td>
-                            <td>{{ data.avg_occupancy|floatformat:2 }}%</td>
-                            <td>EGP {{ data.avg_rate|floatformat:2 }}</td>
-                            <td class="{% if data.avg_rate > hotel_summary.avg_rate %}text-danger{% else %}text-success{% endif %}">
-                                {{ data.avg_rate|subtract:hotel_summary.avg_rate|floatformat:2 }}
-                            </td>
-                            <td class="{% if data.avg_occupancy > hotel_summary.avg_occupancy %}text-danger{% else %}text-success{% endif %}">
-                                {{ data.avg_occupancy|subtract:hotel_summary.avg_occupancy|floatformat:2 }}%
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center text-muted py-4">No competitor data available</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <!-- Competitor Summary Table -->
+        {% if competitor_summaries %}
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="card enhanced-card fade-in">
+                    <div class="card-header" style="background: var(--info-gradient);">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-people-fill fs-4 me-3 text-white"></i>
+                                <h5 class="card-title mb-0 text-white">Competitor Performance Overview</h5>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-light btn-sm" onclick="toggleView('table')">
+                                    <i class="bi bi-table"></i>
+                                </button>
+                                <button class="btn btn-outline-light btn-sm" onclick="toggleView('chart')">
+                                    <i class="bi bi-bar-chart"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-enhanced mb-0">
+                                <thead>
+                                    <tr>
+                                        <th><i class="bi bi-building me-2"></i>Competitor</th>
+                                        <th><i class="bi bi-percent me-2"></i>Avg. Occupancy</th>
+                                        <th><i class="bi bi-currency-dollar me-2"></i>Avg. Rate</th>
+                                        <th><i class="bi bi-arrow-up-down me-2"></i>Rate Difference</th>
+                                        <th><i class="bi bi-graph-up-arrow me-2"></i>Occupancy Difference</th>
+                                        <th><i class="bi bi-activity me-2"></i>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for competitor_id, data in competitor_summaries.items %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="status-indicator {% if data.avg_occupancy > hotel_summary.avg_occupancy %}status-positive{% elif data.avg_occupancy < hotel_summary.avg_occupancy %}status-negative{% else %}status-neutral{% endif %}"></div>
+                                                <strong>{{ data.name }}</strong>
+                                            </div>
+                                        </td>
+                                        <td>{{ data.avg_occupancy|floatformat:1 }}%</td>
+                                        <td>{{ system_settings.currency_symbol }}{{ data.avg_rate|floatformat:0 }}</td>
+                                        <td class="{% if data.avg_rate > hotel_summary.avg_rate %}text-danger{% else %}text-success{% endif %}">
+                                            <i class="bi bi-arrow-{% if data.avg_rate > hotel_summary.avg_rate %}up{% else %}down{% endif %} me-1"></i>
+                                            {{ system_settings.currency_symbol }}{{ data.avg_rate|subtract:hotel_summary.avg_rate|floatformat:0 }}
+                                        </td>
+                                        <td class="{% if data.avg_occupancy > hotel_summary.avg_occupancy %}text-danger{% else %}text-success{% endif %}">
+                                            <i class="bi bi-arrow-{% if data.avg_occupancy > hotel_summary.avg_occupancy %}up{% else %}down{% endif %} me-1"></i>
+                                            {{ data.avg_occupancy|subtract:hotel_summary.avg_occupancy|floatformat:1 }}%
+                                        </td>
+                                        <td>
+                                            {% if data.avg_occupancy > hotel_summary.avg_occupancy %}
+                                                <span class="badge bg-success">Ahead</span>
+                                            {% elif data.avg_occupancy < hotel_summary.avg_occupancy %}
+                                                <span class="badge bg-danger">Behind</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Equal</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">No competitor data available</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+        {% endif %}
 
-    <!-- Detailed Daily Comparison -->
-    <div class="card shadow">
-        <div class="card-header bg-warning text-dark">
-            <h5 class="card-title mb-0">Daily Performance Comparison</h5>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Date</th>
-                            <th colspan="2" class="text-center">Your Hotel</th>
-                            {% for competitor in selected_competitors %}
-                            <th colspan="2" class="text-center">{{ competitor.name }}</th>
-                            {% endfor %}
-                        </tr>
-                        <tr>
-                            <th></th>
-                            <th>Occupancy</th>
-                            <th>ADR</th>
-                            {% for competitor in selected_competitors %}
-                            <th>Occupancy</th>
-                            <th>ADR</th>
-                            {% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for data in hotel_data %}
-                        <tr>
-                            <td>{{ data.date|date:"M j" }}</td>
-                            <td>{{ data.occupancy_percentage|floatformat:2 }}%</td>
-                            <td>EGP {{ data.average_rate|floatformat:2 }}</td>
-                            {% for competitor in selected_competitors %}
-                                {% get_competitor_data competitor_data data.date competitor as comp_data %}
-                                {% if comp_data %}
-                                    <td class="{% if comp_data.estimated_occupancy > data.occupancy_percentage %}table-danger{% elif comp_data.estimated_occupancy < data.occupancy_percentage %}table-success{% endif %}">
-                                        {{ comp_data.estimated_occupancy|floatformat:2 }}%
-                                    </td>
-                                    <td class="{% if comp_data.estimated_average_rate > data.average_rate %}table-danger{% elif comp_data.estimated_average_rate < data.average_rate %}table-success{% endif %}">
-                                        EGP {{ comp_data.estimated_average_rate|floatformat:2 }}
-                                    </td>
-                                {% else %}
-                                    <td>-</td>
-                                    <td>-</td>
-                                {% endif %}
-                            {% endfor %}
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="{{ 3|add:selected_competitors|length|multiply:2 }}" 
-                                class="text-center text-muted py-4">
-                                No daily data available for selected period
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <!-- Daily Performance Comparison -->
+        {% if hotel_data %}
+        <div class="row">
+            <div class="col-12">
+                <div class="card enhanced-card fade-in">
+                    <div class="card-header" style="background: var(--warning-gradient);">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-calendar-week-fill fs-4 me-3 text-white"></i>
+                                <h5 class="card-title mb-0 text-white">Daily Performance Comparison</h5>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-light btn-sm" onclick="exportDailyData()">
+                                    <i class="bi bi-download"></i>
+                                </button>
+                                <button class="btn btn-light btn-sm" onclick="refreshDailyData()">
+                                    <i class="bi bi-arrow-clockwise"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover table-enhanced">
+                                <thead>
+                                    <tr>
+                                        <th rowspan="2" class="align-middle">Date</th>
+                                        <th colspan="2" class="text-center bg-success text-white">Your Hotel</th>
+                                        {% for competitor in selected_competitors %}
+                                        <th colspan="2" class="text-center bg-primary text-white">{{ competitor.name|truncatechars:15 }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                    <tr>
+                                        <th class="bg-light">Occupancy</th>
+                                        <th class="bg-light">ADR</th>
+                                        {% for competitor in selected_competitors %}
+                                        <th class="bg-light">Occupancy</th>
+                                        <th class="bg-light">ADR</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for data in hotel_data %}
+                                    <tr>
+                                        <td class="fw-bold">{{ data.date|date:"M j" }}</td>
+                                        <td>{{ data.occupancy_percentage|floatformat:1 }}%</td>
+                                        <td>{{ system_settings.currency_symbol }}{{ data.average_rate|floatformat:0 }}</td>
+                                        {% for competitor in selected_competitors %}
+                                            {% get_competitor_data competitor_data data.date competitor as comp_data %}
+                                            {% if comp_data %}
+                                                <td class="{% if comp_data.estimated_occupancy > data.occupancy_percentage %}table-danger{% elif comp_data.estimated_occupancy < data.occupancy_percentage %}table-success{% endif %}">
+                                                    {{ comp_data.estimated_occupancy|floatformat:1 }}%
+                                                </td>
+                                                <td class="{% if comp_data.estimated_average_rate > data.average_rate %}table-danger{% elif comp_data.estimated_average_rate < data.average_rate %}table-success{% endif %}">
+                                                    {{ system_settings.currency_symbol }}{{ comp_data.estimated_average_rate|floatformat:0 }}
+                                                </td>
+                                            {% else %}
+                                                <td class="text-muted">-</td>
+                                                <td class="text-muted">-</td>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="{% if selected_competitors %}{{ selected_competitors|length|add:selected_competitors|length|add:1 }}{% else %}3{% endif %}" 
+                                            class="text-center text-muted py-4">
+                                            No daily data available for selected period
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-3 text-center">
+                            <small class="text-muted">
+                                <span class="badge bg-success me-2">Green</span>Better than competitor
+                                <span class="badge bg-danger mx-2">Red</span>Behind competitor
+                                <span class="badge bg-secondary ms-2">Gray</span>No data available
+                            </small>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
+        {% endif %}
     </div>
-</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
+    
+    <script>
+        // Global variables
+        let autoRefreshInterval = null;
+        let isAutoRefreshEnabled = false;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSelectedCount();
+            initializeForm();
+            addAnimationObserver();
+        });
+
+        // Date Management
+        function setDateRange(days) {
+            const today = new Date();
+            const endDate = today.toISOString().split('T')[0];
+            let startDate;
+
+            if (days === 'ytd') {
+                startDate = new Date(today.getFullYear(), 0, 1).toISOString().split('T')[0];
+            } else {
+                const start = new Date(today.getTime() - (days * 24 * 60 * 60 * 1000));
+                startDate = start.toISOString().split('T')[0];
+            }
+
+            document.getElementById('start_date').value = startDate;
+            document.getElementById('end_date').value = endDate;
+
+            // Add visual feedback
+            document.querySelectorAll('.btn-outline-primary').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // Competitor Selection
+        function updateSelectedCount() {
+            const checkedBoxes = document.querySelectorAll('input[name="competitors"]:checked');
+            const countBadge = document.getElementById('selectedCount');
+            if (countBadge) {
+                countBadge.textContent = checkedBoxes.length;
+                
+                // Update badge color based on selection
+                countBadge.className = checkedBoxes.length > 0 
+                    ? 'badge bg-success rounded-pill ms-2' 
+                    : 'badge bg-primary rounded-pill ms-2';
+            }
+        }
+
+        function selectAllCompetitors(selectAll) {
+            const checkboxes = document.querySelectorAll('input[name="competitors"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = selectAll;
+                // Add animation effect
+                const card = checkbox.closest('.competitor-checkbox');
+                if (selectAll) {
+                    card.style.transform = 'scale(0.95)';
+                    setTimeout(() => card.style.transform = 'scale(1)', 150);
+                }
+            });
+            updateSelectedCount();
+        }
+
+        // Form Handling
+        function initializeForm() {
+            const form = document.getElementById('reportForm');
+            
+            form.addEventListener('submit', function(e) {
+                const submitBtn = document.querySelector('button[type="submit"]');
+                const spinner = document.getElementById('loadingSpinner');
+                
+                // Show loading state
+                submitBtn.disabled = true;
+                if (spinner) {
+                    spinner.style.display = 'inline-block';
+                }
+                submitBtn.innerHTML = '<div class="loading-spinner"></div><i class="bi bi-file-earmark-bar-graph me-2"></i>Generating...';
+                
+                // Allow form to submit normally to Django backend
+                return true;
+            });
+        }
+
+        function previewReport() {
+            showAlert('Preview functionality would show a modal with report preview', 'info');
+        }
+
+        // Export Functions
+        function exportData() {
+            const data = generateExportData();
+            downloadCSV(data, 'competitor_analysis_' + new Date().toISOString().split('T')[0] + '.csv');
+            showAlert('Data exported successfully!', 'success');
+        }
+
+        function exportDailyData() {
+            const data = generateDailyExportData();
+            downloadCSV(data, 'daily_performance_' + new Date().toISOString().split('T')[0] + '.csv');
+            showAlert('Daily data exported successfully!', 'success');
+        }
+
+        function generateExportData() {
+            // Extract data from the current table
+            const table = document.querySelector('.table-enhanced tbody');
+            if (!table) return 'No data available';
+            
+            let csvContent = 'Hotel,Avg Occupancy,Avg Rate,Rate Difference,Occupancy Difference\n';
+            
+            // Add your hotel data first
+            {% if hotel_summary %}
+            csvContent += 'Your Hotel,{{ hotel_summary.avg_occupancy|floatformat:2 }}%,{{ system_settings.currency_symbol }}{{ hotel_summary.avg_rate|floatformat:2 }},0,0\n';
+            {% endif %}
+            
+            // Add competitor data
+            {% for competitor_id, data in competitor_summaries.items %}
+            csvContent += '{{ data.name }},{{ data.avg_occupancy|floatformat:2 }}%,{{ system_settings.currency_symbol }}{{ data.avg_rate|floatformat:2 }},{{ data.avg_rate|subtract:hotel_summary.avg_rate|floatformat:2 }},{{ data.avg_occupancy|subtract:hotel_summary.avg_occupancy|floatformat:2 }}%\n';
+            {% endfor %}
+            
+            return csvContent;
+        }
+
+        function generateDailyExportData() {
+            // Extract daily data from the table
+            const table = document.querySelector('.table-bordered tbody');
+            if (!table) return 'No daily data available';
+            
+            let csvContent = 'Date,Your Hotel Occupancy,Your Hotel ADR';
+            {% for competitor in selected_competitors %}
+            csvContent += ',{{ competitor.name }} Occupancy,{{ competitor.name }} ADR';
+            {% endfor %}
+            csvContent += '\n';
+            
+            {% for data in hotel_data %}
+            csvContent += '{{ data.date|date:"M j" }},{{ data.occupancy_percentage|floatformat:2 }}%,{{ system_settings.currency_symbol }}{{ data.average_rate|floatformat:2 }}';
+            {% for competitor in selected_competitors %}
+                {% get_competitor_data competitor_data data.date competitor as comp_data %}
+                {% if comp_data %}
+                csvContent += ',{{ comp_data.estimated_occupancy|floatformat:2 }}%,{{ system_settings.currency_symbol }}{{ comp_data.estimated_average_rate|floatformat:2 }}';
+                {% else %}
+                csvContent += ',-,-';
+                {% endif %}
+            {% endfor %}
+            csvContent += '\n';
+            {% endfor %}
+            
+            return csvContent;
+        }
+
+        function downloadCSV(csvContent, filename) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Auto Refresh
+        function toggleAutoRefresh() {
+            const btn = event.target.closest('button');
+            
+            if (isAutoRefreshEnabled) {
+                clearInterval(autoRefreshInterval);
+                isAutoRefreshEnabled = false;
+                btn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Auto Refresh';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-info');
+                showAlert('Auto refresh disabled', 'info');
+            } else {
+                autoRefreshInterval = setInterval(() => {
+                    // Refresh the page to get updated data from Django
+                    window.location.reload();
+                }, 300000); // Refresh every 5 minutes
+                
+                isAutoRefreshEnabled = true;
+                btn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Auto Refresh (ON)';
+                btn.classList.remove('btn-outline-info');
+                btn.classList.add('btn-success');
+                showAlert('Auto refresh enabled (every 5 minutes)', 'success');
+            }
+        }
+
+        function refreshDailyData() {
+            const refreshBtn = document.querySelector('[onclick="refreshDailyData()"]');
+            refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise spin"></i>';
+            
+            // Add CSS for spin animation
+            const style = document.createElement('style');
+            style.textContent = '.spin { animation: spin 1s linear infinite; }';
+            document.head.appendChild(style);
+            
+            // Refresh the page to get updated data
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        }
+
+        // View Toggle
+        function toggleView(viewType) {
+            const buttons = document.querySelectorAll('.btn-group .btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('btn-light');
+                btn.classList.add('btn-outline-light');
+            });
+            
+            event.target.classList.remove('btn-outline-light');
+            event.target.classList.add('btn-light');
+            
+            if (viewType === 'chart') {
+                showChartView();
+            } else {
+                showTableView();
+            }
+        }
+
+        function showChartView() {
+            // In real implementation, create and show chart with competitor data
+            showAlert('Chart view would display interactive charts with your data', 'info');
+        }
+
+        function showTableView() {
+            // Already showing table view
+            showAlert('Switched to table view', 'info');
+        }
+
+        // Utility Functions
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.createElement('div');
+            alertContainer.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertContainer.style.cssText = `
+                top: 20px; 
+                right: 20px; 
+                z-index: 9999; 
+                min-width: 300px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                border: none;
+                border-radius: 10px;
+            `;
+            
+            alertContainer.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-${getAlertIcon(type)} me-2"></i>
+                    <span>${message}</span>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            document.body.appendChild(alertContainer);
+            
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                if (alertContainer.parentNode) {
+                    alertContainer.remove();
+                }
+            }, 5000);
+        }
+
+        function getAlertIcon(type) {
+            const icons = {
+                success: 'check-circle-fill',
+                warning: 'exclamation-triangle-fill',
+                danger: 'x-circle-fill',
+                info: 'info-circle-fill'
+            };
+            return icons[type] || 'info-circle-fill';
+        }
+
+        function animateResults() {
+            const cards = document.querySelectorAll('.enhanced-card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.classList.add('animate__animated', 'animate__pulse');
+                    setTimeout(() => {
+                        card.classList.remove('animate__animated', 'animate__pulse');
+                    }, 1000);
+                }, index * 200);
+            });
+        }
+
+        function addAnimationObserver() {
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate__animated', 'animate__fadeInUp');
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.fade-in').forEach(el => {
+                observer.observe(el);
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'e':
+                        e.preventDefault();
+                        exportData();
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        if (document.getElementById('reportForm')) {
+                            document.getElementById('reportForm').submit();
+                        }
+                        break;
+                    case 'a':
+                        e.preventDefault();
+                        selectAllCompetitors(true);
+                        break;
+                }
+            }
+        });
+
+        // Touch/Mobile optimizations
+        if ('ontouchstart' in window) {
+            document.querySelectorAll('.enhanced-card').forEach(card => {
+                card.addEventListener('touchstart', function() {
+                    this.style.transform = 'translateY(-2px)';
+                });
+                
+                card.addEventListener('touchend', function() {
+                    this.style.transform = '';
+                });
+            });
+        }
+
+        // Print styles
+        window.addEventListener('beforeprint', function() {
+            document.body.classList.add('printing');
+        });
+
+        window.addEventListener('afterprint', function() {
+            document.body.classList.remove('printing');
+        });
+    </script>
+
+    <style>
+        @media print {
+            .btn, .form-control, .form-check-input {
+                display: none !important;
+            }
+            
+            .enhanced-card {
+                break-inside: avoid;
+                box-shadow: none !important;
+                border: 1px solid #dee2e6 !important;
+            }
+            
+            .gradient-header {
+                background: #6c757d !important;
+                color: white !important;
+            }
+        }
+
+        /* Additional mobile optimizations */
+        @media (max-width: 576px) {
+            .container-fluid {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+            
+            .display-4 {
+                font-size: 2rem;
+            }
+            
+            .btn-enhanced {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+            
+            .metric-value {
+                font-size: 1.8rem;
+            }
+            
+            .table-responsive {
+                font-size: 0.85rem;
+            }
+        }
+
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            .enhanced-card {
+                border: 2px solid #000 !important;
+            }
+            
+            .gradient-header {
+                background: #000 !important;
+                color: #fff !important;
+            }
+            
+            .performance-card {
+                background: #fff !important;
+                border: 2px solid #000 !important;
+            }
+        }
+
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</body>
+</html>
 {% endblock %}

@@ -64,7 +64,7 @@
                         <div class="card bg-primary text-white">
                             <div class="card-body text-center">
                                 <h5 class="card-title">Total Revenue</h5>
-                                <h2 class="display-6">EGP {{ summary.total_revenue|floatformat:2 }}</h2>
+                                <h2 class="display-6">{{ system_settings.currency_symbol }} {{ summary.total_revenue|floatformat:2 }}</h2>
                             </div>
                         </div>
                     </div>
@@ -72,7 +72,7 @@
                         <div class="card bg-success text-white">
                             <div class="card-body text-center">
                                 <h5 class="card-title">Avg. Daily Revenue</h5>
-                                <h2 class="display-6">EGP {{ summary.avg_daily_revenue|floatformat:2 }}</h2>
+                                <h2 class="display-6">{{ system_settings.currency_symbol }} {{ summary.avg_daily_revenue|floatformat:2 }}</h2>
                             </div>
                         </div>
                     </div>
@@ -80,7 +80,7 @@
                         <div class="card bg-info text-white">
                             <div class="card-body text-center">
                                 <h5 class="card-title">Avg. Rate</h5>
-                                <h2 class="display-6">EGP {{ summary.avg_rate|floatformat:2 }}</h2>
+                                <h2 class="display-6">{{ system_settings.currency_symbol }} {{ summary.avg_rate|floatformat:2 }}</h2>
                             </div>
                         </div>
                     </div>
@@ -88,7 +88,7 @@
                         <div class="card bg-warning text-dark">
                             <div class="card-body text-center">
                                 <h5 class="card-title">Avg. RevPAR</h5>
-                                <h2 class="display-6">EGP {{ summary.avg_revpar|floatformat:2 }}</h2>
+                                <h2 class="display-6">{{ system_settings.currency_symbol }} {{ summary.avg_revpar|floatformat:2 }}</h2>
                             </div>
                         </div>
                     </div>
@@ -124,9 +124,9 @@
                                 <td>{{ data.date|date:"M d, Y" }}</td>
                                 <td>{{ data.rooms_sold }}</td>
                                 <td>{{ data.occupancy_percentage|floatformat:1 }}%</td>
-                                <td>EGP {{ data.average_rate|floatformat:2 }}</td>
-                                <td>EGP {{ data.revpar|floatformat:2 }}</td>
-                                <td>EGP {{ data.total_revenue|floatformat:2 }}</td>
+                                <td>{{ system_settings.currency_symbol }} {{ data.average_rate|floatformat:2 }}</td>
+                                <td>{{ system_settings.currency_symbol }} {{ data.revpar|floatformat:2 }}</td>
+                                <td>{{ system_settings.currency_symbol }} {{ data.total_revenue|floatformat:2 }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -165,7 +165,7 @@
                 labels: dates,
                 datasets: [
                     {
-                        label: 'Revenue (EGP)',
+                        label: 'Revenue ({{ system_settings.currency_symbol }})',
                         data: revenues,
                         backgroundColor: 'rgba(0, 123, 255, 0.5)',
                         borderColor: 'rgba(0, 123, 255, 1)',
@@ -192,7 +192,7 @@
                         position: 'left',
                         title: {
                             display: true,
-                            text: 'Revenue (EGP)'
+                            text: 'Revenue ({{ system_settings.currency_symbol }})'
                         },
                         beginAtZero: true
                     },

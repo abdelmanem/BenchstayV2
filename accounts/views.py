@@ -56,8 +56,8 @@ def help_page(request):
         'name': 'Benchstay',
         'version': '2.0.0',  # You can update this with your actual version
         'description': 'Hotel Benchmarking Platform',
-        'developer': 'Your Company Name',
-        'contact': 'support@example.com',
+        'developer': 'Abdelmanem Samy',
+        'contact': 'Abdelmmanem@msn.com',
         'django_version': django_version,
         'python_version': settings.PYTHON_VERSION if hasattr(settings, 'PYTHON_VERSION') else 'Not specified',
     }
@@ -135,7 +135,7 @@ def profile(request):
 
 @login_required
 def admin_settings(request):
-    """Admin settings view - only accessible to admin users"""
+    """Admin dashboard with user management, system settings, and system information"""
     # Check if user is admin
     try:
         # Get or create the user profile
@@ -150,7 +150,37 @@ def admin_settings(request):
         messages.error(request, 'An error occurred. Please contact the administrator.')
         return redirect('hotel_management:home')
     
+    # Get all users for user management section
     users = User.objects.all()
+    
+    # Get or create system settings
+    from .models import SystemSettings
+    system_settings = SystemSettings.get_settings()
+    
+    # Get system information
+    import platform
+    import django
+    import psycopg2
+    import sys
+    import os
+    from django.conf import settings
+    
+    system_info = {
+        'django_version': django.get_version(),
+        'python_version': platform.python_version(),
+        'os_name': platform.system(),
+        'os_version': platform.version(),
+        'database_engine': settings.DATABASES['default']['ENGINE'].split('.')[-1],
+        'database_name': settings.DATABASES['default']['NAME'],
+        'database_user': settings.DATABASES['default']['USER'],
+        'database_host': settings.DATABASES['default']['HOST'],
+        'database_port': settings.DATABASES['default']['PORT'],
+        'media_root': settings.MEDIA_ROOT,
+        'static_root': settings.STATIC_ROOT,
+    }
+    
+    # Get active tab from URL parameter or default to user_management
+    active_tab = request.GET.get('tab', 'user_management')
     
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -251,9 +281,35 @@ def admin_settings(request):
                 messages.success(request, f'User {username} has been created successfully')
             except Exception as e:
                 messages.error(request, f'Error creating user: {str(e)}')
+        
+        # Handle system settings update
+        elif action == 'update_system_settings':
+            try:
+                # Update system settings
+                system_settings.currency = request.POST.get('currency')
+                system_settings.currency_symbol = request.POST.get('currency_symbol', '')
+                system_settings.date_format = request.POST.get('date_format')
+                system_settings.system_name = request.POST.get('system_name')
+                system_settings.system_version = request.POST.get('system_version')
+                system_settings.company_name = request.POST.get('company_name', '')
+                system_settings.support_email = request.POST.get('support_email', '')
+                system_settings.enable_email_notifications = request.POST.get('enable_email_notifications') == 'on'
+                system_settings.items_per_page = int(request.POST.get('items_per_page', 25))
+                
+                # Handle company logo upload
+                if 'company_logo' in request.FILES:
+                    system_settings.company_logo = request.FILES['company_logo']
+                
+                system_settings.save()
+                messages.success(request, 'System settings updated successfully')
+            except Exception as e:
+                messages.error(request, f'Error updating system settings: {str(e)}')
     
     context = {
-        'title': 'Admin Settings - Benchstay',
-        'users': users
+        'title': 'Admin Dashboard - Benchstay',
+        'users': users,
+        'system_settings': system_settings,
+        'system_info': system_info,
+        'active_tab': active_tab,
     }
     return render(request, 'accounts/admin_settings.html', context)

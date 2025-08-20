@@ -12,6 +12,9 @@ urlpatterns = [
     path('occupancy-reports/', views.occupancy_reports, name='occupancy_reports'),
     path('competitor-analysis/', views.competitor_analysis, name='competitor_analysis'),
     path('competitor-advanced-analytics/', views.competitor_advanced_analytics, name='competitor_advanced_analytics'),
+    path('competitor-charts/', views.competitor_charts, name='competitor_charts'),
+    path('competitor-analytics-charts/', views.competitor_analytics_charts, name='competitor_analytics_charts'),
+    path('competitor-data-visualization/', views.competitor_data_visualization, name='competitor_data_visualization'),
     path('export-pdf/', views.export_competitor_analytics_pdf, name='export_competitor_analytics_pdf'),
     # AJAX endpoints
     path('ajax/refresh-competitor-analytics/', ajax_views.refresh_competitor_analytics, name='refresh_competitor_analytics'),

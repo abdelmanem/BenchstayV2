@@ -68,14 +68,15 @@ function updateTableData(tableId, data) {
     
     Object.entries(data).forEach(([hotelName, metrics]) => {
         const row = document.createElement('tr');
+        const currencySymbol = document.getElementById('currency-symbol-data')?.dataset.symbol || '$';
         row.innerHTML = `
             <td>${hotelName}</td>
             <td>${metrics.rooms_available}</td>
             <td>${(metrics.occupancy_percentage).toFixed(2)}%</td>
-            <td>$${(metrics.average_rate).toFixed(2)}</td>
+            <td>${currencySymbol}${(metrics.average_rate).toFixed(2)}</td>
             <td>${metrics.rooms_sold}</td>
-            <td>$${(metrics.room_revenue).toFixed(2)}</td>
-            <td>$${(metrics.revpar).toFixed(2)}</td>
+            <td>${currencySymbol}${(metrics.room_revenue).toFixed(2)}</td>
+            <td>${currencySymbol}${(metrics.revpar).toFixed(2)}</td>
             <td>${(metrics.fair_market_share).toFixed(2)}%</td>
             <td>${(metrics.actual_market_share).toFixed(2)}%</td>
             <td>${metrics.mpi_rank}</td>

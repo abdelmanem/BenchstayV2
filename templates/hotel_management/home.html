@@ -56,9 +56,9 @@
                     {{ summary.adr_change|floatformat:1 }}%
                 </div>
             </div>
-            <div class="metric-value">EGP {{ summary.current_adr|floatformat:2 }}</div>
+            <div class="metric-value">{{ system_settings.currency_symbol }} {{ summary.current_adr|floatformat:2 }}</div>
             <div class="text-muted small">
-                Prior Year: EGP {{ summary.prior_year_adr|floatformat:2 }}
+                Prior Year: {{ system_settings.currency_symbol }} {{ summary.prior_year_adr|floatformat:2 }}
             </div>
         </div>
     </div>
@@ -74,9 +74,9 @@
                     {{ summary.revpar_change|floatformat:1 }}%
                 </div>
             </div>
-            <div class="metric-value">EGP {{ summary.current_revpar|floatformat:2 }}</div>
+            <div class="metric-value">{{ system_settings.currency_symbol }} {{ summary.current_revpar|floatformat:2 }}</div>
             <div class="text-muted small">
-                Prior Year: EGP {{ summary.prior_year_revpar|floatformat:2 }}
+                Prior Year: {{ system_settings.currency_symbol }} {{ summary.prior_year_revpar|floatformat:2 }}
             </div>
         </div>
     </div>

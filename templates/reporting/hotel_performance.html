@@ -31,7 +31,7 @@
             <div class="card h-100">
                 <div class="card-body">
                     <h6 class="card-subtitle mb-2 text-muted">Average Daily Rate</h6>
-                    <h3 class="card-title mb-0">${{ summary.avg_rate|floatformat:2|intcomma }}</h3>
+                    <h3 class="card-title mb-0">{{ system_settings.currency_symbol }}{{ summary.avg_rate|floatformat:2|intcomma }}</h3>
                     <p class="card-text mt-2 {% if summary.rate_change > 0 %}text-success{% elif summary.rate_change < 0 %}text-danger{% endif %}">
                         <i class="bi {% if summary.rate_change > 0 %}bi-arrow-up{% elif summary.rate_change < 0 %}bi-arrow-down{% else %}bi-dash{% endif %}"></i>
                         {{ summary.rate_change|floatformat:1 }}% YoY
@@ -43,7 +43,7 @@
             <div class="card h-100">
                 <div class="card-body">
                     <h6 class="card-subtitle mb-2 text-muted">RevPAR</h6>
-                    <h3 class="card-title mb-0">${{ summary.avg_revpar|floatformat:2|intcomma }}</h3>
+                    <h3 class="card-title mb-0">{{ system_settings.currency_symbol }}{{ summary.avg_revpar|floatformat:2|intcomma }}</h3>
                     <p class="card-text mt-2 {% if summary.revpar_change > 0 %}text-success{% elif summary.revpar_change < 0 %}text-danger{% endif %}">
                         <i class="bi {% if summary.revpar_change > 0 %}bi-arrow-up{% elif summary.revpar_change < 0 %}bi-arrow-down{% else %}bi-dash{% endif %}"></i>
                         {{ summary.revpar_change|floatformat:1 }}% YoY
@@ -55,7 +55,7 @@
             <div class="card h-100">
                 <div class="card-body">
                     <h6 class="card-subtitle mb-2 text-muted">Total Revenue</h6>
-                    <h3 class="card-title mb-0">${{ summary.total_revenue|floatformat:0|intcomma }}</h3>
+                    <h3 class="card-title mb-0">{{ system_settings.currency_symbol }}{{ summary.total_revenue|floatformat:0|intcomma }}</h3>
                     <p class="card-text mt-2 {% if summary.revenue_change > 0 %}text-success{% elif summary.revenue_change < 0 %}text-danger{% endif %}">
                         <i class="bi {% if summary.revenue_change > 0 %}bi-arrow-up{% elif summary.revenue_change < 0 %}bi-arrow-down{% else %}bi-dash{% endif %}"></i>
                         {{ summary.revenue_change|floatformat:1 }}% YoY

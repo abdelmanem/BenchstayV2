@@ -10,6 +10,9 @@ import calendar
 import xlsxwriter
 import io
 
+# Import views from views_charts.py
+from .views_charts import competitor_charts, competitor_analytics_charts, competitor_data_visualization
+
 from decimal import Decimal
 from .models import ReportConfiguration, SavedReport
 from hotel_management.models import Hotel, Competitor, DailyData, CompetitorData, MarketSummary, PerformanceIndex

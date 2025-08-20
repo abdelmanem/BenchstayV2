@@ -180,6 +180,42 @@ function createComparisonChart() {
     return comparisonChart;
 }
 
+// Update Performance Overview section
+function updatePerformanceOverview() {
+    const dailyData = JSON.parse(document.getElementById('daily-data').textContent);
+    const hotelNames = Object.keys(dailyData);
+    
+    // Calculate averages
+    let totalOccupancy = 0;
+    let totalRate = 0;
+    let totalRevPAR = 0;
+    let bestPerformerScore = 0;
+    let bestPerformer = '';
+    
+    hotelNames.forEach(hotel => {
+        const hotelData = dailyData[hotel];
+        totalOccupancy += hotelData.occupancy_percentage || 0;
+        totalRate += hotelData.average_rate || 0;
+        totalRevPAR += hotelData.revpar || 0;
+        
+        // Determine best performer based on RevPAR
+        if (hotelData.revpar > bestPerformerScore) {
+            bestPerformerScore = hotelData.revpar;
+            bestPerformer = hotel;
+        }
+    });
+    
+    const avgOccupancy = totalOccupancy / hotelNames.length;
+    const avgRate = totalRate / hotelNames.length;
+    const avgRevPAR = totalRevPAR / hotelNames.length;
+    
+    // Update DOM elements
+    document.getElementById('avg-occupancy').textContent = formatValue(avgOccupancy, 'occupancy_percentage');
+    document.getElementById('avg-rate').textContent = formatValue(avgRate, 'average_rate');
+    document.getElementById('avg-revpar').textContent = formatValue(avgRevPAR, 'revpar');
+    document.getElementById('best-performer').textContent = bestPerformer;
+}
+
 // Update all charts with the selected metric
 function updateCharts() {
     const dailyData = JSON.parse(document.getElementById('daily-data').textContent);
@@ -193,6 +229,9 @@ function updateCharts() {
     
     // Update comparison chart
     createComparisonChart();
+    
+    // Update performance overview
+    updatePerformanceOverview();
 }
 
 // Initialize when the page loads
@@ -207,6 +246,9 @@ document.addEventListener('DOMContentLoaded', function() {
     createBarChart('mtd-chart', mtdData, 'mtd');
     createBarChart('ytd-chart', ytdData, 'ytd');
     createComparisonChart();
+    
+    // Update performance overview
+    updatePerformanceOverview();
     
     // Add event listeners to metric selector buttons
     const metricButtons = document.querySelectorAll('.metric-selector .btn');
