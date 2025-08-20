@@ -57,11 +57,7 @@ def help_page(request):
         'version': '2.0.0',  # You can update this with your actual version
         'description': 'Hotel Benchmarking Platform',
         'developer': 'Abdelmanem Samy',
-<<<<<<< HEAD
-        'contact': 'Abdelmmanem@msn.com',
-=======
         'contact': 'Abdelmanem@msn.com',
->>>>>>> e85df87dec628392226273691cbc2102aa79647c
         'django_version': django_version,
         'python_version': settings.PYTHON_VERSION if hasattr(settings, 'PYTHON_VERSION') else 'Not specified',
     }
