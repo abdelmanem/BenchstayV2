@@ -51,6 +51,19 @@ def competitor_charts(request):
     mtd_data = prepare_chart_data(hotel, competitors, month_start, today)
     ytd_data = prepare_chart_data(hotel, competitors, year_start, today)
     
+    # Debug: Print data to console
+    print("Daily Data:", daily_data)
+    print("MTD Data:", mtd_data)
+    print("YTD Data:", ytd_data)
+    
+    # Check if data is empty
+    if not daily_data or all(not v for v in daily_data.values()):
+        # If no data, create sample data for testing
+        daily_data = create_sample_data(hotel, competitors)
+        mtd_data = create_sample_data(hotel, competitors)
+        ytd_data = create_sample_data(hotel, competitors)
+        messages.warning(request, 'No data found for the selected period. Using sample data for demonstration.')
+    
     context = {
         'title': 'Competitor Charts - Benchstay',
         'hotel': hotel,
@@ -64,6 +77,38 @@ def competitor_charts(request):
     }
     
     return render(request, 'reporting/competitor_charts.html', context)
+
+# Function to create sample data for testing
+def create_sample_data(hotel, competitors):
+    data = {}
+    
+    # Add hotel sample data
+    data[hotel.name] = {
+        'occupancy_percentage': 75.5,
+        'average_rate': 120.0,
+        'revpar': 90.6,
+        'mpi': 105.0,
+        'ari': 98.0,
+        'rgi': 102.0
+    }
+    
+    # Add competitor sample data
+    for i, competitor in enumerate(competitors):
+        # Create varied data for each competitor
+        occupancy = 70.0 + (i * 2.5)
+        avg_rate = 110.0 + (i * 10.0)
+        revpar = (occupancy / 100) * avg_rate
+        
+        data[competitor.name] = {
+            'occupancy_percentage': occupancy,
+            'average_rate': avg_rate,
+            'revpar': revpar,
+            'mpi': 95.0 + (i * 3.0),
+            'ari': 97.0 + (i * 2.0),
+            'rgi': 96.0 + (i * 2.5)
+        }
+    
+    return data
 
 @login_required
 def competitor_analytics_charts(request):
