@@ -387,7 +387,7 @@
                                     <i class="fas fa-circle-notch me-1"></i>Polar
                                 </button>
                             </div>
-                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -474,7 +474,7 @@
                                 <canvas id="rate-index-circle"></canvas>
                                 <div class="performance-indicator">
                                     <div class="value" id="rate-index-value"></div>
-                                    <div class.="label"><span id="rate-index-label">Above Market</span></div>
+                                    <div class="label"><span id="rate-index-label">Above Market</span></div>
                                 </div>
                             </div>
                         </div>
@@ -792,27 +792,6 @@ class EnhancedCompetitorCharts {
             warning: ['#f093fb', '#f5576c'],
             secondary: ['#4b6cb7', '#182848']
         };
-        
-        // Enhanced color scheme for better visual distinction
-        this.enhancedColors = {
-            occupancy: {
-                active: '#11998e',
-                background: '#e8f8f5'  // Light teal background
-            },
-            rateIndex: {
-                active: '#667eea',
-                background: '#e8eaf6'  // Light blue background
-            },
-            revenueIndex: {
-                active: '#f093fb',
-                background: '#fce4ec'  // Light pink background
-            },
-            marketShare: {
-                active: '#4b6cb7',
-                background: '#e3f2fd'  // Light navy background
-            }
-        };
-        
         this.init();
     }
 
@@ -927,7 +906,7 @@ class EnhancedCompetitorCharts {
         
         // Occupancy Circle - Use real data
         const occupancyValue = dailyData[userHotelName].occupancy_percentage;
-        this.createCircularProgress('occupancy-circle', occupancyValue, 100, this.enhancedColors.occupancy);
+        this.createCircularProgress('occupancy-circle', occupancyValue, 100, '#11998e');
         document.getElementById('occupancy-value').textContent = occupancyValue.toFixed(1) + '%';
         
         // Set occupancy target - typically 5-10% higher than current value or industry average
@@ -936,7 +915,7 @@ class EnhancedCompetitorCharts {
         
         // Rate Index Circle - Use real data
         const rateIndexValue = dailyData[userHotelName].ari;
-        this.createCircularProgress('rate-index-circle', rateIndexValue, 150, this.enhancedColors.rateIndex);
+        this.createCircularProgress('rate-index-circle', rateIndexValue, 150, '#667eea');
         document.getElementById('rate-index-value').textContent = rateIndexValue.toFixed(1);
         
         // Set rate index label based on value
@@ -951,7 +930,7 @@ class EnhancedCompetitorCharts {
         
         // Revenue Index Circle - Use real data
         const revenueIndexValue = dailyData[userHotelName].rgi;
-        this.createCircularProgress('revenue-index-circle', revenueIndexValue, 150, this.enhancedColors.revenueIndex);
+        this.createCircularProgress('revenue-index-circle', revenueIndexValue, 150, '#f093fb');
         document.getElementById('revenue-index-value').textContent = revenueIndexValue.toFixed(1);
         
         // Set revenue index label based on value
@@ -967,11 +946,11 @@ class EnhancedCompetitorCharts {
         // Market Share Circle - Calculate market share from data
         // For simplicity, we'll use MPI as an approximation of market share
         const marketShareValue = dailyData[userHotelName].mpi / 10; // Convert MPI to approximate market share percentage
-        this.createCircularProgress('market-share-circle', marketShareValue, 100, this.enhancedColors.marketShare);
+        this.createCircularProgress('market-share-circle', marketShareValue, 100, '#4b6cb7');
         document.getElementById('market-share-value').textContent = marketShareValue.toFixed(1) + '%';
     }
 
-    createCircularProgress(canvasId, value, max, colorScheme) {
+    createCircularProgress(canvasId, value, max, color) {
         const ctx = document.getElementById(canvasId)?.getContext('2d');
         if (!ctx) return;
 
@@ -982,7 +961,7 @@ class EnhancedCompetitorCharts {
             data: {
                 datasets: [{
                     data: [value, max - value],
-                    backgroundColor: [colorScheme.active, colorScheme.background],
+                    backgroundColor: [color, '#e9ecef'],
                     borderWidth: 0,
                     cutout: '75%'
                 }]
@@ -1142,23 +1121,23 @@ class EnhancedCompetitorCharts {
         
         // Occupancy Gauge - Use real data
         const occupancyValue = dailyData[userHotelName].occupancy_percentage;
-        this.createGaugeChart('occupancy-gauge', occupancyValue, 'Occupancy %', this.enhancedColors.occupancy);
+        this.createGaugeChart('occupancy-gauge', occupancyValue, 'Occupancy %', '#11998e');
         
         // Rate Gauge - Use real data
         const rateIndexValue = dailyData[userHotelName].ari;
-        this.createGaugeChart('rate-gauge', rateIndexValue, 'Rate Index', this.enhancedColors.rateIndex);
+        this.createGaugeChart('rate-gauge', rateIndexValue, 'Rate Index', '#667eea');
         
         // RevPAR Gauge - Use real data
         const revenueIndexValue = dailyData[userHotelName].rgi;
-        this.createGaugeChart('revpar-gauge', revenueIndexValue, 'RevPAR Index', this.enhancedColors.revenueIndex);
+        this.createGaugeChart('revpar-gauge', revenueIndexValue, 'RevPAR Index', '#f093fb');
         
         // Market Share Gauge - Calculate market share from data
         // For simplicity, we'll use MPI as an approximation of market share
         const marketShareValue = dailyData[userHotelName].mpi / 10; // Convert MPI to approximate market share percentage
-        this.createGaugeChart('market-share-gauge', marketShareValue, 'Market Share %', this.enhancedColors.marketShare);
+        this.createGaugeChart('market-share-gauge', marketShareValue, 'Market Share %', '#4b6cb7');
     }
 
-    createGaugeChart(canvasId, value, label, colorScheme) {
+    createGaugeChart(canvasId, value, label, color) {
         const ctx = document.getElementById(canvasId)?.getContext('2d');
         if (!ctx) return;
 
@@ -1167,7 +1146,7 @@ class EnhancedCompetitorCharts {
             data: {
                 datasets: [{
                     data: [value, 100 - value],
-                    backgroundColor: [colorScheme.active, colorScheme.background],
+                    backgroundColor: [color, '#e9ecef'],
                     borderWidth: 0,
                     cutout: '80%',
                     circumference: 180,
