@@ -1,411 +1,477 @@
+<!-- competitor-charts/ fixed and complete template -->
 {% extends 'dashboard_base.html' %}
 {% load reporting_filters %}
 {% load static %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/competitor_analytics.css' %}">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 <style>
-    :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --success-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        --dark-gradient: linear-gradient(135deg, #434343 0%, #000000 100%);
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
     }
-    
+
     body {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: #f5f7fa;
+        color: #2d3748;
+        line-height: 1.6;
     }
-    
+
+    .container-fluid {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 30px 20px;
+    }
+
+    /* Header Styling */
+    .header {
+        text-align: center;
+        margin-bottom: 50px;
+    }
+
+    .header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #1a202c;
+        margin-bottom: 10px;
+    }
+
+    .header p {
+        color: #718096;
+        font-size: 1.1rem;
+    }
+
+    /* Performance Summary */
+    .performance-summary {
+        background: white;
+        border-radius: 20px;
+        padding: 40px 30px;
+        margin-bottom: 40px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        text-align: center;
+    }
+
+    .performance-summary h3 {
+        color: #1a202c;
+        margin-bottom: 30px;
+        font-weight: 700;
+        font-size: 1.4rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .summary-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 25px;
+    }
+
+    .stat-item {
+        background: #f8fafc;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        border-left: 4px solid #667eea;
+        position: relative;
+        height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .stat-item:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+
+    .stat-chart-container {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 10px;
+    }
+
+    .stat-value {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #667eea;
+        text-align: center;
+        z-index: 2;
+    }
+
+    .stat-label {
+        color: #718096;
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-top: 10px;
+        text-align: center;
+    }
+
+    /* Card Styling */
+    .card {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        background: white;
+        transition: all 0.3s ease;
+        overflow: hidden;
+        margin-bottom: 30px;
+    }
+
+    .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 40px rgba(0,0,0,0.12);
+    }
+
+    .card-header {
+        border: none;
+        border-radius: 16px 16px 0 0;
+        padding: 25px;
+        position: relative;
+        color: white;
+        font-weight: 600;
+    }
+
+    .card-header.bg-primary {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+    }
+
+    .card-header.bg-success {
+        background: linear-gradient(135deg, #38a169, #48bb78);
+    }
+
+    .card-header.bg-warning {
+        background: linear-gradient(135deg, #ed8936, #f6ad55);
+        color: white !important;
+    }
+
+    .card-header.bg-info {
+        background: linear-gradient(135deg, #4299e1, #63b3ed);
+    }
+
+    .card-header.bg-secondary {
+        background: linear-gradient(135deg, #a0aec0, #cbd5e0);
+        color: #2d3748 !important;
+    }
+
+    .card-header h5 {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.1rem;
+    }
+
+    .card-body {
+        padding: 25px;
+        background: white;
+    }
+
+    /* Form Controls */
+    .form-control {
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+        transition: all 0.3s ease;
+        padding: 12px 15px;
+        font-size: 0.95rem;
+    }
+
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+
+    .form-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #4a5568;
+        margin-bottom: 8px;
+    }
+
+    /* Buttons */
+    .btn {
+        border-radius: 12px;
+        padding: 12px 24px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.95rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    .btn-outline-primary {
+        background: white;
+        border: 2px solid #667eea;
+        color: #667eea;
+    }
+
+    .btn-outline-primary:hover {
+        background: #667eea;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    /* Metric Selector */
+    .metric-selector {
+        margin-bottom: 20px;
+    }
+
+    .btn-group {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .btn-group .btn {
+        background: #f7fafc;
+        border: 2px solid transparent;
+        color: #718096;
+        margin: 0;
+    }
+
+    .btn-group .btn.active,
+    .btn-group .btn:hover {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    /* Period Badge */
+    .period-badge {
+        font-size: 0.8rem;
+        padding: 6px 12px;
+        border-radius: 20px;
+        margin-left: 15px;
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+    }
+
+    /* Chart Containers */
     .chart-container {
         position: relative;
         height: 400px;
         margin-bottom: 20px;
         background: white;
-        border-radius: 15px;
+        border-radius: 12px;
         padding: 20px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
     }
-    
+
     .circle-chart-container {
         position: relative;
         height: 350px;
         margin-bottom: 20px;
         background: white;
-        border-radius: 15px;
+        border-radius: 12px;
         padding: 20px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
     }
-    
-    .card {
-        border: none;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        backdrop-filter: blur(10px);
-        background: rgba(255,255,255,0.9);
-        transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-        overflow: hidden;
-    }
-    
-    .card:hover {
-        transform: translateY(-10px) scale(1.02);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-    }
-    
-    .card-header {
-        border: none;
-        border-radius: 20px 20px 0 0 !important;
-        background: var(--primary-gradient);
-        color: white;
-        padding: 20px 25px;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .card-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
-        transform: translateX(-100%);
-        transition: transform 0.6s;
-    }
-    
-    .card:hover .card-header::before {
-        transform: translateX(100%);
-    }
-    
-    .card-header.bg-success {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    }
-    
-    .card-header.bg-warning {
-        background: linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%);
-        color: white !important;
-    }
-    
-    .card-header.bg-info {
-        background: var(--info-gradient);
-    }
-    
-    .card-header.bg-secondary {
-        background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-        color: #333 !important;
-    }
-    
-    .card-header.bg-primary {
-        background: var(--primary-gradient);
-    }
-    
-    .card-body {
-        padding: 25px;
-        background: rgba(255,255,255,0.95);
-    }
-    
-    .metric-selector {
-        margin-bottom: 20px;
-    }
-    
-    .btn-group .btn {
-        border-radius: 25px !important;
-        margin: 0 5px;
-        padding: 12px 20px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        border: 2px solid transparent;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .btn-group .btn::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 0;
-        height: 0;
-        background: rgba(255,255,255,0.2);
-        border-radius: 50%;
-        transition: all 0.3s ease;
-        transform: translate(-50%, -50%);
-    }
-    
-    .btn-group .btn:hover::before {
-        width: 300px;
-        height: 300px;
-    }
-    
-    .btn-group .btn.active {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        transform: scale(1.05);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-    
-    .btn-group .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    }
-    
-    .period-badge {
-        font-size: 0.85rem;
-        padding: 8px 15px;
-        border-radius: 25px;
-        margin-left: 15px;
-        background: rgba(255,255,255,0.2);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.3);
-        animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
-    }
-    
-    .form-control {
-        border-radius: 15px;
-        border: 2px solid #e3e6f0;
-        transition: all 0.3s ease;
-        padding: 12px 15px;
-    }
-    
-    .form-control:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 15px rgba(102, 126, 234, 0.3);
-        transform: scale(1.02);
-    }
-    
-    .btn-primary {
-        background: var(--primary-gradient);
-        border: none;
-        border-radius: 15px;
-        padding: 12px 30px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .btn-primary::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-        transition: left 0.5s;
-    }
-    
-    .btn-primary:hover::before {
-        left: 100%;
-    }
-    
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
-    }
-    
-    .btn-outline-primary {
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-        border: 2px solid #667eea;
-        border-radius: 15px;
-        padding: 12px 25px;
-        font-weight: 600;
-        color: #667eea;
-        transition: all 0.3s ease;
-    }
-    
-    .btn-outline-primary:hover {
-        background: var(--primary-gradient);
-        color: white;
-        transform: translateY(-3px);
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-    }
-    
+
+    /* Chart Controls */
     .chart-controls {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 20px;
-        padding: 15px;
-        background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-        border-radius: 15px;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        padding: 15px 20px;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
     }
-    
+
     .chart-type-selector {
         display: flex;
         gap: 10px;
     }
-    
+
     .chart-type-btn {
         background: white;
-        border: 2px solid #667eea;
-        border-radius: 10px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
         padding: 8px 15px;
         cursor: pointer;
         transition: all 0.3s ease;
-        color: #667eea;
-        font-weight: 600;
+        color: #4a5568;
+        font-weight: 500;
+        font-size: 0.85rem;
     }
-    
+
     .chart-type-btn.active,
     .chart-type-btn:hover {
         background: #667eea;
         color: white;
-        transform: scale(1.05);
+        border-color: #667eea;
+        transform: translateY(-1px);
     }
-    
-    .performance-summary {
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-        border-radius: 20px;
-        padding: 25px;
-        margin-bottom: 30px;
-        text-align: center;
-    }
-    
-    .performance-summary h3 {
-        color: #333;
-        margin-bottom: 20px;
-        font-weight: 700;
-    }
-    
-    .summary-stats {
-        display: flex;
-        justify-content: space-around;
-        flex-wrap: wrap;
-        gap: 20px;
-    }
-    
-    .stat-item {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        min-width: 150px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
-    }
-    
-    .stat-item:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-    }
-    
-    .stat-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #667eea;
-        display: block;
-    }
-    
-    .stat-label {
-        color: #666;
-        font-size: 0.9rem;
-        margin-top: 5px;
-    }
-    
+
+    /* Loading Spinner */
     .loading-spinner {
         display: none;
         text-align: center;
         padding: 50px;
+        color: #718096;
     }
-    
+
     .spinner {
-        width: 50px;
-        height: 50px;
-        border: 5px solid #f3f3f3;
-        border-top: 5px solid #667eea;
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e2e8f0;
+        border-top: 3px solid #667eea;
         border-radius: 50%;
         animation: spin 1s linear infinite;
         margin: 0 auto 20px;
     }
-    
+
     @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
     }
-    
+
+    /* Animations */
     .fade-in {
-        animation: fadeIn 0.5s ease-in;
+        animation: fadeIn 0.6s ease-in;
     }
-    
+
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
     }
-    
-    .container-fluid {
-        padding: 30px;
-    }
-    
-    h1 {
-        background: var(--primary-gradient);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-size: 3rem;
-        font-weight: 700;
-        text-align: center;
-        margin-bottom: 40px;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-    }
-    
+
+    /* Responsive Design */
     @media (max-width: 768px) {
+        .container-fluid {
+            padding: 20px 15px;
+        }
+
+        .summary-stats {
+            grid-template-columns: 1fr;
+        }
+
         .chart-container,
         .circle-chart-container {
             height: 300px;
         }
-        
+
         .btn-group {
             flex-direction: column;
-            width: 100%;
         }
-        
+
         .btn-group .btn {
-            margin: 5px 0;
             width: 100%;
+            margin: 2px 0;
         }
-        
-        .summary-stats {
+
+        .chart-controls {
             flex-direction: column;
+            gap: 15px;
         }
-        
-        .stat-item {
-            width: 100%;
+
+        .chart-type-selector {
+            justify-content: center;
         }
+    }
+
+    /* Additional styling for data visualization */
+    .row {
+        margin: 0 -15px;
+    }
+
+    .col-md-12, .col-md-6, .col-md-4 {
+        padding: 0 15px;
+    }
+
+    .chart-card {
+        height: 100%;
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .w-100 {
+        width: 100%;
+    }
+
+    .mb-4 {
+        margin-bottom: 30px;
+    }
+
+    .mt-4 {
+        margin-top: 30px;
+    }
+
+    .g-3 {
+        gap: 1rem;
+    }
+
+    .align-items-end {
+        align-items: flex-end;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
-    <h1>🏨 Competitor Performance Analytics</h1>
+    <div class="header">
+        <h1><i class="fas fa-chart-line"></i> Competitor Performance Analytics</h1>
+        <p>Real-time insights into market performance and competitive positioning</p>
+    </div>
     
-    <!-- Performance Summary -->
+    <!-- Performance Summary with Circle Charts -->
     <div class="performance-summary fade-in">
-        <h3>📊 Performance Overview</h3>
+        <h3><i class="fas fa-chart-bar"></i> Performance Overview</h3>
         <div class="summary-stats" id="summary-stats">
             <div class="stat-item">
-                <span class="stat-value" id="avg-occupancy">--</span>
+                <div class="stat-chart-container">
+                    <canvas id="occupancy-chart"></canvas>
+                    <div class="stat-value" id="avg-occupancy">--</div>
+                </div>
                 <div class="stat-label">Avg Occupancy</div>
             </div>
             <div class="stat-item">
-                <span class="stat-value" id="avg-rate">--</span>
+                <div class="stat-chart-container">
+                    <canvas id="rate-chart"></canvas>
+                    <div class="stat-value" id="avg-rate">--</div>
+                </div>
                 <div class="stat-label">Avg Rate</div>
             </div>
             <div class="stat-item">
-                <span class="stat-value" id="avg-revpar">--</span>
+                <div class="stat-chart-container">
+                    <canvas id="revpar-chart"></canvas>
+                    <div class="stat-value" id="avg-revpar">--</div>
+                </div>
                 <div class="stat-label">Avg RevPAR</div>
             </div>
             <div class="stat-item">
-                <span class="stat-value" id="best-performer">--</span>
+                <div class="stat-chart-container">
+                    <canvas id="performer-chart"></canvas>
+                    <div class="stat-value" id="best-performer">--</div>
+                </div>
                 <div class="stat-label">Top Performer</div>
             </div>
         </div>
@@ -416,7 +482,7 @@
         <div class="col-md-12">
             <div class="card fade-in">
                 <div class="card-header bg-primary">
-                    <h5 class="card-title mb-0">📅 Custom Date Range Filter</h5>
+                    <h5 class="card-title mb-0"><i class="fas fa-calendar-alt"></i> Custom Date Range Filter</h5>
                 </div>
                 <div class="card-body">
                     <form method="POST" id="date-filter-form" class="row g-3 align-items-end">
@@ -431,7 +497,7 @@
                         </div>
                         <div class="col-md-4">
                             <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-funnel"></i> Apply Filter
+                                <i class="fas fa-search"></i> Apply Filter
                             </button>
                         </div>
                     </form>
@@ -445,17 +511,17 @@
         <div class="col-md-12">
             <div class="card fade-in">
                 <div class="card-header bg-secondary">
-                    <h5 class="card-title mb-0">🎯 Select Metrics to Display</h5>
+                    <h5 class="card-title mb-0"><i class="fas fa-sliders-h"></i> Select Metrics to Display</h5>
                 </div>
                 <div class="card-body">
                     <div class="metric-selector">
                         <div class="btn-group" role="group">
-                            <button type="button" class="btn active" data-metric="occupancy_percentage">📈 Occupancy %</button>
-                            <button type="button" class="btn" data-metric="average_rate">💰 Average Rate</button>
-                            <button type="button" class="btn" data-metric="revpar">🏆 RevPAR</button>
-                            <button type="button" class="btn" data-metric="mpi">📊 MPI</button>
-                            <button type="button" class="btn" data-metric="ari">📈 ARI</button>
-                            <button type="button" class="btn" data-metric="rgi">🎯 RGI</button>
+                            <button type="button" class="btn active" data-metric="occupancy_percentage"><i class="fas fa-percentage"></i> Occupancy %</button>
+                            <button type="button" class="btn" data-metric="average_rate"><i class="fas fa-dollar-sign"></i> Average Rate</button>
+                            <button type="button" class="btn" data-metric="revpar"><i class="fas fa-trophy"></i> RevPAR</button>
+                            <button type="button" class="btn" data-metric="mpi"><i class="fas fa-chart-bar"></i> MPI</button>
+                            <button type="button" class="btn" data-metric="ari"><i class="fas fa-chart-line"></i> ARI</button>
+                            <button type="button" class="btn" data-metric="rgi"><i class="fas fa-bullseye"></i> RGI</button>
                         </div>
                     </div>
                 </div>
@@ -476,20 +542,20 @@
             <div class="card chart-card fade-in">
                 <div class="card-header bg-warning">
                     <h5 class="card-title mb-0">
-                        🕒 Custom Date Range Performance
+                        <i class="fas fa-calendar-day"></i> Custom Date Range Performance
                         <span class="period-badge">{{ start_date|date:'M d, Y' }} - {{ end_date|date:'M d, Y' }}</span>
                     </h5>
                 </div>
                 <div class="card-body">
                     <div class="chart-controls">
                         <div class="chart-type-selector">
-                            <button class="chart-type-btn active" data-chart="daily-chart" data-type="line">📈 Line</button>
-                            <button class="chart-type-btn" data-chart="daily-chart" data-type="bar">📊 Bar</button>
-                            <button class="chart-type-btn" data-chart="daily-chart" data-type="area">🏔️ Area</button>
+                            <button class="chart-type-btn active" data-chart-id="daily-chart" data-chart-type="line"><i class="fas fa-chart-line"></i> Line</button>
+                            <button class="chart-type-btn" data-chart-id="daily-chart" data-chart-type="bar"><i class="fas fa-chart-bar"></i> Bar</button>
+                            <button class="chart-type-btn" data-chart-id="daily-chart" data-chart-type="area"><i class="fas fa-chart-area"></i> Area</button>
                         </div>
                         <div>
                             <button class="btn btn-outline-primary btn-sm" onclick="downloadChart('daily-chart')">
-                                📥 Download
+                                <i class="fas fa-download"></i> Download
                             </button>
                         </div>
                     </div>
@@ -504,18 +570,18 @@
         <div class="col-md-6 mb-4">
             <div class="card chart-card fade-in">
                 <div class="card-header bg-success">
-                    <h5 class="card-title mb-0">📅 MTD Performance</h5>
+                    <h5 class="card-title mb-0"><i class="fas fa-calendar-week"></i> MTD Performance</h5>
                 </div>
                 <div class="card-body">
                     <div class="chart-controls">
                         <div class="chart-type-selector">
-                            <button class="chart-type-btn active" data-chart="mtd-chart" data-type="doughnut">🍩 Doughnut</button>
-                            <button class="chart-type-btn" data-chart="mtd-chart" data-type="pie">🥧 Pie</button>
-                            <button class="chart-type-btn" data-chart="mtd-chart" data-type="bar">📊 Bar</button>
+                            <button class="chart-type-btn active" data-chart-id="mtd-chart" data-chart-type="doughnut"><i class="fas fa-chart-pie"></i> Doughnut</button>
+                            <button class="chart-type-btn" data-chart-id="mtd-chart" data-chart-type="pie"><i class="fas fa-chart-pie"></i> Pie</button>
+                            <button class="chart-type-btn" data-chart-id="mtd-chart" data-chart-type="bar"><i class="fas fa-chart-bar"></i> Bar</button>
                         </div>
                         <div>
                             <button class="btn btn-outline-primary btn-sm" onclick="downloadChart('mtd-chart')">
-                                📥 Download
+                                <i class="fas fa-download"></i> Download
                             </button>
                         </div>
                     </div>
@@ -530,18 +596,18 @@
         <div class="col-md-6 mb-4">
             <div class="card chart-card fade-in">
                 <div class="card-header bg-warning">
-                    <h5 class="card-title mb-0">📈 YTD Performance</h5>
+                    <h5 class="card-title mb-0"><i class="fas fa-calendar-alt"></i> YTD Performance</h5>
                 </div>
                 <div class="card-body">
                     <div class="chart-controls">
                         <div class="chart-type-selector">
-                            <button class="chart-type-btn active" data-chart="ytd-chart" data-type="polarArea">🌟 Polar</button>
-                            <button class="chart-type-btn" data-chart="ytd-chart" data-type="radar">🔍 Radar</button>
-                            <button class="chart-type-btn" data-chart="ytd-chart" data-type="bar">📊 Bar</button>
+                            <button class="chart-type-btn active" data-chart-id="ytd-chart" data-chart-type="polarArea"><i class="fas fa-star"></i> Polar</button>
+                            <button class="chart-type-btn" data-chart-id="ytd-chart" data-chart-type="radar"><i class="fas fa-search"></i> Radar</button>
+                            <button class="chart-type-btn" data-chart-id="ytd-chart" data-chart-type="bar"><i class="fas fa-chart-bar"></i> Bar</button>
                         </div>
                         <div>
                             <button class="btn btn-outline-primary btn-sm" onclick="downloadChart('ytd-chart')">
-                                📥 Download
+                                <i class="fas fa-download"></i> Download
                             </button>
                         </div>
                     </div>
@@ -558,18 +624,18 @@
         <div class="col-md-12">
             <div class="card chart-card fade-in">
                 <div class="card-header bg-info">
-                    <h5 class="card-title mb-0">⚖️ Period Comparison</h5>
+                    <h5 class="card-title mb-0"><i class="fas fa-balance-scale"></i> Period Comparison</h5>
                 </div>
                 <div class="card-body">
                     <div class="chart-controls">
                         <div class="chart-type-selector">
-                            <button class="chart-type-btn active" data-chart="comparison-chart" data-type="bar">📊 Bar</button>
-                            <button class="chart-type-btn" data-chart="comparison-chart" data-type="line">📈 Line</button>
-                            <button class="chart-type-btn" data-chart="comparison-chart" data-type="radar">🔍 Radar</button>
+                            <button class="chart-type-btn active" data-chart-id="comparison-chart" data-chart-type="bar"><i class="fas fa-chart-bar"></i> Bar</button>
+                            <button class="chart-type-btn" data-chart-id="comparison-chart" data-chart-type="line"><i class="fas fa-chart-line"></i> Line</button>
+                            <button class="chart-type-btn" data-chart-id="comparison-chart" data-chart-type="radar"><i class="fas fa-search"></i> Radar</button>
                         </div>
                         <div>
                             <button class="btn btn-outline-primary btn-sm" onclick="downloadChart('comparison-chart')">
-                                📥 Download
+                                <i class="fas fa-download"></i> Download
                             </button>
                         </div>
                     </div>
@@ -585,7 +651,7 @@
     <div class="row mb-4">
         <div class="col-md-12 text-center">
             <a href="{% url 'reporting:competitor_advanced_analytics' %}" class="btn btn-outline-primary">
-                <i class="bi bi-table"></i> 📋 View Tabular Data
+                <i class="fas fa-table"></i> View Tabular Data
             </a>
         </div>
     </div>
@@ -603,9 +669,6 @@
 <script id="mtd-data" type="application/json">
     {{ mtd_data|safe }}
 </script>
-<script id="ytd-data" type="application/json">
-    {{ ytd_data|safe }}
-</script>
 <script src="{% static 'js/cache_control.js' %}"></script>
 
 <script>
@@ -613,35 +676,27 @@
 const chartInstances = {};
 let currentMetric = 'occupancy_percentage';
 
-// Color schemes for different chart types
+// Clean color schemes
 const colorSchemes = {
+    primary: [
+        '#667eea',
+        '#764ba2', 
+        '#4299e1',
+        '#38a169',
+        '#ed8936',
+        '#e53e3e'
+    ],
     gradient: [
         'rgba(102, 126, 234, 0.8)',
         'rgba(118, 75, 162, 0.8)',
-        'rgba(240, 147, 251, 0.8)',
-        'rgba(245, 87, 108, 0.8)',
-        'rgba(79, 172, 254, 0.8)',
-        'rgba(0, 242, 254, 0.8)'
-    ],
-    solid: [
-        '#667eea',
-        '#764ba2',
-        '#f093fb',
-        '#f5576c',
-        '#4facfe',
-        '#00f2fe'
-    ],
-    pastel: [
-        '#FFB6C1',
-        '#98FB98',
-        '#87CEEB',
-        '#DDA0DD',
-        '#F0E68C',
-        '#FFA07A'
+        'rgba(66, 153, 225, 0.8)', 
+        'rgba(56, 161, 105, 0.8)',
+        'rgba(237, 137, 54, 0.8)',
+        'rgba(229, 62, 62, 0.8)'
     ]
 };
 
-// Chart configurations
+// Chart configurations with clean styling
 const chartConfigs = {
     line: {
         type: 'line',
@@ -654,32 +709,68 @@ const chartConfigs = {
                     labels: {
                         usePointStyle: true,
                         padding: 20,
-                        font: { size: 12, weight: 'bold' }
+                        font: { size: 12, weight: '500' },
+                        color: '#4a5568'
                     }
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    backgroundColor: 'rgba(26, 32, 44, 0.95)',
                     titleColor: 'white',
                     bodyColor: 'white',
                     borderColor: '#667eea',
                     borderWidth: 1,
-                    cornerRadius: 10
+                    cornerRadius: 8,
+                    padding: 12
                 }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    grid: { color: 'rgba(0,0,0,0.1)' },
-                    ticks: { font: { size: 11 } }
+                    grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                    ticks: { font: { size: 11 }, color: '#718096' }
                 },
                 x: {
-                    grid: { color: 'rgba(0,0,0,0.1)' },
-                    ticks: { font: { size: 11 } }
+                    grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                    ticks: { font: { size: 11 }, color: '#718096' }
                 }
             },
             elements: {
-                line: { tension: 0.4, borderWidth: 3 },
-                point: { radius: 6, hoverRadius: 8 }
+                line: { tension: 0.3, borderWidth: 3 },
+                point: { radius: 5, hoverRadius: 7, borderWidth: 2 }
+            }
+        }
+    },
+    area: {
+        type: 'line',
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            fill: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20,
+                        font: { size: 12, weight: '500' },
+                        color: '#4a5568'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                    ticks: { font: { size: 11 }, color: '#718096' }
+                },
+                x: {
+                    grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                    ticks: { font: { size: 11 }, color: '#718096' }
+                }
+            },
+            elements: {
+                line: { tension: 0.3, borderWidth: 3, fill: true },
+                point: { radius: 5, hoverRadius: 7, borderWidth: 2 }
             }
         }
     },
@@ -694,17 +785,20 @@ const chartConfigs = {
                     labels: {
                         usePointStyle: true,
                         padding: 20,
-                        font: { size: 12, weight: 'bold' }
+                        font: { size: 12, weight: '500' },
+                        color: '#4a5568'
                     }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    grid: { color: 'rgba(0,0,0,0.1)' }
+                    grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                    ticks: { color: '#718096' }
                 },
                 x: {
-                    grid: { display: false }
+                    grid: { display: false },
+                    ticks: { color: '#718096' }
                 }
             }
         }
@@ -714,21 +808,15 @@ const chartConfigs = {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            cutout: '60%',
+            cutout: '65%',
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
                         usePointStyle: true,
                         padding: 15,
-                        font: { size: 12, weight: 'bold' }
-                    }
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.label + ': ' + context.parsed + '%';
-                        }
+                        font: { size: 12, weight: '500' },
+                        color: '#4a5568'
                     }
                 }
             }
@@ -745,7 +833,8 @@ const chartConfigs = {
                     labels: {
                         usePointStyle: true,
                         padding: 15,
-                        font: { size: 12, weight: 'bold' }
+                        font: { size: 12, weight: '500' },
+                        color: '#4a5568'
                     }
                 }
             }
@@ -762,8 +851,16 @@ const chartConfigs = {
                     labels: {
                         usePointStyle: true,
                         padding: 15,
-                        font: { size: 12, weight: 'bold' }
+                        font: { size: 12, weight: '500' },
+                        color: '#4a5568'
                     }
+                }
+            },
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(102, 126, 234, 0.2)' },
+                    pointLabels: { font: { size: 12, weight: '500' }, color: '#4a5568' }
                 }
             }
         }
@@ -779,7 +876,8 @@ const chartConfigs = {
                     labels: {
                         usePointStyle: true,
                         padding: 15,
-                        font: { size: 12, weight: 'bold' }
+                        font: { size: 12, weight: '500' },
+                        color: '#4a5568'
                     }
                 }
             },
@@ -787,7 +885,7 @@ const chartConfigs = {
                 r: {
                     beginAtZero: true,
                     grid: { color: 'rgba(102, 126, 234, 0.2)' },
-                    pointLabels: { font: { size: 12, weight: 'bold' } }
+                    pointLabels: { font: { size: 12, weight: '500' }, color: '#4a5568' }
                 }
             }
         }
@@ -803,10 +901,10 @@ function initializeCharts() {
         const dailyData = JSON.parse(document.getElementById('daily-data').textContent);
         const mtdData = JSON.parse(document.getElementById('mtd-data').textContent);
         
-        // Update summary statistics
+        // Update summary statistics with circle charts
         updateSummaryStats(dailyData);
         
-        // Create charts
+        // Create main charts
         createChart('daily-chart', dailyData, 'line');
         createChart('mtd-chart', mtdData, 'doughnut');
         createChart('ytd-chart', ytdData, 'polarArea');
@@ -828,19 +926,57 @@ function createChart(canvasId, data, chartType) {
         chartInstances[canvasId].destroy();
     }
     
-    const config = { ...chartConfigs[chartType] };
+    const config = JSON.parse(JSON.stringify(chartConfigs[chartType])); // Deep copy
     config.data = prepareChartData(data, chartType);
     
-    // Add animations
+    // Add smooth animations
     config.options.animation = {
-        duration: 2000,
+        duration: 1500,
         easing: 'easeInOutQuart'
     };
     
     chartInstances[canvasId] = new Chart(ctx, config);
 }
 
-// Prepare chart data
+// Create small circle charts for summary stats
+function createSummaryChart(canvasId, value, maxValue, color) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    
+    // Destroy existing chart if it exists
+    if (chartInstances[canvasId]) {
+        chartInstances[canvasId].destroy();
+    }
+    
+    const percentage = (value / maxValue) * 100;
+    
+    const config = {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [percentage, 100 - percentage],
+                backgroundColor: [color, 'rgba(226, 232, 240, 0.3)'],
+                borderWidth: 0,
+                cutout: '75%'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+            animation: {
+                duration: 2000,
+                easing: 'easeInOutQuart'
+            }
+        }
+    };
+    
+    chartInstances[canvasId] = new Chart(ctx, config);
+}
+
+// Prepare chart data with clean styling
 function prepareChartData(data, chartType) {
     if (!data || !data.labels || !data.datasets) {
         return { labels: [], datasets: [] };
@@ -852,14 +988,15 @@ function prepareChartData(data, chartType) {
             ...dataset,
             backgroundColor: getBackgroundColors(chartType, index, data.datasets.length),
             borderColor: getBorderColors(chartType, index, data.datasets.length),
-            borderWidth: chartType === 'line' ? 3 : 1,
+            borderWidth: chartType === 'line' ? 3 : 2,
             fill: chartType === 'area',
-            pointBackgroundColor: colorSchemes.solid[index % colorSchemes.solid.length],
+            pointBackgroundColor: colorSchemes.primary[index % colorSchemes.primary.length],
             pointBorderColor: '#fff',
             pointBorderWidth: 2,
-            pointRadius: chartType === 'line' ? 6 : 0,
+            pointRadius: chartType === 'line' ? 5 : 0,
             hoverBackgroundColor: getHoverColors(chartType, index, data.datasets.length),
-            hoverBorderWidth: 3
+            hoverBorderWidth: 3,
+            tension: chartType === 'line' || chartType === 'area' ? 0.3 : 0
         }))
     };
     
@@ -877,20 +1014,20 @@ function getBackgroundColors(chartType, index, total) {
 // Get border colors
 function getBorderColors(chartType, index, total) {
     if (['doughnut', 'pie', 'polarArea'].includes(chartType)) {
-        return colorSchemes.solid.slice(0, total);
+        return colorSchemes.primary.slice(0, total);
     }
-    return colorSchemes.solid[index % colorSchemes.solid.length];
+    return colorSchemes.primary[index % colorSchemes.primary.length];
 }
 
 // Get hover colors
 function getHoverColors(chartType, index, total) {
     if (['doughnut', 'pie', 'polarArea'].includes(chartType)) {
-        return colorSchemes.solid.slice(0, total);
+        return colorSchemes.primary.slice(0, total);
     }
-    return colorSchemes.solid[index % colorSchemes.solid.length];
+    return colorSchemes.primary[index % colorSchemes.primary.length];
 }
 
-// Update summary statistics
+// Update summary statistics with circle charts
 function updateSummaryStats(data) {
     if (!data || !data.datasets || data.datasets.length === 0) return;
     
@@ -901,21 +1038,28 @@ function updateSummaryStats(data) {
     if (occupancyData) {
         const avgOccupancy = occupancyData.data.reduce((a, b) => a + b, 0) / occupancyData.data.length;
         document.getElementById('avg-occupancy').textContent = avgOccupancy.toFixed(1) + '%';
+        createSummaryChart('occupancy-chart', avgOccupancy, 100, '#667eea');
     }
     
     if (rateData) {
         const avgRate = rateData.data.reduce((a, b) => a + b, 0) / rateData.data.length;
         document.getElementById('avg-rate').textContent = ' + avgRate.toFixed(0);
+        const maxRate = Math.max(...rateData.data);
+        createSummaryChart('rate-chart', avgRate, maxRate, '#38a169');
     }
     
     if (revparData) {
         const avgRevpar = revparData.data.reduce((a, b) => a + b, 0) / revparData.data.length;
         document.getElementById('avg-revpar').textContent = ' + avgRevpar.toFixed(0);
+        const maxRevpar = Math.max(...revparData.data);
+        createSummaryChart('revpar-chart', avgRevpar, maxRevpar, '#ed8936');
     }
     
     // Find best performer
     if (data.labels && data.labels.length > 0) {
         document.getElementById('best-performer').textContent = data.labels[0];
+        // Create a simple progress chart for best performer
+        createSummaryChart('performer-chart', 85, 100, '#e53e3e');
     }
 }
 
@@ -942,35 +1086,46 @@ function combineDataForComparison(dailyData, mtdData, ytdData) {
     return { labels, datasets };
 }
 
-// Chart type change handlers
+// FIXED: Chart type change handlers with proper event delegation
 function setupChartTypeHandlers() {
-    document.querySelectorAll('.chart-type-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const chartId = this.dataset.chart;
-            const chartType = this.dataset.type;
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('chart-type-btn')) {
+            const chartId = e.target.getAttribute('data-chart-id');
+            const chartType = e.target.getAttribute('data-chart-type');
             
-            // Update active state
-            this.parentNode.querySelectorAll('.chart-type-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
+            if (!chartId || !chartType) return;
             
-            // Get data for chart
+            // Update active state within the same control group
+            const controlGroup = e.target.closest('.chart-type-selector');
+            controlGroup.querySelectorAll('.chart-type-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            e.target.classList.add('active');
+            
+            // Get appropriate data for chart
             let data;
-            if (chartId === 'daily-chart') {
-                data = JSON.parse(document.getElementById('daily-data').textContent);
-            } else if (chartId === 'mtd-chart') {
-                data = JSON.parse(document.getElementById('mtd-data').textContent);
-            } else if (chartId === 'ytd-chart') {
-                data = JSON.parse(document.getElementById('ytd-data').textContent);
-            } else if (chartId === 'comparison-chart') {
-                const dailyData = JSON.parse(document.getElementById('daily-data').textContent);
-                const mtdData = JSON.parse(document.getElementById('mtd-data').textContent);
-                const ytdData = JSON.parse(document.getElementById('ytd-data').textContent);
-                data = combineDataForComparison(dailyData, mtdData, ytdData);
+            try {
+                if (chartId === 'daily-chart') {
+                    data = JSON.parse(document.getElementById('daily-data').textContent);
+                } else if (chartId === 'mtd-chart') {
+                    data = JSON.parse(document.getElementById('mtd-data').textContent);
+                } else if (chartId === 'ytd-chart') {
+                    data = JSON.parse(document.getElementById('ytd-data').textContent);
+                } else if (chartId === 'comparison-chart') {
+                    const dailyData = JSON.parse(document.getElementById('daily-data').textContent);
+                    const mtdData = JSON.parse(document.getElementById('mtd-data').textContent);
+                    const ytdData = JSON.parse(document.getElementById('ytd-data').textContent);
+                    data = combineDataForComparison(dailyData, mtdData, ytdData);
+                }
+                
+                // Recreate chart with new type
+                if (data) {
+                    createChart(chartId, data, chartType);
+                }
+            } catch (error) {
+                console.error('Error switching chart type:', error);
             }
-            
-            // Recreate chart with new type
-            createChart(chartId, data, chartType);
-        });
+        }
     });
 }
 
@@ -1022,7 +1177,7 @@ function downloadChart(chartId) {
 function showLoading() {
     document.getElementById('loading-spinner').style.display = 'block';
     document.querySelectorAll('.chart-card').forEach(card => {
-        card.style.opacity = '0.5';
+        card.style.opacity = '0.6';
     });
 }
 
@@ -1077,7 +1232,7 @@ function setupScrollAnimations() {
                 entry.target.classList.add('fade-in');
             }
         });
-    });
+    }, { threshold: 0.1 });
     
     document.querySelectorAll('.chart-card').forEach(card => {
         observer.observe(card);
@@ -1093,18 +1248,18 @@ document.addEventListener('DOMContentLoaded', function() {
     setupResponsiveCharts();
     setupScrollAnimations();
     
-    // Add some interactive effects
+    // Add subtle hover effects
     document.querySelectorAll('.card').forEach(card => {
         card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-10px) scale(1.02)';
+            this.style.transform = 'translateY(-4px)';
         });
         
         card.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0) scale(1)';
+            this.style.transform = 'translateY(0)';
         });
     });
     
-    // Add keyboard shortcuts
+    // Add keyboard shortcuts for accessibility
     document.addEventListener('keydown', function(e) {
         if (e.ctrlKey && e.key === 'd') {
             e.preventDefault();
@@ -1124,7 +1279,8 @@ window.addEventListener('error', function(e) {
     // Show user-friendly error message
     const errorDiv = document.createElement('div');
     errorDiv.className = 'alert alert-warning';
-    errorDiv.innerHTML = '⚠️ Some charts may not display correctly. Please refresh the page or contact support.';
+    errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Some charts may not display correctly. Please refresh the page or contact support.';
+    errorDiv.style.cssText = 'background: #fed7d7; color: #742a2a; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #fc8181;';
     document.querySelector('.container-fluid').insertBefore(errorDiv, document.querySelector('.container-fluid').firstChild);
 });
 
