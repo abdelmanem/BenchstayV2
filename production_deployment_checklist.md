@@ -51,7 +51,7 @@ This checklist covers all the necessary steps to deploy the BenchstayV2 applicat
 - [ ] Clone the repository to the server:
   ```bash
   cd /opt/BenchstayV2
-  git clone https://github.com/abdelmanem/BenchstayV2.git .
+  git clone https://github.com/abdelmanem/BenchstayV2.git
   ```
 - [ ] Create and activate a virtual environment:
   ```bash
