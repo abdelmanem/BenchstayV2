@@ -326,12 +326,15 @@ function updateSummaryMetrics() {
 function addTrendIndicator(elementId, currentValue, previousValue) {
     const element = document.getElementById(elementId);
     const difference = currentValue - previousValue;
-    const percentChange = (difference / previousValue) * 100;
+    const percentChange = previousValue !== 0 ? (difference / previousValue) * 100 : 0;
     
     let indicator = '';
     if (difference > 0) {
-        indicator = `<span class="text-success"><i class="bi bi-arrow-up-right"></i> ${Math.abs(percentChange).toFixed(1)}%</span>`;
+        indicator = `<span class="text-success"><i class="fas fa-arrow-up"></i> <span class="ms-1">+${Math.abs(percentChange).toFixed(1)}% vs last period</span></span>`;
     } else if (difference < 0) {
-        indicator = `<span class="text-danger"><i class="bi bi-arrow-down-right"></i> ${Math.abs(percentChange).toFixed(1)}%</span>`;
+        indicator = `<span class="text-danger"><i class="fas fa-arrow-down"></i> <span class="ms-1">-${Math.abs(percentChange).toFixed(1)}% vs last period</span></span>`;
     } else {
-        indicator = `<span class="text-secondary"><i class="bi bi-dash">
+        indicator = `<span class="text-secondary"><i class="fas fa-minus"></i> <span class="ms-1">0.0% vs last period</span></span>`;
+    }
+    
+    element.innerHTML = indicator;

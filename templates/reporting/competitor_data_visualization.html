@@ -411,8 +411,7 @@
                             </div>
                             <div class="metric-value" id="summary-occupancy">{{ daily_data|get_item:hotel.name|get_item:'occupancy_percentage'|floatformat:2 }}%</div>
                             <div class="metric-trend" id="trend-occupancy">
-                                <i class="fas fa-arrow-up trend-up"></i>
-                                <span class="ms-1">+2.3% vs last period</span>
+                                <!-- This will be populated by JavaScript -->
                             </div>
                         </div>
                         <div class="metric-card">
@@ -421,8 +420,7 @@
                             </div>
                             <div class="metric-value" id="summary-rate">{{ system_settings.currency_symbol }}{{ daily_data|get_item:hotel.name|get_item:'average_rate'|floatformat:2 }}</div>
                             <div class="metric-trend" id="trend-rate">
-                                <i class="fas fa-arrow-up trend-up"></i>
-                                <span class="ms-1">+5.1% vs last period</span>
+                                <!-- This will be populated by JavaScript -->
                             </div>
                         </div>
                         <div class="metric-card">
@@ -431,8 +429,7 @@
                             </div>
                             <div class="metric-value" id="summary-revpar">{{ system_settings.currency_symbol }}{{ daily_data|get_item:hotel.name|get_item:'revpar'|floatformat:2 }}</div>
                             <div class="metric-trend" id="trend-revpar">
-                                <i class="fas fa-arrow-up trend-up"></i>
-                                <span class="ms-1">+7.8% vs last period</span>
+                                <!-- This will be populated by JavaScript -->
                             </div>
                         </div>
                         <div class="metric-card">
@@ -441,8 +438,7 @@
                             </div>
                             <div class="metric-value" id="summary-mpi">{{ daily_data|get_item:hotel.name|get_item:'mpi'|floatformat:2 }}</div>
                             <div class="metric-trend" id="trend-mpi">
-                                <i class="fas fa-minus trend-neutral"></i>
-                                <span class="ms-1">-0.2% vs last period</span>
+                                <!-- This will be populated by JavaScript -->
                             </div>
                         </div>
                     </div>
@@ -467,8 +463,8 @@
                             <div class="circular-chart-container">
                                 <canvas id="occupancy-circle"></canvas>
                                 <div class="performance-indicator">
-                                    <div class="value" id="occupancy-value">75%</div>
-                                    <div class="label">Target: 80%</div>
+                                    <div class="value" id="occupancy-value"></div>
+                                    <div class="label">Target: <span id="occupancy-target">80%</span></div>
                                 </div>
                             </div>
                         </div>
@@ -477,8 +473,8 @@
                             <div class="circular-chart-container">
                                 <canvas id="rate-index-circle"></canvas>
                                 <div class="performance-indicator">
-                                    <div class="value" id="rate-index-value">105</div>
-                                    <div class="label">Above Market</div>
+                                    <div class="value" id="rate-index-value"></div>
+                                    <div class="label"><span id="rate-index-label">Above Market</span></div>
                                 </div>
                             </div>
                         </div>
@@ -487,8 +483,8 @@
                             <div class="circular-chart-container">
                                 <canvas id="revenue-index-circle"></canvas>
                                 <div class="performance-indicator">
-                                    <div class="value" id="revenue-index-value">98</div>
-                                    <div class="label">Fair Share</div>
+                                    <div class="value" id="revenue-index-value"></div>
+                                    <div class="label"><span id="revenue-index-label">Fair Share</span></div>
                                 </div>
                             </div>
                         </div>
@@ -497,7 +493,7 @@
                             <div class="circular-chart-container">
                                 <canvas id="market-share-circle"></canvas>
                                 <div class="performance-indicator">
-                                    <div class="value" id="market-share-value">12%</div>
+                                    <div class="value" id="market-share-value"></div>
                                     <div class="label">Of Total Market</div>
                                 </div>
                             </div>
@@ -908,17 +904,56 @@ class EnhancedCompetitorCharts {
     }
 
     createCircularIndicators() {
-        // Occupancy Circle
-        this.createCircularProgress('occupancy-circle', 75, 100, '#11998e');
+        // Get hotel name
+        const userHotelName = document.querySelector('.metrics-summary').getAttribute('data-hotel-name');
         
-        // Rate Index Circle
-        this.createCircularProgress('rate-index-circle', 105, 150, '#667eea');
+        // Get data from backend
+        const dailyData = this.data.daily;
         
-        // Revenue Index Circle
-        this.createCircularProgress('revenue-index-circle', 98, 150, '#f093fb');
+        // Occupancy Circle - Use real data
+        const occupancyValue = dailyData[userHotelName].occupancy_percentage;
+        this.createCircularProgress('occupancy-circle', occupancyValue, 100, '#11998e');
+        document.getElementById('occupancy-value').textContent = occupancyValue.toFixed(1) + '%';
         
-        // Market Share Circle
-        this.createCircularProgress('market-share-circle', 12, 100, '#4b6cb7');
+        // Set occupancy target - typically 5-10% higher than current value or industry average
+        const occupancyTarget = Math.min(100, Math.round(occupancyValue * 1.1)); // 10% higher than current, max 100%
+        document.getElementById('occupancy-target').textContent = occupancyTarget + '%';
+        
+        // Rate Index Circle - Use real data
+        const rateIndexValue = dailyData[userHotelName].ari;
+        this.createCircularProgress('rate-index-circle', rateIndexValue, 150, '#667eea');
+        document.getElementById('rate-index-value').textContent = rateIndexValue.toFixed(1);
+        
+        // Set rate index label based on value
+        const rateIndexLabel = document.getElementById('rate-index-label');
+        if (rateIndexValue > 105) {
+            rateIndexLabel.textContent = 'Above Market';
+        } else if (rateIndexValue >= 95 && rateIndexValue <= 105) {
+            rateIndexLabel.textContent = 'At Market';
+        } else {
+            rateIndexLabel.textContent = 'Below Market';
+        }
+        
+        // Revenue Index Circle - Use real data
+        const revenueIndexValue = dailyData[userHotelName].rgi;
+        this.createCircularProgress('revenue-index-circle', revenueIndexValue, 150, '#f093fb');
+        document.getElementById('revenue-index-value').textContent = revenueIndexValue.toFixed(1);
+        
+        // Set revenue index label based on value
+        const revenueIndexLabel = document.getElementById('revenue-index-label');
+        if (revenueIndexValue > 105) {
+            revenueIndexLabel.textContent = 'Above Fair Share';
+        } else if (revenueIndexValue >= 95 && revenueIndexValue <= 105) {
+            revenueIndexLabel.textContent = 'Fair Share';
+        } else {
+            revenueIndexLabel.textContent = 'Below Fair Share';
+        }
+        
+        // Market Share Circle - Calculate market share from data
+        // For simplicity, we'll use MPI as an approximation of market share
+        const marketShareValue = dailyData[userHotelName].mpi / 10; // Convert MPI to approximate market share percentage
+        this.createCircularProgress('market-share-circle', marketShareValue, 100, '#4b6cb7');
+        document.getElementById('market-share-value').textContent = marketShareValue.toFixed(1) + '%';
     }
 
     createCircularProgress(canvasId, value, max, color) {
@@ -956,13 +991,37 @@ class EnhancedCompetitorCharts {
         const ctx = document.getElementById('market-radar-chart')?.getContext('2d');
         if (!ctx) return;
 
+        // Get hotel name and data
+        const userHotelName = document.querySelector('.metrics-summary').getAttribute('data-hotel-name');
+        const dailyData = this.data.daily;
+        
+        // Get hotel data
+        const hotelData = dailyData[userHotelName];
+        
+        // Get market average data
+        const marketData = dailyData['Market Average'] || {
+            occupancy_percentage: 70,
+            average_rate: 100,
+            revpar: 95,
+            mpi: 100,
+            ari: 100,
+            rgi: 100
+        };
+
         this.charts.marketRadar = new Chart(ctx, {
             type: 'radar',
             data: {
                 labels: ['Occupancy', 'Rate', 'RevPAR', 'MPI', 'ARI', 'RGI'],
                 datasets: [{
                     label: 'Your Hotel',
-                    data: [75, 105, 98, 102, 105, 98],
+                    data: [
+                        hotelData.occupancy_percentage,
+                        hotelData.average_rate,
+                        hotelData.revpar,
+                        hotelData.mpi,
+                        hotelData.ari,
+                        hotelData.rgi
+                    ],
                     backgroundColor: 'rgba(102, 126, 234, 0.2)',
                     borderColor: '#667eea',
                     borderWidth: 3,
@@ -971,7 +1030,14 @@ class EnhancedCompetitorCharts {
                     pointBorderWidth: 2
                 }, {
                     label: 'Market Average',
-                    data: [70, 100, 95, 100, 100, 100],
+                    data: [
+                        marketData.occupancy_percentage,
+                        marketData.average_rate,
+                        marketData.revpar,
+                        marketData.mpi,
+                        marketData.ari,
+                        marketData.rgi
+                    ],
                     backgroundColor: 'rgba(118, 75, 162, 0.1)',
                     borderColor: '#764ba2',
                     borderWidth: 2,
@@ -1004,12 +1070,35 @@ class EnhancedCompetitorCharts {
         const ctx = document.getElementById('performance-pie-chart')?.getContext('2d');
         if (!ctx) return;
 
+        // Get data from backend
+        const dailyData = this.data.daily;
+        
+        // Get hotel names and data (excluding Market Average)
+        const hotelNames = Object.keys(dailyData).filter(name => name !== 'Market Average');
+        
+        // Count hotels above, at, and below market
+        let aboveMarket = 0;
+        let atMarket = 0;
+        let belowMarket = 0;
+        
+        // Use MPI (Market Penetration Index) to determine market position
+        hotelNames.forEach(name => {
+            const mpi = dailyData[name].mpi;
+            if (mpi > 105) { // Above market
+                aboveMarket++;
+            } else if (mpi >= 95 && mpi <= 105) { // At market
+                atMarket++;
+            } else { // Below market
+                belowMarket++;
+            }
+        });
+
         this.charts.performancePie = new Chart(ctx, {
             type: 'doughnut',
             data: {
                 labels: ['Above Market', 'At Market', 'Below Market'],
                 datasets: [{
-                    data: [45, 35, 20],
+                    data: [aboveMarket, atMarket, belowMarket],
                     backgroundColor: ['#11998e', '#667eea', '#f093fb'],
                     borderWidth: 3,
                     borderColor: '#fff'
@@ -1030,17 +1119,28 @@ class EnhancedCompetitorCharts {
     }
 
     createGaugeCharts() {
-        // Occupancy Gauge
-        this.createGaugeChart('occupancy-gauge', 75, 'Occupancy %', '#11998e');
+        // Get hotel name
+        const userHotelName = document.querySelector('.metrics-summary').getAttribute('data-hotel-name');
         
-        // Rate Gauge
-        this.createGaugeChart('rate-gauge', 105, 'Rate Index', '#667eea');
+        // Get data from backend
+        const dailyData = this.data.daily;
         
-        // RevPAR Gauge
-        this.createGaugeChart('revpar-gauge', 98, 'RevPAR Index', '#f093fb');
+        // Occupancy Gauge - Use real data
+        const occupancyValue = dailyData[userHotelName].occupancy_percentage;
+        this.createGaugeChart('occupancy-gauge', occupancyValue, 'Occupancy %', '#11998e');
         
-        // Market Share Gauge
-        this.createGaugeChart('market-share-gauge', 12, 'Market Share %', '#4b6cb7');
+        // Rate Gauge - Use real data
+        const rateIndexValue = dailyData[userHotelName].ari;
+        this.createGaugeChart('rate-gauge', rateIndexValue, 'Rate Index', '#667eea');
+        
+        // RevPAR Gauge - Use real data
+        const revenueIndexValue = dailyData[userHotelName].rgi;
+        this.createGaugeChart('revpar-gauge', revenueIndexValue, 'RevPAR Index', '#f093fb');
+        
+        // Market Share Gauge - Calculate market share from data
+        // For simplicity, we'll use MPI as an approximation of market share
+        const marketShareValue = dailyData[userHotelName].mpi / 10; // Convert MPI to approximate market share percentage
+        this.createGaugeChart('market-share-gauge', marketShareValue, 'Market Share %', '#4b6cb7');
     }
 
     createGaugeChart(canvasId, value, label, color) {
@@ -1074,19 +1174,34 @@ class EnhancedCompetitorCharts {
         const ctx = document.getElementById('competitor-polar-chart')?.getContext('2d');
         if (!ctx) return;
 
+        // Get data from backend
+        const dailyData = this.data.daily;
+        
+        // Get hotel names and data
+        const hotelNames = Object.keys(dailyData);
+        
+        // Filter out 'Market Average' if it exists
+        const filteredHotelNames = hotelNames.filter(name => name !== 'Market Average');
+        
+        // Get performance data (using MPI as overall performance indicator)
+        const performanceData = filteredHotelNames.map(name => dailyData[name].mpi);
+        
+        // Generate colors
+        const colors = [
+            'rgba(102, 126, 234, 0.8)',
+            'rgba(17, 153, 142, 0.8)',
+            'rgba(240, 147, 251, 0.8)',
+            'rgba(75, 108, 183, 0.8)',
+            'rgba(118, 75, 162, 0.8)'
+        ];
+
         this.charts.competitorPolar = new Chart(ctx, {
             type: 'polarArea',
             data: {
-                labels: ['Your Hotel', 'Competitor A', 'Competitor B', 'Competitor C', 'Competitor D'],
+                labels: filteredHotelNames,
                 datasets: [{
-                    data: [85, 78, 92, 67, 73],
-                    backgroundColor: [
-                        'rgba(102, 126, 234, 0.8)',
-                        'rgba(17, 153, 142, 0.8)',
-                        'rgba(240, 147, 251, 0.8)',
-                        'rgba(75, 108, 183, 0.8)',
-                        'rgba(118, 75, 162, 0.8)'
-                    ],
+                    data: performanceData,
+                    backgroundColor: colors.slice(0, filteredHotelNames.length),
                     borderColor: '#fff',
                     borderWidth: 2
                 }]
