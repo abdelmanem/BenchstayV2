@@ -746,9 +746,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <!-- Data for Charts -->
-<script id="daily-data" type="application/json">{{ daily_data|safe }}</script>
-<script id="mtd-data" type="application/json">{{ mtd_data|safe }}</script>
-<script id="ytd-data" type="application/json">{{ ytd_data|safe }}</script>
+<script id="daily-data" type="application/json">{{ daily_data_json|default:daily_data|safe }}</script>
+<script id="mtd-data" type="application/json">{{ mtd_data_json|default:mtd_data|safe }}</script>
+<script id="ytd-data" type="application/json">{{ ytd_data_json|default:ytd_data|safe }}</script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {

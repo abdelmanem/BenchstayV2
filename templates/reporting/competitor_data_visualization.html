@@ -404,7 +404,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="metrics-summary">
+                    <div class="metrics-summary" data-hotel-name="{{ hotel.name }}">
                         <div class="metric-card">
                             <div class="metric-label">
                                 <i class="fas fa-bed me-1"></i>Occupancy Rate
@@ -768,15 +768,9 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-<script id="ytd-data" type="application/json">
-    {{ ytd_data|safe }}
-</script>
-<script id="daily-data" type="application/json">
-    {{ daily_data|safe }}
-</script>
-<script id="mtd-data" type="application/json">
-    {{ mtd_data|safe }}
-</script>
+<script id="ytd-data" type="application/json">{{ ytd_data_json|default:ytd_data|safe }}</script>
+<script id="daily-data" type="application/json">{{ daily_data_json|default:daily_data|safe }}</script>
+<script id="mtd-data" type="application/json">{{ mtd_data_json|default:mtd_data|safe }}</script>
 <script src="{% static 'js/cache_control.js' %}"></script>
 
 <script>

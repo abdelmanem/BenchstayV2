@@ -212,9 +212,14 @@ def competitor_data_visualization(request):
         'competitors': competitors,
         'start_date': start_date,
         'end_date': end_date,
-        'daily_data': json.dumps(daily_data),
-        'mtd_data': json.dumps(mtd_data),
-        'ytd_data': json.dumps(ytd_data),
+        # Python dicts for server-rendered sections
+        'daily_data': daily_data,
+        'mtd_data': mtd_data,
+        'ytd_data': ytd_data,
+        # JSON strings for client-side scripts
+        'daily_data_json': json.dumps(daily_data, default=str),
+        'mtd_data_json': json.dumps(mtd_data, default=str),
+        'ytd_data_json': json.dumps(ytd_data, default=str),
         'system_settings': SystemSettings.objects.first(),
     }
     

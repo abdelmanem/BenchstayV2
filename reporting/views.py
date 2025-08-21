@@ -3,8 +3,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Avg, Sum, F, ExpressionWrapper, DecimalField, Count, Q
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.template.loader import get_template
+import json
 from datetime import timedelta, datetime
 import calendar
 import xlsxwriter
@@ -663,6 +664,10 @@ def competitor_advanced_analytics(request):
         'daily_data': daily_data,
         'mtd_data': mtd_data,
         'ytd_data': ytd_data,
+        # JSON versions for client-side scripts
+        'daily_data_json': json.dumps(daily_data, default=str),
+        'mtd_data_json': json.dumps(mtd_data, default=str),
+        'ytd_data_json': json.dumps(ytd_data, default=str),
         'daily_totals': daily_totals,
         'mtd_totals': mtd_totals,
         'ytd_totals': ytd_totals,
@@ -1175,85 +1180,7 @@ def export_competitor_analytics_pdf(request, hotel_id):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     return response
-# Alternative: HTML to PDF using WeasyPrint (even better)
-from weasyprint import HTML, CSS
-from django.template.loader import render_to_string
-
-def export_competitor_analytics_pdf_weasyprint(request):
-    """Generate PDF using WeasyPrint - maintains exact HTML styling"""
-    
-    # Get your data
-    context = {
-        'hotel': hotel,
-        'daily_data': daily_data,
-        'mtd_data': mtd_data,
-        'ytd_data': ytd_data,
-        'start_date': start_date,
-        'end_date': end_date,
-        'is_pdf_export': True  # Flag to modify template for PDF
-    }
-    
-    # Render HTML template
-    html_string = render_to_string('reporting/competitor_analytics_pdf.html', context)
-    
-    # CSS for PDF optimization
-    css_string = """
-    @page {
-        size: A3 landscape;
-        margin: 0.5in;
-    }
-    
-    body {
-        font-family: Arial, sans-serif;
-        font-size: 10px;
-        line-height: 1.2;
-    }
-    
-    .enhanced-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 8px;
-        page-break-inside: avoid;
-    }
-    
-    .enhanced-table th,
-    .enhanced-table td {
-        border: 1px solid #ddd;
-        padding: 4px;
-        text-align: center;
-        word-wrap: break-word;
-    }
-    
-    .enhanced-table th {
-        background-color: #374151 !important;
-        color: white !important;
-        font-weight: bold;
-    }
-    
-    .table-primary-custom {
-        background-color: #dbeafe !important;
-        font-weight: bold;
-    }
-    
-    .page-break {
-        page-break-before: always;
-    }
-    
-    .no-print {
-        display: none;
-    }
-    """
-    
-    # Generate PDF
-    html = HTML(string=html_string)
-    css = CSS(string=css_string)
-    pdf = html.write_pdf(stylesheets=[css])
-    
-    # Return response
-    response = HttpResponse(pdf, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{hotel.name}_Market_Report.pdf"'
-    
-    return response
+# Removed unused WeasyPrint export function that referenced undefined variables
 
 
 def calculate_daily_metrics(hotel, competitors, start_date, end_date):
