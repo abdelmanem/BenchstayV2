@@ -19,7 +19,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'x$2ywe8je))utjw7k!h(lxkpb3)bnm
 DEBUG = False
 
 # Add your domain and server IP to allowed hosts
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'your-domain.com', 'www.your-domain.com', 'your-server-ip']
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
@@ -83,29 +83,29 @@ WSGI_APPLICATION = 'benchstay.wsgi_production.application'
 
 # Database
 # For testing purposes, use SQLite instead of PostgreSQL
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.sqlite3',
+#        'NAME': BASE_DIR / 'db.sqlite3',
+#    }
+#}
 
 # Uncomment this when ready to use PostgreSQL
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.environ.get('DB_NAME', 'Benchstay'),
-#         'USER': os.environ.get('DB_USER', 'Benchstaydbuser'),
-#         'PASSWORD': os.environ.get('DB_PASSWORD', ''),  # Set this in environment variable
-#         'HOST': os.environ.get('DB_HOST', 'localhost'),
-#         'PORT': os.environ.get('DB_PORT', '5432'),
-#         'CONN_MAX_AGE': 600,  # 10 minutes connection persistence
-#         'OPTIONS': {
-#             'connect_timeout': 10,
-#             'sslmode': 'prefer',  # Use SSL if available
-#         },
-#     }
-# }
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'Benchstay'),
+        'USER': os.environ.get('DB_USER', 'Benchstaydbuser'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),  # Set this in environment variable
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
+        'CONN_MAX_AGE': 600,  # 10 minutes connection persistence
+        'OPTIONS': {
+            'connect_timeout': 10,
+            'sslmode': 'prefer',  # Use SSL if available
+        },
+    }
+}
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
