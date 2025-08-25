@@ -24,6 +24,35 @@
     </div>
 </div>
 
+<!-- Unified Date Filter Form -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0"><i class="fas fa-calendar-alt me-2"></i>Custom Date Range Filter</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="date-filter-form" class="row g-3 align-items-end">
+                    {% csrf_token %}
+                    <div class="col-md-4">
+                        <label for="start_date" class="form-label">From Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="end_date" class="form-label">To Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter me-2"></i>Apply Filter
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Enhanced Key Performance Metrics -->
 <div class="row g-4 mb-5">
     <!-- Occupancy -->
@@ -77,6 +106,130 @@
             <div class="metric-value">{{ system_settings.currency_symbol }} {{ summary.current_revpar|floatformat:2 }}</div>
             <div class="text-muted small">
                 Prior Year: {{ system_settings.currency_symbol }} {{ summary.prior_year_revpar|floatformat:2 }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Revenue Metrics Charts - Side by Side -->
+<div class="row mb-5">
+    <div class="col-12 mb-3">
+        <h3 class="section-title">
+            <i class="fas fa-chart-area me-2"></i>Revenue Performance Analytics
+        </h3>
+    </div>
+    
+    <!-- No Data Message -->
+    {% if not summary.current_occ and not summary.current_adr and not summary.current_revpar %}
+    <div class="col-12">
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>No data available</strong> for the selected date range. 
+            Please enter some hotel data or adjust your date filter to see charts.
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Occupancy Chart -->
+    <div class="col-lg-4 mb-4">
+        <div class="chart-section">
+            <div class="section-header-small">
+                <h5 class="chart-title">
+                    <i class="fas fa-bed me-2"></i>Occupancy Rate
+                </h5>
+            </div>
+            
+            <div class="chart-container-compact">
+                <canvas id="occupancyChart"></canvas>
+                <div class="performance-indicator">
+                    <div id="occupancy-value" class="value">{{ summary.current_occ|floatformat:1 }}%</div>
+                    <div class="label">Target: <span id="occupancy-target">86%</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADR Chart -->
+    <div class="col-lg-4 mb-4">
+        <div class="chart-section">
+            <div class="section-header-small">
+                <h5 class="chart-title">
+                    <i class="fas fa-dollar-sign me-2"></i>Average Daily Rate
+                </h5>
+            </div>
+            
+            <div class="chart-container-compact">
+                <canvas id="adrChart"></canvas>
+                <div class="performance-indicator">
+                    <div id="adr-value" class="value">{{ summary.current_adr|floatformat:2 }}</div>
+                    <div class="label">Current ADR</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RevPAR Chart -->
+    <div class="col-lg-4 mb-4">
+        <div class="chart-section">
+            <div class="section-header-small">
+                <h5 class="chart-title">
+                    <i class="fas fa-chart-line me-2"></i>RevPAR
+                </h5>
+            </div>
+            
+            <div class="chart-container-compact">
+                <canvas id="revparChart"></canvas>
+                <div class="performance-indicator">
+                    <div id="revpar-value" class="value">{{ summary.current_revpar|floatformat:2 }}</div>
+                    <div class="label">Current RevPAR</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Color Customization Controls -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="card-title mb-0"><i class="fas fa-palette me-2"></i>Chart Color Customization</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Occupancy</label>
+                        <input type="color" class="form-control form-control-color" id="occupancy-color" value="#FF6B6B" title="Choose occupancy chart color">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">ADR</label>
+                        <input type="color" class="form-control form-control-color" id="adr-color" value="#4ECDC4" title="Choose ADR chart color">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">RevPAR</label>
+                        <input type="color" class="form-control form-control-color" id="revpar-color" value="#45B7D1" title="Choose RevPAR chart color">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">MPI</label>
+                        <input type="color" class="form-control form-control-color" id="mpi-color" value="#96CEB4" title="Choose MPI chart color">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">ARI</label>
+                        <input type="color" class="form-control form-control-color" id="ari-color" value="#FFEAA7" title="Choose ARI chart color">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">RGI</label>
+                        <input type="color" class="form-control form-control-color" id="rgi-color" value="#DDA0DD" title="Choose RGI chart color">
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <button type="button" class="btn btn-primary" id="apply-colors">
+                        <i class="fas fa-paint-brush me-2"></i>Apply Colors
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary ms-2" id="reset-colors">
+                        <i class="fas fa-undo me-2"></i>Reset to Default
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -145,46 +298,66 @@
         </div>
     </div>
 </div>
-
-<!-- Enhanced RevPAR Positioning Matrix -->
+<!-- Market Performance Indices Charts - Side by Side -->
 <div class="row mb-5">
+    <div class="col-12 mb-3">
+        <h3 class="section-title">
+            <i class="fas fa-chart-bar me-2"></i>Market Performance Indices
+        </h3>
+    </div>
+    
+    <!-- No Data Message for Indices -->
+    {% if not indices.current_mpi and not indices.current_ari and not indices.current_rgi %}
     <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start">
-                    <div>
-                        <h5 class="fw-bold mb-0">
-                            <i class="fas fa-crosshairs me-2"></i>RevPAR Positioning Matrix
-                        </h5>
-                        <p class="text-muted mb-0 mt-1">Competitive positioning analysis</p>
-                    </div>
-                    <div class="mt-3 mt-md-0">
-                        <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-outline-primary active" id="currentBtn">Current</button>
-                            <button type="button" class="btn btn-outline-primary" id="compareBtn">Compare</button>
-                        </div>
-                    </div>
-                </div>
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>No performance indices available</strong> for the selected date range. 
+            Performance indices are calculated when both hotel and competitor data are available.
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- MPI Chart -->
+    <div class="col-lg-4 mb-4">
+        <div class="chart-section">
+            <div class="section-header-small">
+                <h5 class="chart-title">
+                    <i class="fas fa-users me-2"></i>Market Penetration Index
+                </h5>
             </div>
-            <div class="row g-0">
-                <div class="col-md-6 border-end">
-                    <div class="chart-container">
-                        <div class="text-center mb-3">
-                            <h6 class="fw-bold">Current Period</h6>
-                            <small class="text-muted">{{ start_date|date:"F j, Y" }} - {{ end_date|date:"F j, Y" }}</small>
-                        </div>
-                        <canvas id="revparMatrix"></canvas>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="chart-container">
-                        <div class="text-center mb-3">
-                            <h6 class="fw-bold">Previous Year</h6>
-                            <small class="text-muted">{{ prev_year_start_date|date:"F j, Y" }} - {{ prev_year_end_date|date:"F j, Y" }}</small>
-                        </div>
-                        <canvas id="revparMatrixPrevYear"></canvas>
-                    </div>
-                </div>
+            
+            <div class="chart-container-compact">
+                <canvas id="mpiChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ARI Chart -->
+    <div class="col-lg-4 mb-4">
+        <div class="chart-section">
+            <div class="section-header-small">
+                <h5 class="chart-title">
+                    <i class="fas fa-money-bill-wave me-2"></i>Average Rate Index
+                </h5>
+            </div>
+            
+            <div class="chart-container-compact">
+                <canvas id="ariChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- RGI Chart -->
+    <div class="col-lg-4 mb-4">
+        <div class="chart-section">
+            <div class="section-header-small">
+                <h5 class="chart-title">
+                    <i class="fas fa-trophy me-2"></i>Revenue Generation Index
+                </h5>
+            </div>
+            
+            <div class="chart-container-compact">
+                <canvas id="rgiChart"></canvas>
             </div>
         </div>
     </div>
@@ -202,83 +375,700 @@
         font-weight: 500;
         display: inline-block;
     }
-    .chart-container {
+    
+    .chart-container-compact {
         position: relative;
-        height: 40vh; /* 40% of viewport height */
+        height: 250px;
         width: 100%;
         padding: 1rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
+
+    .chart-container-compact canvas {
+        max-width: 80% !important;
+        max-height: 80% !important;
+        width: auto !important;
+        height: auto !important;
+    }
+
+    .section-header-small {
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .chart-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0;
+    }
+    
     canvas {
         width: 100% !important;
         height: 100% !important;
+    }
+
+    .chart-section {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e2e8f0;
+        height: 100%;
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+    }
+    
+    /* Circular Charts Styles */
+    .circular-metrics-row {
+        display: flex;
+        justify-content: space-around;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin-top: 1rem;
+    }
+    
+    .circular-chart-card {
+        flex: 1;
+        min-width: 200px;
+        max-width: 300px;
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .circular-chart-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+    
+    .circular-chart-container {
+        position: relative;
+        height: 200px;
+        width: 200px;
+        margin: 0 auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    .circular-chart-container canvas {
+        max-width: 80% !important;
+        max-height: 80% !important;
+        width: auto !important;
+        height: auto !important;
+    }
+    
+    .performance-indicator {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        width: 100%;
+        z-index: 10;
+        pointer-events: none;
+    }
+    
+    .performance-indicator .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1e293b;
+        line-height: 1;
+        margin-bottom: 0.25rem;
+    }
+    
+    .performance-indicator .label {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 0.25rem;
+    }
+
+    /* Color customization styles */
+    .form-control-color {
+        width: 100%;
+        height: 40px;
+        border-radius: 8px;
+        border: 2px solid #e2e8f0;
+        cursor: pointer;
+    }
+
+    .form-control-color:hover {
+        border-color: #3b82f6;
+    }
+
+    /* Debug styles - remove these after charts are working */
+    .chart-container-compact::before {
+        content: "";
+        display: none;
+    }
+
+    .circular-chart-container::before {
+        content: "";
+        display: none;
+    }
+
+    /* Hide debug text when charts are loaded */
+    .chart-container-compact canvas + .chart-container-compact::before,
+    .circular-chart-container canvas + .circular-chart-container::before {
+        display: none;
     }
 </style>
 {% endblock %}
 
 {% block extra_js %}
+<!-- Load Chart.js library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+<!-- Test Chart.js loading -->
+<script>
+console.log('Testing Chart.js loading...');
+if (typeof Chart !== 'undefined') {
+    console.log('✅ Chart.js loaded successfully:', Chart.version);
+} else {
+    console.error('❌ Chart.js failed to load');
+}
+</script>
+
+<!-- Django data for JavaScript -->
+<script id="django-data" type="application/json">
+{
+    "summary": {
+        "current_occ": {{ summary.current_occ|default:0|floatformat:1 }},
+        "current_adr": {{ summary.current_adr|default:0|floatformat:2 }},
+        "current_revpar": {{ summary.current_revpar|default:0|floatformat:2 }},
+        "occ_change": {{ summary.occ_change|default:0|floatformat:1 }},
+        "adr_change": {{ summary.adr_change|default:0|floatformat:1 }},
+        "revpar_change": {{ summary.revpar_change|default:0|floatformat:1 }}
+    },
+    "indices": {
+        "current_mpi": {{ indices.current_mpi|default:0|floatformat:1 }},
+        "current_ari": {{ indices.current_ari|default:0|floatformat:1 }},
+        "current_rgi": {{ indices.current_rgi|default:0|floatformat:1 }},
+        "mpi_rank": {{ indices.mpi_rank|default:0 }},
+        "ari_rank": {{ indices.ari_rank|default:0 }},
+        "rgi_rank": {{ indices.rgi_rank|default:0 }},
+        "total_competitors": {{ indices.total_competitors|default:0 }}
+    },
+    "dates": {
+        "start_date": "{{ start_date|date:'Y-m-d' }}",
+        "end_date": "{{ end_date|date:'Y-m-d' }}"
+    }
+}
+</script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const ctx1 = document.getElementById('revparMatrix').getContext('2d');
-    const ctx2 = document.getElementById('revparMatrixPrevYear').getContext('2d');
+    // Check if Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js library not loaded!');
+        return;
+    }
 
-    const chartConfig = {
-        type: 'scatter',
-        data: {
-            datasets: [{
-                label: 'Your Hotel',
-                data: [{x: 105, y: 98}],
-                backgroundColor: '#2563eb',
-                borderColor: '#2563eb',
-                pointRadius: 8,
-                pointHoverRadius: 10
-            }, {
-                label: 'Competitors',
-                data: [
-                    {x: 95, y: 102},
-                    {x: 108, y: 96},
-                    {x: 102, y: 104},
-                    {x: 98, y: 99},
-                    {x: 110, y: 101}
-                ],
-                backgroundColor: '#64748b',
-                borderColor: '#64748b',
-                pointRadius: 6
-            }]
+    // Register the DataLabels plugin
+    //if (typeof ChartDataLabels !== 'undefined') {
+    //    Chart.register(ChartDataLabels);
+     //   console.log('✅ DataLabels plugin registered successfully');
+    //} else {
+    //    console.warn('⚠️ DataLabels plugin not available, charts will render without labels');
+    //}
+
+    // Get backend data from Django template context
+    let backendData;
+    try {
+        const dataElement = document.getElementById('django-data');
+        if (dataElement) {
+            backendData = JSON.parse(dataElement.textContent);
+        } else {
+            backendData = {
+                summary: { current_occ: 0, current_adr: 0, current_revpar: 0, occ_change: 0, adr_change: 0, revpar_change: 0 },
+                indices: { current_mpi: 0, current_ari: 0, current_rgi: 0, mpi_rank: 0, ari_rank: 0, rgi_rank: 0, total_competitors: 0 },
+                dates: { start_date: '', end_date: '' }
+            };
+        }
+    } catch (error) {
+        console.error('Error parsing Django data:', error);
+        backendData = {
+            summary: { current_occ: 0, current_adr: 0, current_revpar: 0, occ_change: 0, adr_change: 0, revpar_change: 0 },
+            indices: { current_mpi: 0, current_ari: 0, current_rgi: 0, mpi_rank: 0, ari_rank: 0, rgi_rank: 0, total_competitors: 0 },
+            dates: { start_date: '', end_date: '' }
+        };
+    }
+
+    // Enhanced color schemes for circular charts
+    const circularColorSchemes = {
+        occupancy: {
+            active: '#FF6B6B',
+            background: '#FFE5E5'
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                x: {
-                    title: { display: true, text: 'Occupancy Index' },
-                    min: 90,
-                    max: 115
-                },
-                y: {
-                    title: { display: true, text: 'ADR Index' },
-                    min: 90,
-                    max: 110
-                }
-            },
-            plugins: {
-                legend: { display: true, position: 'bottom' }
-            }
+        adr: {
+            active: '#4ECDC4',
+            background: '#E0F7F5'
+        },
+        revpar: {
+            active: '#45B7D1',
+            background: '#E3F2FD'
+        },
+        mpi: {
+            active: '#96CEB4',
+            background: '#E8F5E8'
+        },
+        ari: {
+            active: '#FFEAA7',
+            background: '#FFF8E1'
+        },
+        rgi: {
+            active: '#DDA0DD',
+            background: '#F3E5F5'
         }
     };
 
-    new Chart(ctx1, chartConfig);
+    // Function to create circular progress charts
+    function createCircularProgress(canvasId, value, max, colorScheme) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
+            console.warn(`Canvas element ${canvasId} not found`);
+            return null;
+        }
 
-    const prevYearConfig = JSON.parse(JSON.stringify(chartConfig));
-    prevYearConfig.data.datasets[0].data = [{x: 102, y: 96}];
-    prevYearConfig.data.datasets[1].data = [
-        {x: 98, y: 100},
-        {x: 105, y: 94},
-        {x: 100, y: 102},
-        {x: 96, y: 97},
-        {x: 107, y: 99}
-    ];
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            console.warn(`Could not get 2D context for ${canvasId}`);
+            return null;
+        }
 
-    new Chart(ctx2, prevYearConfig);
+        // Ensure value is a number and not negative
+        const safeValue = Math.max(0, parseFloat(value) || 0);
+        const safeMax = Math.max(safeValue + 1, parseFloat(max) || 100);
+
+        console.log(`Creating chart for ${canvasId}: value=${safeValue}, max=${safeMax}, colors=`, colorScheme);
+
+        return new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [safeValue, safeMax - safeValue],
+                    backgroundColor: [colorScheme.active, colorScheme.background],
+                    borderWidth: 0,
+                    cutout: '75%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: true }
+                },
+                animation: {
+                    animateRotate: true,
+                    duration: 2000
+                }
+            }
+        });
+    }
+    
+    // Function to create simple circular charts for main metrics
+    function createSimpleCircularChart(canvasId, value, max, colorScheme) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
+            console.warn(`Canvas element ${canvasId} not found`);
+            return null;
+        }
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            console.warn(`Could not get 2D context for ${canvasId}`);
+            return null;
+        }
+
+        // Ensure value is a number and not negative
+        const safeValue = Math.max(0, parseFloat(value) || 0);
+        const safeMax = Math.max(safeValue + 1, parseFloat(max) || 100);
+
+        console.log(`Creating simple chart for ${canvasId}: value=${safeValue}, max=${safeMax}, colors=`, colorScheme);
+        
+        return new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [safeValue, safeMax - safeValue],
+                    backgroundColor: [colorScheme.active, colorScheme.background],
+                    borderWidth: 0,
+                    cutout: '75%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                },
+                animation: {
+                    animateRotate: true,
+                    duration: 1500
+                }
+            }
+        });
+    }
+
+    // Initialize main metric charts as circular charts using backend data
+    function initializeMainCharts() {
+        console.log('Initializing main charts with data:', backendData);
+        
+        // Use actual backend data
+        const data = backendData.summary;
+        const indices = backendData.indices;
+
+        // Check if we have data before creating charts
+        if (!data || !indices) {
+            console.warn('No backend data available for charts');
+            return;
+        }
+
+        // Create circular charts for main metrics - only destroy if they exist and have destroy method
+        if (window.occupancyChart && typeof window.occupancyChart.destroy === 'function') {
+            window.occupancyChart.destroy();
+        }
+        if (window.adrChart && typeof window.adrChart.destroy === 'function') {
+            window.adrChart.destroy();
+        }
+        if (window.revparChart && typeof window.revparChart.destroy === 'function') {
+            window.revparChart.destroy();
+        }
+        if (window.mpiChart && typeof window.mpiChart.destroy === 'function') {
+            window.mpiChart.destroy();
+        }
+        if (window.ariChart && typeof window.ariChart.destroy === 'function') {
+            window.ariChart.destroy();
+        }
+        if (window.rgiChart && typeof window.rgiChart.destroy === 'function') {
+            window.rgiChart.destroy();
+        }
+
+        // Use actual values from backend, with fallbacks
+        const occupancyValue = data.current_occ || 0;
+        const adrValue = data.current_adr || 0;
+        const revparValue = data.current_revpar || 0;
+        const mpiValue = indices.current_mpi || 0;
+        const ariValue = indices.current_ari || 0;
+        const rgiValue = indices.current_rgi || 0;
+
+        console.log('Chart values:', { occupancyValue, adrValue, revparValue, mpiValue, ariValue, rgiValue });
+
+        // Create charts even with zero values to show empty state
+        window.occupancyChart = createSimpleCircularChart('occupancyChart', occupancyValue, 100, circularColorSchemes.occupancy);
+        window.adrChart = createSimpleCircularChart('adrChart', adrValue, Math.max(200, adrValue * 1.5), circularColorSchemes.adr);
+        window.revparChart = createSimpleCircularChart('revparChart', revparValue, Math.max(150, revparValue * 1.5), circularColorSchemes.revpar);
+        window.mpiChart = createSimpleCircularChart('mpiChart', mpiValue, Math.max(120, mpiValue * 1.2), circularColorSchemes.mpi);
+        window.ariChart = createSimpleCircularChart('ariChart', ariValue, Math.max(120, ariValue * 1.2), circularColorSchemes.ari);
+        window.rgiChart = createSimpleCircularChart('rgiChart', rgiValue, Math.max(120, rgiValue * 1.2), circularColorSchemes.rgi);
+        
+        // Debug: Log chart creation results
+        console.log('Chart creation results:', {
+            occupancyChart: window.occupancyChart,
+            adrChart: window.adrChart,
+            revparChart: window.revparChart,
+            mpiChart: window.mpiChart,
+            ariChart: window.ariChart,
+            rgiChart: window.rgiChart
+        });
+    }
+
+    // Initialize circular performance indicator charts using backend data
+    function initializeCircularCharts() {
+        console.log('Initializing circular charts with data:', backendData);
+        
+        const data = backendData.summary;
+        const indices = backendData.indices;
+
+        // Check if we have data before creating charts
+        if (!data || !indices) {
+            console.warn('No backend data available for circular charts');
+            return;
+        }
+
+        // Use actual backend data
+        const occupancyValue = data.current_occ || 0;
+        const rateIndexValue = indices.current_ari || 0;
+        const revparIndexValue = indices.current_rgi || 0;
+        const marketShareValue = indices.current_mpi || 0;
+        
+        console.log('Circular chart values:', { occupancyValue, rateIndexValue, revparIndexValue, marketShareValue });
+        
+        // Destroy existing charts if they exist
+        if (window.occupancyCircle && typeof window.occupancyCircle.destroy === 'function') {
+            window.occupancyCircle.destroy();
+        }
+        if (window.rateIndexCircle && typeof window.rateIndexCircle.destroy === 'function') {
+            window.rateIndexCircle.destroy();
+        }
+        if (window.revparIndexCircle && typeof window.revparIndexCircle.destroy === 'function') {
+            window.revparIndexCircle.destroy();
+        }
+        if (window.marketShareCircle && typeof window.marketShareCircle.destroy === 'function') {
+            window.marketShareCircle.destroy();
+        }
+        
+        // Create new charts with actual data (even if zero to show empty state)
+        window.occupancyCircle = createCircularProgress('occupancy-circle', occupancyValue, 100, circularColorSchemes.occupancy);
+        window.rateIndexCircle = createCircularProgress('rate-index-circle', rateIndexValue, Math.max(150, rateIndexValue * 1.3), circularColorSchemes.ari);
+        window.revparIndexCircle = createCircularProgress('revpar-index-circle', revparIndexValue, Math.max(150, revparIndexValue * 1.3), circularColorSchemes.revpar);
+        window.marketShareCircle = createCircularProgress('market-share-circle', marketShareValue, Math.max(30, marketShareValue * 1.5), circularColorSchemes.mpi);
+        
+        // Debug: Log circular chart creation results
+        console.log('Circular chart creation results:', {
+            occupancyCircle: window.occupancyCircle,
+            rateIndexCircle: window.rateIndexCircle,
+            revparIndexCircle: window.revparIndexCircle,
+            marketShareCircle: window.marketShareCircle
+        });
+        
+        // Update text values with actual data
+        if (document.getElementById('occupancy-value')) {
+            document.getElementById('occupancy-value').textContent = occupancyValue.toFixed(1) + '%';
+        }
+        if (document.getElementById('rate-index-value')) {
+            document.getElementById('rate-index-value').textContent = rateIndexValue.toFixed(1);
+        }
+        if (document.getElementById('revpar-index-value')) {
+            document.getElementById('revpar-index-value').textContent = revparIndexValue.toFixed(1);
+        }
+        if (document.getElementById('market-share-value')) {
+            document.getElementById('market-share-value').textContent = marketShareValue.toFixed(1);
+        }
+        
+        // Set occupancy target - typically 5-10% higher than current value
+        if (document.getElementById('occupancy-target')) {
+            const occupancyTarget = Math.min(100, Math.round(occupancyValue * 1.1));
+            document.getElementById('occupancy-target').textContent = occupancyTarget + '%';
+        }
+        
+        // Set rate index label based on actual value
+        const rateIndexLabel = document.getElementById('rate-index-label');
+        if (rateIndexLabel) {
+            if (rateIndexValue > 105) {
+                rateIndexLabel.textContent = 'Above Market';
+            } else if (rateIndexValue >= 95 && rateIndexValue <= 105) {
+                rateIndexLabel.textContent = 'At Market';
+            } else {
+                rateIndexLabel.textContent = 'Below Market';
+            }
+        }
+        
+        // Set revpar index label based on actual value
+        const revparIndexLabel = document.getElementById('revpar-index-label');
+        if (revparIndexLabel) {
+            if (revparIndexValue > 105) {
+                revparIndexLabel.textContent = 'Above Fair Share';
+            } else if (revparIndexValue >= 95 && revparIndexValue <= 105) {
+                revparIndexLabel.textContent = 'Fair Share';
+            } else {
+                revparIndexLabel.textContent = 'Below Fair Share';
+            }
+        }
+    }
+
+    // Function to refresh all charts with new date range
+    async function refreshAllCharts() {
+        try {
+            console.log('Refreshing all charts...');
+            // Reinitialize all charts
+            initializeMainCharts();
+            initializeCircularCharts();
+        } catch (error) {
+            console.error('Error refreshing charts:', error);
+        }
+    }
+
+    // Function to update chart colors
+    function updateChartColors() {
+        // Get current color values from color pickers
+        const newColors = {
+            occupancy: {
+                active: document.getElementById('occupancy-color').value,
+                background: getLightColor(document.getElementById('occupancy-color').value)
+            },
+            adr: {
+                active: document.getElementById('adr-color').value,
+                background: getLightColor(document.getElementById('adr-color').value)
+            },
+            revpar: {
+                active: document.getElementById('revpar-color').value,
+                background: getLightColor(document.getElementById('revpar-color').value)
+            },
+            mpi: {
+                active: document.getElementById('mpi-color').value,
+                background: getLightColor(document.getElementById('mpi-color').value)
+            },
+            ari: {
+                active: document.getElementById('ari-color').value,
+                background: getLightColor(document.getElementById('ari-color').value)
+            },
+            rgi: {
+                active: document.getElementById('rgi-color').value,
+                background: getLightColor(document.getElementById('rgi-color').value)
+            }
+        };
+
+        // Update global color schemes
+        Object.assign(circularColorSchemes, newColors);
+
+        // Recreate all charts with new colors
+        refreshAllCharts();
+    }
+
+    // Function to get light version of a color
+    function getLightColor(hexColor) {
+        // Convert hex to RGB
+        const r = parseInt(hexColor.slice(1, 3), 16);
+        const g = parseInt(hexColor.slice(3, 5), 16);
+        const b = parseInt(hexColor.slice(5, 7), 16);
+        
+        // Make it lighter (add 40% white)
+        const lightR = Math.min(255, r + (255 - r) * 0.4);
+        const lightG = Math.min(255, g + (255 - g) * 0.4);
+        const lightB = Math.min(255, b + (255 - b) * 0.4);
+        
+        // Convert back to hex
+        return '#' + Math.round(lightR).toString(16).padStart(2, '0') + 
+                   Math.round(lightG).toString(16).padStart(2, '0') + 
+                   Math.round(lightB).toString(16).padStart(2, '0');
+    }
+
+    // Function to reset colors to default
+    function resetColors() {
+        const defaultColors = {
+            'occupancy-color': '#FF6B6B',
+            'adr-color': '#4ECDC4',
+            'revpar-color': '#45B7D1',
+            'mpi-color': '#96CEB4',
+            'ari-color': '#FFEAA7',
+            'rgi-color': '#DDA0DD'
+        };
+
+        Object.entries(defaultColors).forEach(([id, color]) => {
+            document.getElementById(id).value = color;
+        });
+
+        updateChartColors();
+    }
+
+    // Set up date filter form event listener
+    const dateFilterForm = document.getElementById('date-filter-form');
+    if (dateFilterForm) {
+        dateFilterForm.addEventListener('submit', function(e) {
+            // Don't prevent default - let the form submit to refresh the page with new data
+            // The Django view will handle the date filtering and return updated context
+            return true;
+        });
+    }
+
+    // Set up color customization event listeners
+    const applyColorsBtn = document.getElementById('apply-colors');
+    const resetColorsBtn = document.getElementById('reset-colors');
+
+    if (applyColorsBtn) {
+        applyColorsBtn.addEventListener('click', updateChartColors);
+    }
+
+    if (resetColorsBtn) {
+        resetColorsBtn.addEventListener('click', resetColors);
+    }
+    
+    // Initialize all charts with backend data
+    console.log('Starting chart initialization...');
+    
+    // Test Chart.js with a simple chart first
+    try {
+        const testCanvas = document.createElement('canvas');
+        testCanvas.id = 'test-chart';
+        testCanvas.width = 100;
+        testCanvas.height = 100;
+        testCanvas.style.border = '1px solid red';
+        document.body.appendChild(testCanvas);
+        
+        const testChart = new Chart(testCanvas, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [75, 25],
+                    backgroundColor: ['#3b82f6', '#dbeafe']
+                }]
+            },
+            options: {
+                responsive: false,
+                maintainAspectRatio: false
+            }
+        });
+        
+        console.log('✅ Test chart created successfully:', testChart);
+        
+        // Remove test chart after 3 seconds
+        setTimeout(() => {
+            if (testChart) testChart.destroy();
+            if (testCanvas.parentNode) testCanvas.parentNode.removeChild(testCanvas);
+        }, 3000);
+        
+    } catch (error) {
+        console.error('❌ Test chart creation failed:', error);
+    }
+    
+    // Force chart creation with sample data if backend data is empty
+    if (!backendData.summary.current_occ && !backendData.summary.current_adr && !backendData.summary.current_revpar) {
+        console.log('No backend data, creating sample charts');
+        
+        // Debug: Check all canvas elements
+        const canvasIds = ['occupancyChart', 'adrChart', 'revparChart', 'mpiChart', 'ariChart', 'rgiChart', 'occupancy-circle', 'rate-index-circle', 'revpar-index-circle', 'market-share-circle'];
+        console.log('Checking canvas elements:');
+        canvasIds.forEach(id => {
+            const canvas = document.getElementById(id);
+            if (canvas) {
+                console.log(`✅ Found canvas: ${id}`, canvas);
+            } else {
+                console.warn(`❌ Missing canvas: ${id}`);
+            }
+        });
+        
+        // Create sample charts to test if Chart.js is working
+        window.occupancyChart = createSimpleCircularChart('occupancyChart', 75, 100, circularColorSchemes.occupancy);
+        window.adrChart = createSimpleCircularChart('adrChart', 150, 200, circularColorSchemes.adr);
+        window.revparChart = createSimpleCircularChart('revparChart', 112.5, 150, circularColorSchemes.revpar);
+        window.mpiChart = createSimpleCircularChart('mpiChart', 95, 120, circularColorSchemes.mpi);
+        window.ariChart = createSimpleCircularChart('ariChart', 105, 120, circularColorSchemes.ari);
+        window.rgiChart = createSimpleCircularChart('rgiChart', 98, 120, circularColorSchemes.rgi);
+        
+        window.occupancyCircle = createCircularProgress('occupancy-circle', 75, 100, circularColorSchemes.occupancy);
+        window.rateIndexCircle = createCircularProgress('rate-index-circle', 105, 150, circularColorSchemes.ari);
+        window.revparIndexCircle = createCircularProgress('revpar-index-circle', 98, 150, circularColorSchemes.revpar);
+        window.marketShareCircle = createCircularProgress('market-share-circle', 95, 150, circularColorSchemes.mpi);
+    } else {
+        initializeMainCharts();
+        initializeCircularCharts();
+    }
+    
+    console.log('Chart initialization complete');
 });
 </script>
 {% endblock %}

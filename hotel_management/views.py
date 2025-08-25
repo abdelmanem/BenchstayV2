@@ -38,6 +38,61 @@ def ajax_metrics(request):
     return JsonResponse(summary)
 
 @login_required
+def performance_indicators_api(request):
+    """API endpoint for performance indicators"""
+    hotel = Hotel.objects.first()
+    
+    if not hotel:
+        return JsonResponse({'error': 'Hotel not found'}, status=404)
+    
+    # Get date range from request or use current month
+    today = timezone.now().date()
+    
+    # Default: first day to last day of current month
+    current_month = today.month
+    current_year = today.year
+    from calendar import monthrange
+    _, last_day = monthrange(current_year, current_month)
+    start_date = date(current_year, current_month, 1)
+    end_date = date(current_year, current_month, last_day)
+    
+    # Get date parameters from request if provided
+    if request.GET.get('start_date') and request.GET.get('end_date'):
+        try:
+            start_date = datetime.strptime(request.GET.get('start_date'), '%Y-%m-%d').date()
+            end_date = datetime.strptime(request.GET.get('end_date'), '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'Invalid date format'}, status=400)
+    
+    # Get performance data for the specified date range
+    recent_data = DailyData.objects.filter(
+        hotel=hotel,
+        date__gte=start_date,
+        date__lte=end_date
+    ).order_by('-date')
+    
+    # Get performance indices
+    performance_indices = PerformanceIndex.objects.filter(
+        hotel=hotel,
+        date__gte=start_date,
+        date__lte=end_date
+    ).order_by('-date')
+    
+    # Calculate average metrics
+    avg_occupancy = recent_data.aggregate(Avg('occupancy_percentage'))['occupancy_percentage__avg'] or 0
+    avg_rate_index = performance_indices.aggregate(Avg('ari'))['ari__avg'] or 0
+    avg_revpar_index = performance_indices.aggregate(Avg('rgi'))['rgi__avg'] or 0
+    avg_market_share = performance_indices.aggregate(Avg('actual_market_share'))['actual_market_share__avg'] or 0
+    
+    # Return performance indicators as JSON
+    return JsonResponse({
+        'occupancy': float(avg_occupancy),
+        'rate_index': float(avg_rate_index),
+        'revpar_index': float(avg_revpar_index),
+        'market_share': float(avg_market_share)
+    })
+
+@login_required
 def home(request):
     """Home page view"""
     # Get the user's hotel
@@ -58,9 +113,24 @@ def home(request):
     start_date = date(current_year, current_month, 1)
     end_date = date(current_year, current_month, last_day)
     
+    # Handle date filter form submission
+    if request.method == 'POST':
+        try:
+            start_date = datetime.strptime(request.POST.get('start_date'), '%Y-%m-%d').date()
+            end_date = datetime.strptime(request.POST.get('end_date'), '%Y-%m-%d').date()
+            
+            # Validate date range
+            if start_date > end_date:
+                messages.error(request, 'Start date cannot be after end date')
+                start_date = date(current_year, current_month, 1)
+                end_date = date(current_year, current_month, last_day)
+        except (ValueError, TypeError):
+            messages.error(request, 'Invalid date format')
+    
     # Calculate prior year date range (same period last year)
-    prior_year_start_date = date(current_year - 1, current_month, 1)
-    prior_year_end_date = date(current_year - 1, current_month, last_day)
+    days_diff = (end_date - start_date).days
+    prior_year_start_date = date(start_date.year - 1, start_date.month, start_date.day)
+    prior_year_end_date = prior_year_start_date + timedelta(days=days_diff)
     
     recent_data = DailyData.objects.filter(
         hotel=hotel,
@@ -75,16 +145,29 @@ def home(request):
         date=today - timedelta(days=365)
     ).first()
     
+    # Safely calculate summary with fallbacks
+    current_occ = getattr(current_period, 'occupancy_percentage', 0) if current_period else 0
+    prior_year_occ = getattr(prior_year, 'occupancy_percentage', 0) if prior_year else 0
+    current_adr = getattr(current_period, 'average_rate', 0) if current_period else 0
+    prior_year_adr = getattr(prior_year, 'average_rate', 0) if prior_year else 0
+    current_revpar = getattr(current_period, 'revpar', 0) if current_period else 0
+    prior_year_revpar = getattr(prior_year, 'revpar', 0) if prior_year else 0
+    
+    # Calculate changes safely
+    occ_change = ((current_occ - prior_year_occ) / prior_year_occ * 100) if prior_year_occ != 0 else 0
+    adr_change = ((current_adr - prior_year_adr) / prior_year_adr * 100) if prior_year_adr != 0 else 0
+    revpar_change = ((current_revpar - prior_year_revpar) / prior_year_revpar * 100) if prior_year_revpar != 0 else 0
+    
     summary = {
-        'current_occ': current_period.occupancy_percentage if current_period else 0,
-        'prior_year_occ': prior_year.occupancy_percentage if prior_year else 0,
-        'occ_change': ((current_period.occupancy_percentage - prior_year.occupancy_percentage) / prior_year.occupancy_percentage * 100) if current_period and prior_year else 0,
-        'current_adr': current_period.average_rate if current_period else 0,
-        'prior_year_adr': prior_year.average_rate if prior_year else 0,
-        'adr_change': ((current_period.average_rate - prior_year.average_rate) / prior_year.average_rate * 100) if current_period and prior_year else 0,
-        'current_revpar': current_period.revpar if current_period else 0,
-        'prior_year_revpar': prior_year.revpar if prior_year else 0,
-        'revpar_change': ((current_period.revpar - prior_year.revpar) / prior_year.revpar * 100) if current_period and prior_year else 0,
+        'current_occ': current_occ,
+        'prior_year_occ': prior_year_occ,
+        'occ_change': occ_change,
+        'current_adr': current_adr,
+        'prior_year_adr': prior_year_adr,
+        'adr_change': adr_change,
+        'current_revpar': current_revpar,
+        'prior_year_revpar': prior_year_revpar,
+        'revpar_change': revpar_change,
     }
     
     # Get performance indices
@@ -99,19 +182,32 @@ def home(request):
         date=today - timedelta(days=365)
     ).first()
     
+    # Safely get performance indices with fallbacks
+    current_mpi = getattr(latest_indices, 'mpi', 0) if latest_indices else 0
+    prior_year_mpi = getattr(prior_year_indices, 'mpi', 0) if prior_year_indices else 0
+    current_ari = getattr(latest_indices, 'ari', 0) if latest_indices else 0
+    prior_year_ari = getattr(prior_year_indices, 'ari', 0) if prior_year_indices else 0
+    current_rgi = getattr(latest_indices, 'rgi', 0) if latest_indices else 0
+    prior_year_rgi = getattr(prior_year_indices, 'rgi', 0) if prior_year_indices else 0
+    
+    # Calculate changes safely
+    mpi_change = ((current_mpi - prior_year_mpi) / prior_year_mpi * 100) if prior_year_mpi != 0 else 0
+    ari_change = ((current_ari - prior_year_ari) / prior_year_ari * 100) if prior_year_ari != 0 else 0
+    rgi_change = ((current_rgi - prior_year_rgi) / prior_year_rgi * 100) if prior_year_rgi != 0 else 0
+    
     indices = {
-        'current_mpi': latest_indices.mpi if latest_indices else 0,
-        'prior_year_mpi': prior_year_indices.mpi if prior_year_indices else 0,
-        'mpi_change': ((latest_indices.mpi - prior_year_indices.mpi) / prior_year_indices.mpi * 100) if latest_indices and prior_year_indices else 0,
-        'mpi_rank': latest_indices.mpi_rank if latest_indices else 0,
-        'current_ari': latest_indices.ari if latest_indices else 0,
-        'prior_year_ari': prior_year_indices.ari if prior_year_indices else 0,
-        'ari_change': ((latest_indices.ari - prior_year_indices.ari) / prior_year_indices.ari * 100) if latest_indices and prior_year_indices else 0,
-        'ari_rank': latest_indices.ari_rank if latest_indices else 0,
-        'current_rgi': latest_indices.rgi if latest_indices else 0,
-        'prior_year_rgi': prior_year_indices.rgi if prior_year_indices else 0,
-        'rgi_change': ((latest_indices.rgi - prior_year_indices.rgi) / prior_year_indices.rgi * 100) if latest_indices and prior_year_indices else 0,
-        'rgi_rank': latest_indices.rgi_rank if latest_indices else 0,
+        'current_mpi': current_mpi,
+        'prior_year_mpi': prior_year_mpi,
+        'mpi_change': mpi_change,
+        'mpi_rank': getattr(latest_indices, 'mpi_rank', 0) if latest_indices else 0,
+        'current_ari': current_ari,
+        'prior_year_ari': prior_year_ari,
+        'ari_change': ari_change,
+        'ari_rank': getattr(latest_indices, 'ari_rank', 0) if latest_indices else 0,
+        'current_rgi': current_rgi,
+        'prior_year_rgi': prior_year_rgi,
+        'rgi_change': rgi_change,
+        'rgi_rank': getattr(latest_indices, 'rgi_rank', 0) if latest_indices else 0,
         'total_competitors': Competitor.objects.filter(is_active=True).count()
     }
     
