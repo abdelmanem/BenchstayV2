@@ -657,50 +657,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // Function to create circular progress charts
-    function createCircularProgress(canvasId, value, max, colorScheme) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) {
-            console.warn(`Canvas element ${canvasId} not found`);
-            return null;
-        }
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            console.warn(`Could not get 2D context for ${canvasId}`);
-            return null;
-        }
-
-        // Ensure value is a number and not negative
-        const safeValue = Math.max(0, parseFloat(value) || 0);
-        const safeMax = Math.max(safeValue + 1, parseFloat(max) || 100);
-
-        console.log(`Creating chart for ${canvasId}: value=${safeValue}, max=${safeMax}, colors=`, colorScheme);
-
-        return new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                datasets: [{
-                    data: [safeValue, safeMax - safeValue],
-                    backgroundColor: [colorScheme.active, colorScheme.background],
-                    borderWidth: 0,
-                    cutout: '75%'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { enabled: true }
-                },
-                animation: {
-                    animateRotate: true,
-                    duration: 2000
-                }
-            }
-        });
-    }
+    // Removed legacy circular progress charts (occupancy-circle, rate-index-circle, etc.)
     
     // Function to create simple circular charts for main metrics
     function createSimpleCircularChart(canvasId, value, max, colorScheme) {
@@ -810,99 +767,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Initialize circular performance indicator charts using backend data
-    function initializeCircularCharts() {
-        console.log('Initializing circular charts with data:', backendData);
-        
-        const data = backendData.summary;
-        const indices = backendData.indices;
-
-        // Check if we have data before creating charts
-        if (!data || !indices) {
-            console.warn('No backend data available for circular charts');
-            return;
-        }
-
-        // Use actual backend data
-        const occupancyValue = data.current_occ || 0;
-        const rateIndexValue = indices.current_ari || 0;
-        const revparIndexValue = indices.current_rgi || 0;
-        const marketShareValue = indices.current_mpi || 0;
-        
-        console.log('Circular chart values:', { occupancyValue, rateIndexValue, revparIndexValue, marketShareValue });
-        
-        // Destroy existing charts if they exist
-        if (window.occupancyCircle && typeof window.occupancyCircle.destroy === 'function') {
-            window.occupancyCircle.destroy();
-        }
-        if (window.rateIndexCircle && typeof window.rateIndexCircle.destroy === 'function') {
-            window.rateIndexCircle.destroy();
-        }
-        if (window.revparIndexCircle && typeof window.revparIndexCircle.destroy === 'function') {
-            window.revparIndexCircle.destroy();
-        }
-        if (window.marketShareCircle && typeof window.marketShareCircle.destroy === 'function') {
-            window.marketShareCircle.destroy();
-        }
-        
-        // Create new charts with actual data (even if zero to show empty state)
-        window.occupancyCircle = createCircularProgress('occupancy-circle', occupancyValue, 100, circularColorSchemes.occupancy);
-        window.rateIndexCircle = createCircularProgress('rate-index-circle', rateIndexValue, Math.max(150, rateIndexValue * 1.3), circularColorSchemes.ari);
-        window.revparIndexCircle = createCircularProgress('revpar-index-circle', revparIndexValue, Math.max(150, revparIndexValue * 1.3), circularColorSchemes.revpar);
-        window.marketShareCircle = createCircularProgress('market-share-circle', marketShareValue, Math.max(30, marketShareValue * 1.5), circularColorSchemes.mpi);
-        
-        // Debug: Log circular chart creation results
-        console.log('Circular chart creation results:', {
-            occupancyCircle: window.occupancyCircle,
-            rateIndexCircle: window.rateIndexCircle,
-            revparIndexCircle: window.revparIndexCircle,
-            marketShareCircle: window.marketShareCircle
-        });
-        
-        // Update text values with actual data
-        if (document.getElementById('occupancy-value')) {
-            document.getElementById('occupancy-value').textContent = occupancyValue.toFixed(1) + '%';
-        }
-        if (document.getElementById('rate-index-value')) {
-            document.getElementById('rate-index-value').textContent = rateIndexValue.toFixed(1);
-        }
-        if (document.getElementById('revpar-index-value')) {
-            document.getElementById('revpar-index-value').textContent = revparIndexValue.toFixed(1);
-        }
-        if (document.getElementById('market-share-value')) {
-            document.getElementById('market-share-value').textContent = marketShareValue.toFixed(1);
-        }
-        
-        // Set occupancy target - typically 5-10% higher than current value
-        if (document.getElementById('occupancy-target')) {
-            const occupancyTarget = Math.min(100, Math.round(occupancyValue * 1.1));
-            document.getElementById('occupancy-target').textContent = occupancyTarget + '%';
-        }
-        
-        // Set rate index label based on actual value
-        const rateIndexLabel = document.getElementById('rate-index-label');
-        if (rateIndexLabel) {
-            if (rateIndexValue > 105) {
-                rateIndexLabel.textContent = 'Above Market';
-            } else if (rateIndexValue >= 95 && rateIndexValue <= 105) {
-                rateIndexLabel.textContent = 'At Market';
-            } else {
-                rateIndexLabel.textContent = 'Below Market';
-            }
-        }
-        
-        // Set revpar index label based on actual value
-        const revparIndexLabel = document.getElementById('revpar-index-label');
-        if (revparIndexLabel) {
-            if (revparIndexValue > 105) {
-                revparIndexLabel.textContent = 'Above Fair Share';
-            } else if (revparIndexValue >= 95 && revparIndexValue <= 105) {
-                revparIndexLabel.textContent = 'Fair Share';
-            } else {
-                revparIndexLabel.textContent = 'Below Fair Share';
-            }
-        }
-    }
+    // Removed legacy initializeCircularCharts (no longer used)
 
     // Function to refresh all charts with new date range
     async function refreshAllCharts() {
@@ -910,7 +775,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Refreshing all charts...');
             // Reinitialize all charts
             initializeMainCharts();
-            initializeCircularCharts();
         } catch (error) {
             console.error('Error refreshing charts:', error);
         }
@@ -1014,40 +878,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize all charts with backend data
     console.log('Starting chart initialization...');
     
-    // Test Chart.js with a simple chart first
-    try {
-        const testCanvas = document.createElement('canvas');
-        testCanvas.id = 'test-chart';
-        testCanvas.width = 100;
-        testCanvas.height = 100;
-        testCanvas.style.border = '1px solid red';
-        document.body.appendChild(testCanvas);
-        
-        const testChart = new Chart(testCanvas, {
-            type: 'doughnut',
-            data: {
-                datasets: [{
-                    data: [75, 25],
-                    backgroundColor: ['#3b82f6', '#dbeafe']
-                }]
-            },
-            options: {
-                responsive: false,
-                maintainAspectRatio: false
-            }
-        });
-        
-        console.log('✅ Test chart created successfully:', testChart);
-        
-        // Remove test chart after 3 seconds
-        setTimeout(() => {
-            if (testChart) testChart.destroy();
-            if (testCanvas.parentNode) testCanvas.parentNode.removeChild(testCanvas);
-        }, 3000);
-        
-    } catch (error) {
-        console.error('❌ Test chart creation failed:', error);
-    }
+    // Removed debug test chart creation
     
     // Force chart creation with sample data if backend data is empty
     if (!backendData.summary.current_occ && !backendData.summary.current_adr && !backendData.summary.current_revpar) {
@@ -1072,14 +903,8 @@ document.addEventListener('DOMContentLoaded', function() {
         window.mpiChart = createSimpleCircularChart('mpiChart', 95, 120, circularColorSchemes.mpi);
         window.ariChart = createSimpleCircularChart('ariChart', 105, 120, circularColorSchemes.ari);
         window.rgiChart = createSimpleCircularChart('rgiChart', 98, 120, circularColorSchemes.rgi);
-        
-        window.occupancyCircle = createCircularProgress('occupancy-circle', 75, 100, circularColorSchemes.occupancy);
-        window.rateIndexCircle = createCircularProgress('rate-index-circle', 105, 150, circularColorSchemes.ari);
-        window.revparIndexCircle = createCircularProgress('revpar-index-circle', 98, 150, circularColorSchemes.revpar);
-        window.marketShareCircle = createCircularProgress('market-share-circle', 95, 150, circularColorSchemes.mpi);
     } else {
         initializeMainCharts();
-        initializeCircularCharts();
     }
     
     console.log('Chart initialization complete');
