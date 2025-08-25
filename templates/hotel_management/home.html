@@ -328,6 +328,10 @@
             
             <div class="chart-container-compact">
                 <canvas id="mpiChart"></canvas>
+                <div class="performance-indicator">
+                    <div id="market-share-value" class="value">{{ indices.current_mpi|floatformat:1 }}</div>
+                    <div class="label">of Competitive Set</div>
+                </div>
             </div>
         </div>
     </div>
@@ -343,6 +347,10 @@
             
             <div class="chart-container-compact">
                 <canvas id="ariChart"></canvas>
+                <div class="performance-indicator">
+                    <div id="rate-index-value" class="value">{{ indices.current_ari|floatformat:1 }}</div>
+                    <div id="rate-index-label" class="label">Above Market</div>
+                </div>
             </div>
         </div>
     </div>
@@ -358,6 +366,10 @@
             
             <div class="chart-container-compact">
                 <canvas id="rgiChart"></canvas>
+                <div class="performance-indicator">
+                    <div id="revpar-index-value" class="value">{{ indices.current_rgi|floatformat:1 }}</div>
+                    <div id="revpar-index-label" class="label">Fair Share</div>
+                </div>
             </div>
         </div>
     </div>
@@ -411,8 +423,9 @@
     }
     
     canvas {
-        width: 100% !important;
-        height: 100% !important;
+        display: block;
+        max-width: 100% !important;
+        height: auto !important;
     }
 
     .chart-section {
@@ -422,6 +435,7 @@
         box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
         border: 1px solid #e2e8f0;
         height: 100%;
+        overflow: hidden;
     }
 
     .section-title {
