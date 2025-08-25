@@ -10,6 +10,8 @@ urlpatterns = [
     path('hotel-data/', views.hotel_competitor_management, name='hotel_data'),
     
     path('data-entry/', views.data_entry, name='data_entry'),
+    path('budget-goals/', views.budget_goals, name='budget_goals'),
+    path('budget-goals/tracker/', views.budget_goals_tracker, name='budget_goals_tracker'),
     path('api/hotel-data/<int:pk>/', views.hotel_data_api, name='hotel-data-api'),
     path('api/competitor-data/<int:pk>/', views.competitor_data_api, name='competitor-data-api'),
     path('api/ajax-metrics/', views.ajax_metrics, name='ajax_metrics'),

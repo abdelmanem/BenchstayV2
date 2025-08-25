@@ -1,0 +1,339 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}Budget & KPI Goals - {{ hotel.name }} - Benchstay{% endblock %}
+
+{% block content %}
+<div class="dashboard-header mb-4">
+    <div class="hotel-info d-flex align-items-center">
+        <div class="me-4">
+            <img src="{{ hotel.logo.url|default:'https://via.placeholder.com/90x90/667eea/ffffff?text=HOTEL' }}" 
+                 alt="Hotel Logo" class="hotel-logo">
+        </div>
+        <div>
+            <h1 class="mb-1 fw-bold">Budget & KPI Goals</h1>
+            <p class="mb-0 opacity-90">
+                <i class="fas fa-hotel me-2"></i>{{ hotel.name }}
+            </p>
+        </div>
+    </div>
+ </div>
+
+<!-- Quick Metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="metric-card">
+            <div class="metric-value">{{ goals_metrics.total_goals }}</div>
+            <div class="metric-label">Total Goals</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="metric-card">
+            <div class="metric-value">{{ goals_metrics.active_goals }}</div>
+            <div class="metric-label">Active Goals</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="metric-card">
+            <div class="metric-value">{{ goals_metrics.avg_occupancy|floatformat:1 }}%</div>
+            <div class="metric-label">Avg Occupancy Goal</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="metric-card">
+            <div class="metric-value">{{ system_settings.currency_symbol }} {{ goals_metrics.total_revenue|floatformat:0 }}</div>
+            <div class="metric-label">Total Revenue Budget</div>
+        </div>
+    </div>
+ </div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bullseye me-2"></i>Define Budget and Performance Goals
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="budget-goals-form" novalidate>
+                    {% csrf_token %}
+
+                    <div class="row g-3 mb-2">
+                        <div class="col-md-4">
+                            <label for="fiscal_year" class="form-label">Fiscal Year</label>
+                            <input type="number" class="form-control" id="fiscal_year" name="fiscal_year" value="{{ fiscal_year }}" min="2000" max="2100" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="period_type" class="form-label">Planning Period</label>
+                            <select class="form-select" id="period_type" name="period_type" required>
+                                <option value="annual" selected>Annual</option>
+                                <option value="quarter">Quarter</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4" id="period_detail_wrapper" style="display:none;">
+                            <label for="period_detail" class="form-label">Period Detail</label>
+                            <select class="form-select" id="period_detail" name="period_detail">
+                                <option value="Q1">Q1</option>
+                                <option value="Q2">Q2</option>
+                                <option value="Q3">Q3</option>
+                                <option value="Q4">Q4</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="goal-card p-3 h-100">
+                                <h6 class="fw-bold mb-3"><i class="fas fa-chart-line me-2"></i>Key Performance Goals</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="occupancy_goal" class="form-label">Occupancy Goal (%)</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="occupancy_goal" name="occupancy_goal" value="{{ occupancy_goal|default:'' }}" min="0" max="100" step="0.1" required>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="adr_goal" class="form-label">ADR Goal</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">{{ system_settings.currency_symbol|default:'$' }}</span>
+                                            <input type="number" class="form-control" id="adr_goal" name="adr_goal" value="{{ adr_goal|default:'' }}" min="0" step="0.01" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="revpar_goal" class="form-label">RevPAR Goal</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">{{ system_settings.currency_symbol|default:'$' }}</span>
+                                            <input type="number" class="form-control" id="revpar_goal" name="revpar_goal" value="{{ revpar_goal|default:'' }}" min="0" step="0.01" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="total_revenue_budget" class="form-label">Total Revenue Budget</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">{{ system_settings.currency_symbol|default:'$' }}</span>
+                                            <input type="number" class="form-control" id="total_revenue_budget" name="total_revenue_budget" value="{{ total_revenue_budget|default:'' }}" min="0" step="0.01">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="goal-card p-3 h-100">
+                                <h6 class="fw-bold mb-3"><i class="fas fa-balance-scale me-2"></i>Market Index Goals (Optional)</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label for="mpi_goal" class="form-label">MPI</label>
+                                        <input type="number" class="form-control" id="mpi_goal" name="mpi_goal" value="{{ mpi_goal|default:'' }}" min="0" step="0.1">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="ari_goal" class="form-label">ARI</label>
+                                        <input type="number" class="form-control" id="ari_goal" name="ari_goal" value="{{ ari_goal|default:'' }}" min="0" step="0.1">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="rgi_goal" class="form-label">RGI</label>
+                                        <input type="number" class="form-control" id="rgi_goal" name="rgi_goal" value="{{ rgi_goal|default:'' }}" min="0" step="0.1">
+                                    </div>
+                                    <div class="col-12">
+                                        <label for="notes" class="form-label">Notes</label>
+                                        <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Additional context or allocation details...">{{ notes|default:'' }}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="1" id="lock_targets" name="lock_targets">
+                            <label class="form-check-label" for="lock_targets">
+                                Lock goals for this period
+                            </label>
+                        </div>
+                        <div>
+                            <a href="{% url 'hotel_management:home' %}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Goals
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+ </div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="fas fa-list me-2"></i>Existing Goals</h5>
+                    <a class="btn btn-outline-secondary" href="{% url 'hotel_management:budget_goals_tracker' %}">
+                        <i class="fas fa-list-check me-2"></i>Open Goals Tracker
+                    </a>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table performance-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Year</th>
+                            <th>Period</th>
+                            <th>Detail</th>
+                            <th class="text-end">Occ %</th>
+                            <th class="text-end">ADR</th>
+                            <th class="text-end">RevPAR</th>
+                            <th class="text-end">Revenue</th>
+                            <th>Created By</th>
+                            <th>Created</th>
+                            <th>Updated</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for g in goals_list %}
+                        <tr>
+                            <td>{{ g.fiscal_year }}</td>
+                            <td>{{ g.get_period_type_display }}</td>
+                            <td>{{ g.period_detail|default:'—' }}</td>
+                            <td class="text-end">{{ g.occupancy_goal|default:'' }}</td>
+                            <td class="text-end">{{ system_settings.currency_symbol }} {{ g.adr_goal|default:'' }}</td>
+                            <td class="text-end">{{ system_settings.currency_symbol }} {{ g.revpar_goal|default:'' }}</td>
+                            <td class="text-end">{{ system_settings.currency_symbol }} {{ g.total_revenue_budget|default:'' }}</td>
+                            <td>{{ g.created_by|default:'—' }}</td>
+                            <td>{{ g.created_at|date:'Y-m-d H:i' }}</td>
+                            <td>{{ g.updated_at|date:'Y-m-d H:i' }}</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-primary" href="{% url 'hotel_management:budget_goals' %}?fiscal_year={{ g.fiscal_year }}&period_type={{ g.period_type }}&period_detail={{ g.period_detail }}">
+                                    <i class="fas fa-pen"></i>
+                                </a>
+                                <form method="POST" action="" class="d-inline" onsubmit="return confirm('Delete this goal?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="goal_id" value="{{ g.id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="11" class="text-center text-muted py-4">No goals yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+ </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .goal-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        background: #ffffff;
+    }
+    .input-group-text {
+        min-width: 44px;
+        justify-content: center;
+    }
+    .form-label { font-weight: 600; }
+    .card-title { font-weight: 700; }
+    .hotel-logo { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; }
+    .dashboard-header { padding: 0.5rem 0; }
+    .opacity-90 { opacity: 0.9; }
+    .fw-bold { font-weight: 700 !important; }
+    .fw-600 { font-weight: 600; }
+    .me-2 { margin-right: .5rem; }
+    .me-4 { margin-right: 1.5rem; }
+    .mb-0 { margin-bottom: 0; }
+    .mb-1 { margin-bottom: .25rem; }
+    .mb-3 { margin-bottom: 1rem; }
+    .mb-4 { margin-bottom: 1.5rem; }
+    .mt-4 { margin-top: 1.5rem; }
+    .p-3 { padding: 1rem; }
+    .h-100 { height: 100%; }
+    .d-flex { display: flex; }
+    .align-items-center { align-items: center; }
+    .justify-content-between { justify-content: space-between; }
+    .row { --bs-gutter-x: 1.5rem; --bs-gutter-y: 0; }
+    .g-3 { row-gap: 1rem; column-gap: 1rem; }
+    .g-4 { row-gap: 1.5rem; column-gap: 1.5rem; }
+    .col-12 { width: 100%; }
+    .col-md-4 { width: 100%; }
+    .col-md-6 { width: 100%; }
+    @media (min-width: 768px) {
+        .col-md-4 { width: 33.3333%; }
+        .col-md-6 { width: 50%; }
+    }
+    .card { border: 1px solid #e2e8f0; border-radius: 12px; }
+    .card-header { border-bottom: 1px solid #e2e8f0; }
+    .bg-primary { background-color: #3b82f6 !important; }
+    .text-white { color: #ffffff !important; }
+    .btn-primary { background-color: #3b82f6; border-color: #3b82f6; }
+    .btn-outline-secondary { border-color: #cbd5e1; color: #334155; }
+    .btn-outline-secondary:hover { background: #f8fafc; }
+    .form-control, .form-select, .form-check-input { border-radius: 8px; }
+    .input-group .form-control { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+    .input-group .input-group-text { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+    .shadow-sm { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .shadow { box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    .form-text { color: #64748b; font-size: .875rem; }
+    .form-error { color: #b91c1c; font-size: .875rem; display: none; }
+    .is-invalid ~ .form-error { display: block; }
+    .text-muted { color: #64748b !important; }
+    .text-success { color: #16a34a !important; }
+    .text-warning { color: #f59e0b !important; }
+    .text-danger { color: #dc2626 !important; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const periodType = document.getElementById('period_type');
+    const periodDetailWrapper = document.getElementById('period_detail_wrapper');
+    const periodDetail = document.getElementById('period_detail');
+
+    function updatePeriodDetail() {
+        const value = periodType.value;
+        if (value === 'quarter') {
+            periodDetailWrapper.style.display = '';
+            periodDetail.innerHTML = '<option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option>';
+        } else if (value === 'monthly') {
+            periodDetailWrapper.style.display = '';
+            periodDetail.innerHTML = '<option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option><option>May</option><option>Jun</option><option>Jul</option><option>Aug</option><option>Sep</option><option>Oct</option><option>Nov</option><option>Dec</option>';
+        } else {
+            periodDetailWrapper.style.display = 'none';
+            periodDetail.innerHTML = '';
+        }
+    }
+
+    periodType.addEventListener('change', updatePeriodDetail);
+    updatePeriodDetail();
+
+    // Simple client-side validation
+    const form = document.getElementById('budget-goals-form');
+    form.addEventListener('submit', function(e) {
+        const occ = parseFloat(document.getElementById('occupancy_goal').value || '');
+        if (isNaN(occ) || occ < 0 || occ > 100) {
+            e.preventDefault();
+            document.getElementById('occupancy_goal').classList.add('is-invalid');
+            alert('Occupancy goal must be between 0 and 100.');
+        }
+    });
+});
+</script>
+{% endblock %}
+
+
+

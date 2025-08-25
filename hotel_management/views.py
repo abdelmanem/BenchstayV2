@@ -4,12 +4,126 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Avg, Sum, Q
 from django.http import JsonResponse
-from .models import Hotel, Competitor, DailyData, CompetitorData, AuditLog, MarketSummary, PerformanceIndex
+from .models import Hotel, Competitor, DailyData, CompetitorData, AuditLog, MarketSummary, PerformanceIndex, BudgetGoal
 from datetime import timedelta, datetime, date
 from decimal import Decimal
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 import json
+
+
+@login_required
+def budget_goals(request):
+    """Simple view to render Budget & KPI Goals template (placeholder backend)."""
+    hotel = Hotel.objects.first()
+    if not hotel:
+        messages.info(request, 'Please set up your hotel information first')
+        return redirect('hotel_management:hotel_data')
+
+    fiscal_year = timezone.now().year
+    if request.method == 'POST':
+        # Deletion path
+        if request.POST.get('action') == 'delete' and request.POST.get('goal_id'):
+            try:
+                goal = BudgetGoal.objects.get(id=request.POST.get('goal_id'), hotel=hotel)
+                goal.delete()
+                messages.success(request, 'Goal deleted successfully.')
+            except BudgetGoal.DoesNotExist:
+                messages.error(request, 'Goal not found.')
+        else:
+            fiscal_year = int(request.POST.get('fiscal_year')) if request.POST.get('fiscal_year') else timezone.now().year
+            period_type = request.POST.get('period_type', 'annual')
+            period_detail = request.POST.get('period_detail', '')
+
+            # Find or create the record for this period
+            bg, _ = BudgetGoal.objects.get_or_create(
+                hotel=hotel,
+                fiscal_year=fiscal_year,
+                period_type=period_type,
+                period_detail=period_detail
+            )
+
+            if bg.lock_targets:
+                messages.warning(request, 'Goals are locked for this period and cannot be modified.')
+            else:
+                # Update fields
+                bg.occupancy_goal = request.POST.get('occupancy_goal') or None
+                bg.adr_goal = request.POST.get('adr_goal') or None
+                bg.revpar_goal = request.POST.get('revpar_goal') or None
+                bg.total_revenue_budget = request.POST.get('total_revenue_budget') or None
+                bg.mpi_goal = request.POST.get('mpi_goal') or None
+                bg.ari_goal = request.POST.get('ari_goal') or None
+                bg.rgi_goal = request.POST.get('rgi_goal') or None
+                bg.notes = request.POST.get('notes', '')
+                bg.lock_targets = True if request.POST.get('lock_targets') else False
+                bg.updated_by = request.user
+                if not bg.created_by:
+                    bg.created_by = request.user
+                bg.save()
+                messages.success(request, 'Budget & KPI Goals saved successfully.')
+
+    # Determine which record to load for editing/display
+    qs = BudgetGoal.objects.filter(hotel=hotel)
+    # Optional filters
+    if request.GET.get('fiscal_year'):
+        qs = qs.filter(fiscal_year=request.GET.get('fiscal_year'))
+    if request.GET.get('period_type'):
+        qs = qs.filter(period_type=request.GET.get('period_type'))
+    if request.GET.get('period_detail'):
+        qs = qs.filter(period_detail=request.GET.get('period_detail'))
+    goals = qs.order_by('-fiscal_year', 'period_type', 'period_detail').first()
+
+    goals_list = BudgetGoal.objects.filter(hotel=hotel).order_by('-fiscal_year', 'period_type', 'period_detail')
+
+    # Quick metrics for header cards
+    from django.db.models import Avg, Sum, Count
+    aggregates = goals_list.aggregate(
+        total_goals=Count('id'),
+        active_goals=Count('id', filter=Q(lock_targets=False)),
+        avg_occupancy=Avg('occupancy_goal'),
+        total_revenue=Sum('total_revenue_budget'),
+    )
+
+    context = {
+        'hotel': hotel,
+        'fiscal_year': goals.fiscal_year if goals else fiscal_year,
+        'period_type': getattr(goals, 'period_type', ''),
+        'period_detail': getattr(goals, 'period_detail', ''),
+        'occupancy_goal': getattr(goals, 'occupancy_goal', ''),
+        'adr_goal': getattr(goals, 'adr_goal', ''),
+        'revpar_goal': getattr(goals, 'revpar_goal', ''),
+        'total_revenue_budget': getattr(goals, 'total_revenue_budget', ''),
+        'mpi_goal': getattr(goals, 'mpi_goal', ''),
+        'ari_goal': getattr(goals, 'ari_goal', ''),
+        'rgi_goal': getattr(goals, 'rgi_goal', ''),
+        'notes': getattr(goals, 'notes', ''),
+        'lock_targets_checked': 'checked' if getattr(goals, 'lock_targets', False) else '',
+        'lock_targets': bool(getattr(goals, 'lock_targets', False)),
+        'goals_list': goals_list,
+        'goals_metrics': {
+            'total_goals': aggregates.get('total_goals') or 0,
+            'active_goals': aggregates.get('active_goals') or 0,
+            'avg_occupancy': float(aggregates.get('avg_occupancy') or 0),
+            'total_revenue': float(aggregates.get('total_revenue') or 0),
+        },
+    }
+    return render(request, 'hotel_management/budget_goals.html', context)
+
+
+@login_required
+def budget_goals_tracker(request):
+    hotel = Hotel.objects.first()
+    if not hotel:
+        messages.info(request, 'Please set up your hotel information first')
+        return redirect('hotel_management:hotel_data')
+
+    goals_qs = BudgetGoal.objects.filter(hotel=hotel).order_by('-fiscal_year', 'period_type', 'period_detail')
+
+    context = {
+        'hotel': hotel,
+        'goals_list': goals_qs,
+    }
+    return render(request, 'hotel_management/budget_goals_tracker.html', context)
 
 
 @login_required

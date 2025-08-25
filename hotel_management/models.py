@@ -270,3 +270,47 @@ class AuditLog(models.Model):
     
     def __str__(self):
         return f"{self.entity_type} {self.entity_id} - {self.action} by {self.performed_by} at {self.performed_at}"
+
+
+class BudgetGoal(models.Model):
+    PERIOD_ANNUAL = 'annual'
+    PERIOD_QUARTER = 'quarter'
+    PERIOD_MONTHLY = 'monthly'
+
+    PERIOD_TYPE_CHOICES = [
+        (PERIOD_ANNUAL, 'Annual'),
+        (PERIOD_QUARTER, 'Quarter'),
+        (PERIOD_MONTHLY, 'Monthly'),
+    ]
+
+    hotel = models.ForeignKey(Hotel, on_delete=models.CASCADE, related_name='budget_goals')
+    fiscal_year = models.PositiveIntegerField()
+    period_type = models.CharField(max_length=16, choices=PERIOD_TYPE_CHOICES, default=PERIOD_ANNUAL)
+    period_detail = models.CharField(max_length=16, blank=True, default='')  # e.g., Q1 or Jan
+
+    occupancy_goal = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    adr_goal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    revpar_goal = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total_revenue_budget = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+
+    mpi_goal = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    ari_goal = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    rgi_goal = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+
+    notes = models.TextField(blank=True, default='')
+    lock_targets = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='created_budget_goals')
+    updated_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='updated_budget_goals')
+
+    class Meta:
+        unique_together = ('hotel', 'fiscal_year', 'period_type', 'period_detail')
+        ordering = ['-fiscal_year', 'period_type', 'period_detail']
+
+    def __str__(self):
+        label = f"{self.fiscal_year} {self.period_type}"
+        if self.period_detail:
+            label += f" {self.period_detail}"
+        return f"{self.hotel.name} — {label}"
