@@ -73,5 +73,29 @@ class SystemSettings(models.Model):
         settings, created = cls.objects.get_or_create(pk=1)
         return settings
     
+    def get_currency_symbol(self):
+        """Get the currency symbol for the selected currency"""
+        currency_symbols = {
+            'USD': '$',
+            'EUR': '€',
+            'GBP': '£',
+            'JPY': '¥',
+            'AUD': 'A$',
+            'CAD': 'C$',
+            'CHF': 'CHF',
+            'CNY': '¥',
+            'EGP': 'E£',
+            'SAR': '﷼',
+            'AED': 'د.إ',
+        }
+        return currency_symbols.get(self.currency, '$')
+    
+    @property
+    def effective_currency_symbol(self):
+        """Get the effective currency symbol (custom if set, otherwise default)"""
+        if self.currency_symbol:
+            return self.currency_symbol
+        return self.get_currency_symbol()
+    
     def __str__(self):
         return f"System Settings (Last updated: {self.updated_at})"

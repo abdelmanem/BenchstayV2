@@ -1,4 +1,5 @@
 {% extends 'dashboard_base.html' %}
+{% load reporting_filters %}
 
 {% block title %}Goals Tracker - {{ hotel.name }} - Benchstay{% endblock %}
 
@@ -53,9 +54,9 @@
                     <td>{{ g.get_period_type_display }}</td>
                     <td>{{ g.period_detail|default:'—' }}</td>
                     <td class="text-end">{{ g.occupancy_goal|default:'' }}</td>
-                    <td class="text-end">{{ system_settings.currency_symbol }} {{ g.adr_goal|default:'' }}</td>
-                    <td class="text-end">{{ system_settings.currency_symbol }} {{ g.revpar_goal|default:'' }}</td>
-                    <td class="text-end">{{ system_settings.currency_symbol }} {{ g.total_revenue_budget|default:'' }}</td>
+                    <td class="text-end">{{ system_settings.effective_currency_symbol }} {{ g.adr_goal|default:'' }}</td>
+                    <td class="text-end">{{ system_settings.effective_currency_symbol }} {{ g.revpar_goal|default:'' }}</td>
+                    <td class="text-end">{{ system_settings.effective_currency_symbol }} {{ g.total_revenue_budget|format_currency_short|default:'' }}</td>
                     <td class="text-end">{{ g.mpi_goal|default:'' }}</td>
                     <td class="text-end">{{ g.ari_goal|default:'' }}</td>
                     <td class="text-end">{{ g.rgi_goal|default:'' }}</td>

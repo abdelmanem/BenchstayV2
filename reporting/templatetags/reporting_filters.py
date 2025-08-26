@@ -30,6 +30,28 @@ def filter_by_date_and_competitor(queryset, args):
         return queryset.filter(date=date, competitor=competitor).first()
     except Exception:
         return None
+
+@register.filter
+def format_currency_short(value):
+    """
+    Formats large numbers with K for thousands and M for millions.
+    
+    Example usage: {{ value|format_currency_short }}
+    """
+    if value is None or value == '':
+        return ''
+    
+    try:
+        number = float(value)
+        if number >= 1000000:
+            return f"{number / 1000000:.1f}M"
+        elif number >= 1000:
+            return f"{number / 1000:.1f}K"
+        else:
+            return f"{number:.0f}"
+    except (ValueError, TypeError):
+        return str(value)
+
 @register.filter
 def subtract(value, arg):
     """

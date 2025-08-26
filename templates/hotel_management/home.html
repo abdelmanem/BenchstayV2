@@ -85,9 +85,9 @@
                     {{ summary.adr_change|floatformat:1 }}%
                 </div>
             </div>
-            <div class="metric-value">{{ system_settings.currency_symbol }} {{ summary.current_adr|floatformat:2 }}</div>
+            <div class="metric-value">{{ system_settings.effective_currency_symbol }} {{ summary.current_adr|floatformat:2 }}</div>
             <div class="text-muted small">
-                Prior Year: {{ system_settings.currency_symbol }} {{ summary.prior_year_adr|floatformat:2 }}
+                Prior Year: {{ system_settings.effective_currency_symbol }} {{ summary.prior_year_adr|floatformat:2 }}
             </div>
         </div>
     </div>
@@ -103,9 +103,9 @@
                     {{ summary.revpar_change|floatformat:1 }}%
                 </div>
             </div>
-            <div class="metric-value">{{ system_settings.currency_symbol }} {{ summary.current_revpar|floatformat:2 }}</div>
+            <div class="metric-value">{{ system_settings.effective_currency_symbol }} {{ summary.current_revpar|floatformat:2 }}</div>
             <div class="text-muted small">
-                Prior Year: {{ system_settings.currency_symbol }} {{ summary.prior_year_revpar|floatformat:2 }}
+                Prior Year: {{ system_settings.effective_currency_symbol }} {{ summary.prior_year_revpar|floatformat:2 }}
             </div>
         </div>
     </div>
@@ -673,37 +673,25 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Create circular charts for main metrics - only destroy if they exist and have destroy method
-        if (window.occupancyChart && typeof window.occupancyChart.destroy === 'function') {
-            window.occupancyChart.destroy();
-        }
-        if (window.adrChart && typeof window.adrChart.destroy === 'function') {
-            window.adrChart.destroy();
-        }
-        if (window.revparChart && typeof window.revparChart.destroy === 'function') {
-            window.revparChart.destroy();
-        }
-        if (window.mpiChart && typeof window.mpiChart.destroy === 'function') {
-            window.mpiChart.destroy();
-        }
-        if (window.ariChart && typeof window.ariChart.destroy === 'function') {
-            window.ariChart.destroy();
-        }
-        if (window.rgiChart && typeof window.rgiChart.destroy === 'function') {
-            window.rgiChart.destroy();
-        }
+        // Destroy existing charts if they exist
+        const chartNames = ['occupancyChart', 'adrChart', 'revparChart', 'mpiChart', 'ariChart', 'rgiChart'];
+        chartNames.forEach(chartName => {
+            if (window[chartName] && typeof window[chartName].destroy === 'function') {
+                window[chartName].destroy();
+            }
+        });
 
         // Use actual values from backend, with fallbacks
-        const occupancyValue = data.current_occ || 0;
-        const adrValue = data.current_adr || 0;
-        const revparValue = data.current_revpar || 0;
-        const mpiValue = indices.current_mpi || 0;
-        const ariValue = indices.current_ari || 0;
-        const rgiValue = indices.current_rgi || 0;
+        const occupancyValue = parseFloat(data.current_occ) || 0;
+        const adrValue = parseFloat(data.current_adr) || 0;
+        const revparValue = parseFloat(data.current_revpar) || 0;
+        const mpiValue = parseFloat(indices.current_mpi) || 0;
+        const ariValue = parseFloat(indices.current_ari) || 0;
+        const rgiValue = parseFloat(indices.current_rgi) || 0;
 
         console.log('Chart values:', { occupancyValue, adrValue, revparValue, mpiValue, ariValue, rgiValue });
 
-        // Create charts even with zero values to show empty state
+        // Create charts with appropriate max values
         window.occupancyChart = createSimpleCircularChart('occupancyChart', occupancyValue, 100, circularColorSchemes.occupancy);
         window.adrChart = createSimpleCircularChart('adrChart', adrValue, Math.max(200, adrValue * 1.5), circularColorSchemes.adr);
         window.revparChart = createSimpleCircularChart('revparChart', revparValue, Math.max(150, revparValue * 1.5), circularColorSchemes.revpar);
@@ -711,18 +699,50 @@ document.addEventListener('DOMContentLoaded', function() {
         window.ariChart = createSimpleCircularChart('ariChart', ariValue, Math.max(120, ariValue * 1.2), circularColorSchemes.ari);
         window.rgiChart = createSimpleCircularChart('rgiChart', rgiValue, Math.max(120, rgiValue * 1.2), circularColorSchemes.rgi);
         
-        // Debug: Log chart creation results
-        console.log('Chart creation results:', {
-            occupancyChart: window.occupancyChart,
-            adrChart: window.adrChart,
-            revparChart: window.revparChart,
-            mpiChart: window.mpiChart,
-            ariChart: window.ariChart,
-            rgiChart: window.rgiChart
-        });
+        // Update the performance indicator values in the HTML
+        updatePerformanceIndicators(data, indices);
+        
+        console.log('Charts initialized successfully');
     }
 
-    // Removed legacy initializeCircularCharts (no longer used)
+    // Function to update performance indicator values in the HTML
+    function updatePerformanceIndicators(data, indices) {
+        // Update occupancy value
+        const occupancyValueEl = document.getElementById('occupancy-value');
+        if (occupancyValueEl) {
+            occupancyValueEl.textContent = `${parseFloat(data.current_occ || 0).toFixed(1)}%`;
+        }
+        
+        // Update ADR value
+        const adrValueEl = document.getElementById('adr-value');
+        if (adrValueEl) {
+            adrValueEl.textContent = parseFloat(data.current_adr || 0).toFixed(2);
+        }
+        
+        // Update RevPAR value
+        const revparValueEl = document.getElementById('revpar-value');
+        if (revparValueEl) {
+            revparValueEl.textContent = parseFloat(data.current_revpar || 0).toFixed(2);
+        }
+        
+        // Update MPI value
+        const mpiValueEl = document.getElementById('market-share-value');
+        if (mpiValueEl) {
+            mpiValueEl.textContent = parseFloat(indices.current_mpi || 0).toFixed(1);
+        }
+        
+        // Update ARI value
+        const ariValueEl = document.getElementById('rate-index-value');
+        if (ariValueEl) {
+            ariValueEl.textContent = parseFloat(indices.current_ari || 0).toFixed(1);
+        }
+        
+        // Update RGI value
+        const rgiValueEl = document.getElementById('revpar-index-value');
+        if (rgiValueEl) {
+            rgiValueEl.textContent = parseFloat(indices.current_rgi || 0).toFixed(1);
+        }
+    }
 
     // Function to refresh all charts with new date range
     async function refreshAllCharts() {
@@ -812,7 +832,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const dateFilterForm = document.getElementById('date-filter-form');
     if (dateFilterForm) {
         dateFilterForm.addEventListener('submit', function(e) {
-            // Don't prevent default - let the form submit to refresh the page with new data
+            // Show loading indicator
+            const submitBtn = dateFilterForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading...';
+            submitBtn.disabled = true;
+            
+            // Let the form submit to refresh the page with new data
             // The Django view will handle the date filtering and return updated context
             return true;
         });
@@ -835,32 +861,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Removed debug test chart creation
     
-    // Force chart creation with sample data if backend data is empty
-    if (!backendData.summary.current_occ && !backendData.summary.current_adr && !backendData.summary.current_revpar) {
-        console.log('No backend data, creating sample charts');
-        
-        // Debug: Check all canvas elements
-        const canvasIds = ['occupancyChart', 'adrChart', 'revparChart', 'mpiChart', 'ariChart', 'rgiChart', 'occupancy-circle', 'rate-index-circle', 'revpar-index-circle', 'market-share-circle'];
-        console.log('Checking canvas elements:');
-        canvasIds.forEach(id => {
-            const canvas = document.getElementById(id);
-            if (canvas) {
-                console.log(`✅ Found canvas: ${id}`, canvas);
-            } else {
-                console.warn(`❌ Missing canvas: ${id}`);
-            }
-        });
-        
-        // Create sample charts to test if Chart.js is working
-        window.occupancyChart = createSimpleCircularChart('occupancyChart', 75, 100, circularColorSchemes.occupancy);
-        window.adrChart = createSimpleCircularChart('adrChart', 150, 200, circularColorSchemes.adr);
-        window.revparChart = createSimpleCircularChart('revparChart', 112.5, 150, circularColorSchemes.revpar);
-        window.mpiChart = createSimpleCircularChart('mpiChart', 95, 120, circularColorSchemes.mpi);
-        window.ariChart = createSimpleCircularChart('ariChart', 105, 120, circularColorSchemes.ari);
-        window.rgiChart = createSimpleCircularChart('rgiChart', 98, 120, circularColorSchemes.rgi);
-    } else {
-        initializeMainCharts();
-    }
+    // Always initialize charts with backend data (even if it's zero)
+    console.log('Initializing charts with backend data:', backendData);
+    initializeMainCharts();
     
     console.log('Chart initialization complete');
 });

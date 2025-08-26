@@ -7,7 +7,7 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
 <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
 <!-- Hidden element to store currency symbol for JavaScript -->
-<span id="currency-symbol-data" data-symbol="{{ system_settings.currency_symbol }}" style="display: none;"></span>
+<span id="currency-symbol-data" data-symbol="{{ system_settings.effective_currency_symbol }}" style="display: none;"></span>
 <style>
     :root {
         --primary-blue: #2563eb;
@@ -448,10 +448,10 @@
                                     {{ data.occupancy_percentage|floatformat:2 }}%
                                 </span>
                             </td>
-                            <td>{{ system_settings.currency_symbol }} {{ data.average_rate|floatformat:2 }}</td>
+                            <td>{{ system_settings.effective_currency_symbol }} {{ data.average_rate|floatformat:2 }}</td>
                             <td>{{ data.rooms_sold }}</td>
-                            <td>{{ system_settings.currency_symbol }} {{ data.room_revenue|floatformat:2 }}</td>
-                            <td>{{ system_settings.currency_symbol }} {{ data.revpar|floatformat:2 }}</td>
+                            <td>{{ system_settings.effective_currency_symbol }} {{ data.room_revenue|format_currency_short }}</td>
+                            <td>{{ system_settings.effective_currency_symbol }} {{ data.revpar|floatformat:2 }}</td>
                             <td>{{ data.fair_market_share|floatformat:2 }}%</td>
                             <td>{{ data.actual_market_share|floatformat:2 }}%</td>
                             <td>
@@ -492,10 +492,10 @@
                             <td><strong>TOTAL MARKET</strong></td>
                             <td><strong>{{ daily_totals.rooms_available }}</strong></td>
                             <td><strong>{{ daily_totals.occupancy_percentage|floatformat:2 }}%</strong></td>
-                            <td><strong>{{ system_settings.currency_symbol }} {{ daily_totals.average_rate|floatformat:2 }}</strong></td>
+                            <td><strong>{{ system_settings.effective_currency_symbol }} {{ daily_totals.average_rate|floatformat:2 }}</strong></td>
                             <td><strong>{{ daily_totals.rooms_sold }}</strong></td>
-                            <td><strong>{{ system_settings.currency_symbol }} {{ daily_totals.room_revenue|floatformat:2 }}</strong></td>
-                            <td><strong>{{ system_settings.currency_symbol }} {{ daily_totals.revpar|floatformat:2 }}</strong></td>
+                            <td><strong>{{ system_settings.effective_currency_symbol }} {{ daily_totals.room_revenue|format_currency_short }}</strong></td>
+                            <td><strong>{{ system_settings.effective_currency_symbol }} {{ daily_totals.revpar|floatformat:2 }}</strong></td>
                             <td><strong>100.00%</strong></td>
                             <td><strong>100.00%</strong></td>
                             <td><strong>-</strong></td>
@@ -556,10 +556,10 @@
                                     {{ data.occupancy_percentage|floatformat:2 }}%
                                 </span>
                             </td>
-                            <td>{{ system_settings.currency_symbol }} {{ data.average_rate|floatformat:2 }}</td>
+                            <td>{{ system_settings.effective_currency_symbol }} {{ data.average_rate|floatformat:2 }}</td>
                             <td>{{ data.rooms_sold }}</td>
-                            <td>{{ system_settings.currency_symbol }} {{ data.room_revenue|floatformat:2 }}</td>
-                            <td>{{ system_settings.currency_symbol }} {{ data.revpar|floatformat:2 }}</td>
+                            <td>{{ system_settings.effective_currency_symbol }} {{ data.room_revenue|format_currency_short }}</td>
+                            <td>{{ system_settings.effective_currency_symbol }} {{ data.revpar|floatformat:2 }}</td>
                             <td>{{ data.fair_market_share|floatformat:2 }}%</td>
                             <td>{{ data.actual_market_share|floatformat:2 }}%</td>
                             <td>
@@ -600,10 +600,10 @@
                             <td><strong>TOTAL MARKET</strong></td>
                             <td><strong>{{ mtd_totals.rooms_available }}</strong></td>
                             <td><strong>{{ mtd_totals.occupancy_percentage|floatformat:2 }}%</strong></td>
-                            <td><strong>{{ system_settings.currency_symbol }} {{ mtd_totals.average_rate|floatformat:2 }}</strong></td>
+                            <td><strong>{{ system_settings.effective_currency_symbol }} {{ mtd_totals.average_rate|floatformat:2 }}</strong></td>
                             <td><strong>{{ mtd_totals.rooms_sold }}</strong></td>
-                            <td><strong>{{ system_settings.currency_symbol }} {{ mtd_totals.room_revenue|floatformat:2 }}</strong></td>
-                            <td><strong>{{ system_settings.currency_symbol }} {{ mtd_totals.revpar|floatformat:2 }}</strong></td>
+                            <td><strong>{{ system_settings.effective_currency_symbol }} {{ mtd_totals.room_revenue|format_currency_short }}</strong></td>
+                            <td><strong>{{ system_settings.effective_currency_symbol }} {{ mtd_totals.revpar|floatformat:2 }}</strong></td>
                             <td><strong>100.00%</strong></td>
                             <td><strong>100.00%</strong></td>
                             <td><strong>-</strong></td>
@@ -664,10 +664,10 @@
                                     {{ data.occupancy_percentage|floatformat:2 }}%
                                 </span>
                             </td>
-                            <td>{{ system_settings.currency_symbol }} {{ data.average_rate|floatformat:2 }}</td>
+                            <td>{{ system_settings.effective_currency_symbol }} {{ data.average_rate|floatformat:2 }}</td>
                             <td>{{ data.rooms_sold }}</td>
-                            <td>{{ system_settings.currency_symbol }} {{ data.room_revenue|floatformat:2 }}</td>
-                            <td>{{ system_settings.currency_symbol }} {{ data.revpar|floatformat:2 }}</td>
+                            <td>{{ system_settings.effective_currency_symbol }} {{ data.room_revenue|format_currency_short }}</td>
+                            <td>{{ system_settings.effective_currency_symbol }} {{ data.revpar|floatformat:2 }}</td>
                             <td>{{ data.fair_market_share|floatformat:2 }}%</td>
                             <td>{{ data.actual_market_share|floatformat:2 }}%</td>
                             <td>
@@ -708,10 +708,10 @@
                             <td><strong>TOTAL MARKET</strong></td>
                             <td><strong>{{ ytd_totals.rooms_available }}</strong></td>
                             <td><strong>{{ ytd_totals.occupancy_percentage|floatformat:2 }}%</strong></td>
-                            <td><strong>{{ system_settings.currency_symbol }} {{ ytd_totals.average_rate|floatformat:2 }}</strong></td>
+                            <td><strong>{{ system_settings.effective_currency_symbol }} {{ ytd_totals.average_rate|floatformat:2 }}</strong></td>
                             <td><strong>{{ ytd_totals.rooms_sold }}</strong></td>
-                            <td><strong>{{ system_settings.currency_symbol }} {{ ytd_totals.room_revenue|floatformat:2 }}</strong></td>
-                            <td><strong>{{ system_settings.currency_symbol }} {{ ytd_totals.revpar|floatformat:2 }}</strong></td>
+                            <td><strong>{{ system_settings.effective_currency_symbol }} {{ ytd_totals.room_revenue|format_currency_short }}</strong></td>
+                            <td><strong>{{ system_settings.effective_currency_symbol }} {{ ytd_totals.revpar|floatformat:2 }}</strong></td>
                             <td><strong>100.00%</strong></td>
                             <td><strong>100.00%</strong></td>
                             <td><strong>-</strong></td>
@@ -882,7 +882,7 @@ function createRevenueChart(data) {
         data: {
             labels: labels,
             datasets: [{
-                label: "Revenue ({{ system_settings.currency_symbol }})",
+                label: "Revenue ({{ system_settings.effective_currency_symbol }})",
                 data: revenueValues,
                 backgroundColor: "rgba(5, 150, 105, 0.8)",
                 borderColor: "rgba(5, 150, 105, 1)",
@@ -901,7 +901,7 @@ function createRevenueChart(data) {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return `${context.label}: {{ system_settings.currency_symbol }} ${context.parsed.y.toLocaleString()}`;
+                            return `${context.label}: {{ system_settings.effective_currency_symbol }} ${context.parsed.y.toLocaleString()}`;
                         }
                     }
                 }
@@ -911,7 +911,7 @@ function createRevenueChart(data) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return '{{ system_settings.currency_symbol }} ' + value.toLocaleString();
+                            return '{{ system_settings.effective_currency_symbol }} ' + value.toLocaleString();
                         }
                     },
                     grid: {
@@ -1073,8 +1073,8 @@ function extractTableData(table) {
             text = text.replace(/\s+/g, ' ');
             
             // Format currency values
-            if (text.includes('{{ system_settings.currency_symbol }}')) {
-                    text = text.replace(/{{ system_settings.currency_symbol }}\s*/, '{{ system_settings.currency_symbol }} ');
+            if (text.includes('{{ system_settings.effective_currency_symbol }}')) {
+                    text = text.replace(/{{ system_settings.effective_currency_symbol }}\s*/, '{{ system_settings.effective_currency_symbol }} ');
             }
             
             // Format percentages

@@ -434,7 +434,7 @@
                             </div>
                             <div class="col-lg-4">
                                 <div class="performance-card p-4 text-center h-100">
-                                    <div class="metric-value">{{ system_settings.currency_symbol }}{{ hotel_summary.avg_rate|floatformat:0 }}</div>
+                                    <div class="metric-value">{{ system_settings.effective_currency_symbol }}{{ hotel_summary.avg_rate|floatformat:0 }}</div>
                                     <p class="mb-2 text-muted fw-semibold">Average Daily Rate</p>
                                     <div class="progress progress-enhanced">
                                         <div class="progress-bar progress-bar-enhanced" style="width: 65%"></div>
@@ -443,7 +443,7 @@
                             </div>
                             <div class="col-lg-4">
                                 <div class="performance-card p-4 text-center h-100">
-                                    <div class="metric-value">{{ system_settings.currency_symbol }}{{ hotel_summary.avg_revpar|floatformat:0 }}</div>
+                                    <div class="metric-value">{{ system_settings.effective_currency_symbol }}{{ hotel_summary.avg_revpar|floatformat:0 }}</div>
                                     <p class="mb-2 text-muted fw-semibold">Revenue per Available Room</p>
                                     <div class="progress progress-enhanced">
                                         <div class="progress-bar progress-bar-enhanced" style="width: {% widthratio hotel_summary.avg_revpar hotel_summary.avg_rate 100 %}%"></div>
@@ -501,10 +501,10 @@
                                             </div>
                                         </td>
                                         <td>{{ data.avg_occupancy|floatformat:1 }}%</td>
-                                        <td>{{ system_settings.currency_symbol }}{{ data.avg_rate|floatformat:0 }}</td>
+                                        <td>{{ system_settings.effective_currency_symbol }}{{ data.avg_rate|floatformat:0 }}</td>
                                         <td class="{% if data.avg_rate > hotel_summary.avg_rate %}text-danger{% else %}text-success{% endif %}">
                                             <i class="bi bi-arrow-{% if data.avg_rate > hotel_summary.avg_rate %}up{% else %}down{% endif %} me-1"></i>
-                                            {{ system_settings.currency_symbol }}{{ data.avg_rate|subtract:hotel_summary.avg_rate|floatformat:0 }}
+                                            {{ system_settings.effective_currency_symbol }}{{ data.avg_rate|subtract:hotel_summary.avg_rate|floatformat:0 }}
                                         </td>
                                         <td class="{% if data.avg_occupancy > hotel_summary.avg_occupancy %}text-danger{% else %}text-success{% endif %}">
                                             <i class="bi bi-arrow-{% if data.avg_occupancy > hotel_summary.avg_occupancy %}up{% else %}down{% endif %} me-1"></i>
@@ -580,7 +580,7 @@
                                     <tr>
                                         <td class="fw-bold">{{ data.date|date:"M j" }}</td>
                                         <td>{{ data.occupancy_percentage|floatformat:1 }}%</td>
-                                        <td>{{ system_settings.currency_symbol }}{{ data.average_rate|floatformat:0 }}</td>
+                                        <td>{{ system_settings.effective_currency_symbol }}{{ data.average_rate|floatformat:0 }}</td>
                                         {% for competitor in selected_competitors %}
                                             {% get_competitor_data competitor_data data.date competitor as comp_data %}
                                             {% if comp_data %}
@@ -588,7 +588,7 @@
                                                     {{ comp_data.estimated_occupancy|floatformat:1 }}%
                                                 </td>
                                                 <td class="{% if comp_data.estimated_average_rate > data.average_rate %}table-danger{% elif comp_data.estimated_average_rate < data.average_rate %}table-success{% endif %}">
-                                                    {{ system_settings.currency_symbol }}{{ comp_data.estimated_average_rate|floatformat:0 }}
+                                                    {{ system_settings.effective_currency_symbol }}{{ comp_data.estimated_average_rate|floatformat:0 }}
                                                 </td>
                                             {% else %}
                                                 <td class="text-muted">-</td>
@@ -733,12 +733,12 @@
             
             // Add your hotel data first
             {% if hotel_summary %}
-            csvContent += 'Your Hotel,{{ hotel_summary.avg_occupancy|floatformat:2 }}%,{{ system_settings.currency_symbol }}{{ hotel_summary.avg_rate|floatformat:2 }},0,0\n';
+            csvContent += 'Your Hotel,{{ hotel_summary.avg_occupancy|floatformat:2 }}%,{{ system_settings.effective_currency_symbol }}{{ hotel_summary.avg_rate|floatformat:2 }},0,0\n';
             {% endif %}
             
             // Add competitor data
             {% for competitor_id, data in competitor_summaries.items %}
-            csvContent += '{{ data.name }},{{ data.avg_occupancy|floatformat:2 }}%,{{ system_settings.currency_symbol }}{{ data.avg_rate|floatformat:2 }},{{ data.avg_rate|subtract:hotel_summary.avg_rate|floatformat:2 }},{{ data.avg_occupancy|subtract:hotel_summary.avg_occupancy|floatformat:2 }}%\n';
+            csvContent += '{{ data.name }},{{ data.avg_occupancy|floatformat:2 }}%,{{ system_settings.effective_currency_symbol }}{{ data.avg_rate|floatformat:2 }},{{ data.avg_rate|subtract:hotel_summary.avg_rate|floatformat:2 }},{{ data.avg_occupancy|subtract:hotel_summary.avg_occupancy|floatformat:2 }}%\n';
             {% endfor %}
             
             return csvContent;
@@ -756,11 +756,11 @@
             csvContent += '\n';
             
             {% for data in hotel_data %}
-            csvContent += '{{ data.date|date:"M j" }},{{ data.occupancy_percentage|floatformat:2 }}%,{{ system_settings.currency_symbol }}{{ data.average_rate|floatformat:2 }}';
+            csvContent += '{{ data.date|date:"M j" }},{{ data.occupancy_percentage|floatformat:2 }}%,{{ system_settings.effective_currency_symbol }}{{ data.average_rate|floatformat:2 }}';
             {% for competitor in selected_competitors %}
                 {% get_competitor_data competitor_data data.date competitor as comp_data %}
                 {% if comp_data %}
-                csvContent += ',{{ comp_data.estimated_occupancy|floatformat:2 }}%,{{ system_settings.currency_symbol }}{{ comp_data.estimated_average_rate|floatformat:2 }}';
+                csvContent += ',{{ comp_data.estimated_occupancy|floatformat:2 }}%,{{ system_settings.effective_currency_symbol }}{{ comp_data.estimated_average_rate|floatformat:2 }}';
                 {% else %}
                 csvContent += ',-,-';
                 {% endif %}

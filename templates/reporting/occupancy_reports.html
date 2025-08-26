@@ -126,8 +126,8 @@
                             <td>{{ data.date }}</td>
                             <td>{{ data.rooms_sold }}</td>
                             <td>{{ data.occupancy_percentage|floatformat:2 }}%</td>
-                            <td>{{ system_settings.currency_symbol }} {{ data.average_rate|floatformat:2 }}</td>
-                            <td>{{ system_settings.currency_symbol }} {{ data.revpar|floatformat:2 }}</td>
+                                                    <td>{{ system_settings.effective_currency_symbol }} {{ data.average_rate|floatformat:2 }}</td>
+                        <td>{{ system_settings.effective_currency_symbol }} {{ data.revpar|floatformat:2 }}</td>
                         </tr>
                         {% empty %}
                         <tr>

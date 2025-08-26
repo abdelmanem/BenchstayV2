@@ -418,7 +418,7 @@
                             <div class="metric-label">
                                 <i class="fas fa-dollar-sign me-1"></i>Average Rate
                             </div>
-                            <div class="metric-value" id="summary-rate">{{ system_settings.currency_symbol }}{{ daily_data|get_item:hotel.name|get_item:'average_rate'|floatformat:2 }}</div>
+                            <div class="metric-value" id="summary-rate">{{ system_settings.effective_currency_symbol }}{{ daily_data|get_item:hotel.name|get_item:'average_rate'|floatformat:2 }}</div>
                             <div class="metric-trend" id="trend-rate">
                                 <!-- This will be populated by JavaScript -->
                             </div>
@@ -427,7 +427,7 @@
                             <div class="metric-label">
                                 <i class="fas fa-chart-line me-1"></i>RevPAR
                             </div>
-                            <div class="metric-value" id="summary-revpar">{{ system_settings.currency_symbol }}{{ daily_data|get_item:hotel.name|get_item:'revpar'|floatformat:2 }}</div>
+                            <div class="metric-value" id="summary-revpar">{{ system_settings.effective_currency_symbol }}{{ daily_data|get_item:hotel.name|get_item:'revpar'|floatformat:2 }}</div>
                             <div class="metric-trend" id="trend-revpar">
                                 <!-- This will be populated by JavaScript -->
                             </div>

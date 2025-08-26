@@ -7,7 +7,7 @@
 {% block content %}
 <div class="container mt-4">
     <!-- Hidden element to store currency symbol for JavaScript -->
-    <span id="currency-symbol" data-symbol="{{ system_settings.currency_symbol }}" style="display: none;"></span>
+    <span id="currency-symbol" data-symbol="{{ system_settings.effective_currency_symbol }}" style="display: none;"></span>
     <h1 class="mb-4">Please fill in the required daily data.</h1>
     
     <!-- Data Entry Cards -->
@@ -41,7 +41,7 @@
                             <div class="col-12">
                                 <label for="total_revenue" class="form-label">Hotel Revenue</label>
                                 <div class="input-group">
-                                    <span class="input-group-text">{{ system_settings.currency_symbol }}</span>
+                                    <span class="input-group-text">{{ system_settings.effective_currency_symbol }}</span>
                                     <input type="number" class="form-control" id="total_revenue" 
                                            name="total_revenue" min="0" step="0.01" required>
                                 </div>
@@ -101,7 +101,7 @@
                             <div class="col-md-6">
                                 <label for="estimated_average_rate" class="form-label">ADR</label>
                                 <div class="input-group">
-                                    <span class="input-group-text">{{ system_settings.currency_symbol }}</span>
+                                    <span class="input-group-text">{{ system_settings.effective_currency_symbol }}</span>
                                     <input type="number" class="form-control" id="estimated_average_rate" 
                                            name="estimated_average_rate" min="0" step="0.01" required>
                                 </div>
@@ -190,9 +190,9 @@
                                     <td>{{ data.date|date:"M d, Y" }}</td>
                                     <td>{{ data.rooms_sold }}</td>
                                     <td>{{ data.occupancy_percentage|floatformat:1 }}%</td>
-                                    <td>{{ system_settings.currency_symbol }} {{ data.total_revenue|floatformat:2 }}</td>
-                                    <td>{{ system_settings.currency_symbol }} {{ data.average_rate|floatformat:2 }}</td>
-                                    <td>{{ system_settings.currency_symbol }} {{ data.revpar|floatformat:2 }}</td>
+                                    <td>{{ system_settings.effective_currency_symbol }} {{ data.total_revenue|floatformat:2 }}</td>
+                                    <td>{{ system_settings.effective_currency_symbol }} {{ data.average_rate|floatformat:2 }}</td>
+                                    <td>{{ system_settings.effective_currency_symbol }} {{ data.revpar|floatformat:2 }}</td>
                                     <td class="text-truncate" style="max-width: 150px;" 
                                         title="{{ data.notes }}">
                                         {{ data.notes|default:"-" }}
@@ -249,7 +249,7 @@
                                     <td>{{ data.competitor.name }}</td>
                                     <td>{{ data.rooms_sold }}</td>
                                     <td>{{ data.rooms_sold|default:0|multiply:100|divide:data.competitor.total_rooms|floatformat:1 }}%</td>
-                                    <td>{{ system_settings.currency_symbol }} {{ data.estimated_average_rate|floatformat:2 }}</td>
+                                    <td>{{ system_settings.effective_currency_symbol }} {{ data.estimated_average_rate|floatformat:2 }}</td>
                                     <td class="text-truncate" style="max-width: 150px;" 
                                         title="{{ data.notes }}">
                                         {{ data.notes|default:"-" }}

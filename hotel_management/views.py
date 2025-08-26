@@ -246,26 +246,39 @@ def home(request):
     prior_year_start_date = date(start_date.year - 1, start_date.month, start_date.day)
     prior_year_end_date = prior_year_start_date + timedelta(days=days_diff)
     
-    recent_data = DailyData.objects.filter(
+    # Get aggregated data for current period
+    current_period_data = DailyData.objects.filter(
         hotel=hotel,
         date__gte=start_date,
         date__lte=end_date
-    ).order_by('-date')
+    ).aggregate(
+        avg_occupancy=Avg('occupancy_percentage'),
+        avg_adr=Avg('average_rate'),
+        avg_revpar=Avg('revpar'),
+        total_revenue=Sum('total_revenue'),
+        total_rooms_sold=Sum('rooms_sold')
+    )
     
-    # Calculate summary statistics and year-over-year changes
-    current_period = recent_data.first()
-    prior_year = DailyData.objects.filter(
+    # Get aggregated data for prior year (same period last year)
+    prior_year_data = DailyData.objects.filter(
         hotel=hotel,
-        date=today - timedelta(days=365)
-    ).first()
+        date__gte=prior_year_start_date,
+        date__lte=prior_year_end_date
+    ).aggregate(
+        avg_occupancy=Avg('occupancy_percentage'),
+        avg_adr=Avg('average_rate'),
+        avg_revpar=Avg('revpar'),
+        total_revenue=Sum('total_revenue'),
+        total_rooms_sold=Sum('rooms_sold')
+    )
     
     # Safely calculate summary with fallbacks
-    current_occ = getattr(current_period, 'occupancy_percentage', 0) if current_period else 0
-    prior_year_occ = getattr(prior_year, 'occupancy_percentage', 0) if prior_year else 0
-    current_adr = getattr(current_period, 'average_rate', 0) if current_period else 0
-    prior_year_adr = getattr(prior_year, 'average_rate', 0) if prior_year else 0
-    current_revpar = getattr(current_period, 'revpar', 0) if current_period else 0
-    prior_year_revpar = getattr(prior_year, 'revpar', 0) if prior_year else 0
+    current_occ = current_period_data['avg_occupancy'] or 0
+    prior_year_occ = prior_year_data['avg_occupancy'] or 0
+    current_adr = current_period_data['avg_adr'] or 0
+    prior_year_adr = prior_year_data['avg_adr'] or 0
+    current_revpar = current_period_data['avg_revpar'] or 0
+    prior_year_revpar = prior_year_data['avg_revpar'] or 0
     
     # Calculate changes safely
     occ_change = ((current_occ - prior_year_occ) / prior_year_occ * 100) if prior_year_occ != 0 else 0
@@ -284,25 +297,41 @@ def home(request):
         'revpar_change': revpar_change,
     }
     
-    # Get performance indices
-    latest_indices = PerformanceIndex.objects.filter(
+    # Get aggregated performance indices for current period
+    current_period_indices = PerformanceIndex.objects.filter(
         hotel=hotel,
         date__gte=start_date,
         date__lte=end_date
-    ).order_by('-date').first()
+    ).aggregate(
+        avg_mpi=Avg('mpi'),
+        avg_ari=Avg('ari'),
+        avg_rgi=Avg('rgi'),
+        avg_mpi_rank=Avg('mpi_rank'),
+        avg_ari_rank=Avg('ari_rank'),
+        avg_rgi_rank=Avg('rgi_rank')
+    )
     
+    # Get aggregated performance indices for prior year (same period last year)
     prior_year_indices = PerformanceIndex.objects.filter(
         hotel=hotel,
-        date=today - timedelta(days=365)
-    ).first()
+        date__gte=prior_year_start_date,
+        date__lte=prior_year_end_date
+    ).aggregate(
+        avg_mpi=Avg('mpi'),
+        avg_ari=Avg('ari'),
+        avg_rgi=Avg('rgi'),
+        avg_mpi_rank=Avg('mpi_rank'),
+        avg_ari_rank=Avg('ari_rank'),
+        avg_rgi_rank=Avg('rgi_rank')
+    )
     
     # Safely get performance indices with fallbacks
-    current_mpi = getattr(latest_indices, 'mpi', 0) if latest_indices else 0
-    prior_year_mpi = getattr(prior_year_indices, 'mpi', 0) if prior_year_indices else 0
-    current_ari = getattr(latest_indices, 'ari', 0) if latest_indices else 0
-    prior_year_ari = getattr(prior_year_indices, 'ari', 0) if prior_year_indices else 0
-    current_rgi = getattr(latest_indices, 'rgi', 0) if latest_indices else 0
-    prior_year_rgi = getattr(prior_year_indices, 'rgi', 0) if prior_year_indices else 0
+    current_mpi = current_period_indices['avg_mpi'] or 0
+    prior_year_mpi = prior_year_indices['avg_mpi'] or 0
+    current_ari = current_period_indices['avg_ari'] or 0
+    prior_year_ari = prior_year_indices['avg_ari'] or 0
+    current_rgi = current_period_indices['avg_rgi'] or 0
+    prior_year_rgi = prior_year_indices['avg_rgi'] or 0
     
     # Calculate changes safely
     mpi_change = ((current_mpi - prior_year_mpi) / prior_year_mpi * 100) if prior_year_mpi != 0 else 0
@@ -313,59 +342,65 @@ def home(request):
         'current_mpi': current_mpi,
         'prior_year_mpi': prior_year_mpi,
         'mpi_change': mpi_change,
-        'mpi_rank': getattr(latest_indices, 'mpi_rank', 0) if latest_indices else 0,
+        'mpi_rank': int(current_period_indices['avg_mpi_rank'] or 0),
         'current_ari': current_ari,
         'prior_year_ari': prior_year_ari,
         'ari_change': ari_change,
-        'ari_rank': getattr(latest_indices, 'ari_rank', 0) if latest_indices else 0,
+        'ari_rank': int(current_period_indices['avg_ari_rank'] or 0),
         'current_rgi': current_rgi,
         'prior_year_rgi': prior_year_rgi,
         'rgi_change': rgi_change,
-        'rgi_rank': getattr(latest_indices, 'rgi_rank', 0) if latest_indices else 0,
+        'rgi_rank': int(current_period_indices['avg_rgi_rank'] or 0),
         'total_competitors': Competitor.objects.filter(is_active=True).count()
     }
     
     # Get data for RevPAR positioning matrix - Current Period
     hotel_data = {
-        'occupancy_index': latest_indices.mpi if latest_indices else 0,
-        'adr_index': latest_indices.ari if latest_indices else 0
+        'occupancy_index': current_mpi,
+        'adr_index': current_ari
     }
     
-    # Get competitor data for the matrix - Current Period
+    # Get aggregated competitor data for the matrix - Current Period
     competitor_data = []
     for comp in Competitor.objects.filter(is_active=True):
-        latest_comp_data = CompetitorData.objects.filter(
+        comp_aggregated = CompetitorData.objects.filter(
             competitor=comp,
             date__gte=start_date,
             date__lte=end_date
-        ).order_by('-date').first()
+        ).aggregate(
+            avg_occupancy_index=Avg('occupancy_index'),
+            avg_adr_index=Avg('adr_index')
+        )
         
-        if latest_comp_data:
+        if comp_aggregated['avg_occupancy_index'] and comp_aggregated['avg_adr_index']:
             competitor_data.append({
-                'x': latest_comp_data.occupancy_index,
-                'y': latest_comp_data.adr_index,
+                'x': comp_aggregated['avg_occupancy_index'],
+                'y': comp_aggregated['avg_adr_index'],
                 'name': comp.name
             })
     
     # Get data for RevPAR positioning matrix - Previous Year
     prev_year_hotel_data = {
-        'occupancy_index': prior_year_indices.mpi if prior_year_indices else 0,
-        'adr_index': prior_year_indices.ari if prior_year_indices else 0
+        'occupancy_index': prior_year_mpi,
+        'adr_index': prior_year_ari
     }
     
-    # Get competitor data for the matrix - Previous Year
+    # Get aggregated competitor data for the matrix - Previous Year
     prev_year_competitor_data = []
     for comp in Competitor.objects.filter(is_active=True):
-        prev_year_comp_data = CompetitorData.objects.filter(
+        prev_year_comp_aggregated = CompetitorData.objects.filter(
             competitor=comp,
             date__gte=prior_year_start_date,
             date__lte=prior_year_end_date
-        ).order_by('-date').first()
+        ).aggregate(
+            avg_occupancy_index=Avg('occupancy_index'),
+            avg_adr_index=Avg('adr_index')
+        )
         
-        if prev_year_comp_data:
+        if prev_year_comp_aggregated['avg_occupancy_index'] and prev_year_comp_aggregated['avg_adr_index']:
             prev_year_competitor_data.append({
-                'x': prev_year_comp_data.occupancy_index,
-                'y': prev_year_comp_data.adr_index,
+                'x': prev_year_comp_aggregated['avg_occupancy_index'],
+                'y': prev_year_comp_aggregated['avg_adr_index'],
                 'name': comp.name
             })
     
