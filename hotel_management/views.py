@@ -412,57 +412,66 @@ def home(request):
         # Calculate the duration of the date range
         days_diff = (end_date - start_date).days
         
-        # Determine the period type based on the date range
-        if days_diff <= 31:  # Less than or equal to a month
-            period_type = 'monthly'
-            # Determine which month
-            if start_date.month == end_date.month and start_date.year == end_date.year:
-                # Same month, get the month name
-                month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-                period_detail = month_names[start_date.month - 1]
-            else:
-                # Spanning months, use the start month
-                month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-                period_detail = month_names[start_date.month - 1]
-        elif days_diff <= 93:  # Less than or equal to a quarter (3 months)
-            period_type = 'quarter'
-            # Determine which quarter
-            quarter_start_month = ((start_date.month - 1) // 3) * 3 + 1
-            if start_date.month >= quarter_start_month and start_date.month < quarter_start_month + 3:
-                quarter_num = (start_date.month - 1) // 3 + 1
-                period_detail = f'Q{quarter_num}'
-            else:
-                # Default to Q1 if unclear
-                period_detail = 'Q1'
-        else:  # Annual
-            period_type = 'annual'
-            period_detail = ''
-        
         # Get the fiscal year (use the year of the start date)
         fiscal_year = start_date.year
         
-        # Try to find the matching budget goal
+        # Try to find the most appropriate budget goal based on date range
         try:
-            budget_goal = BudgetGoal.objects.filter(
-                hotel=hotel,
-                fiscal_year=fiscal_year,
-                period_type=period_type,
-                period_detail=period_detail
+            # Get all goals for this hotel and fiscal year
+            existing_goals = BudgetGoal.objects.filter(hotel=hotel, fiscal_year=fiscal_year)
+            
+            # Priority 1: Look for monthly goals that match the month
+            if days_diff <= 31:  # Less than or equal to a month
+                month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                # Check if start_date and end_date are in the same month
+                if start_date.month == end_date.month and start_date.year == end_date.year:
+                    period_detail = month_names[start_date.month - 1]
+                    budget_goal = existing_goals.filter(
+                        period_type='monthly',
+                        period_detail=period_detail
+                    ).first()
+                    
+                    if budget_goal:
+                        return budget_goal
+            
+            # Priority 2: Look for quarterly goals
+            if days_diff <= 93:  # Less than or equal to a quarter
+                quarter_num = (start_date.month - 1) // 3 + 1
+                period_detail = f'Q{quarter_num}'
+                budget_goal = existing_goals.filter(
+                    period_type='quarter',
+                    period_detail=period_detail
+                ).first()
+                
+                if budget_goal:
+                    return budget_goal
+            
+            # Priority 3: Look for annual goals
+            budget_goal = existing_goals.filter(
+                period_type='annual',
+                period_detail=''
             ).first()
             
-            # If no specific goal found, try to find an annual goal as fallback
-            if not budget_goal and period_type != 'annual':
-                budget_goal = BudgetGoal.objects.filter(
-                    hotel=hotel,
-                    fiscal_year=fiscal_year,
-                    period_type='annual',
-                    period_detail=''
-                ).first()
+            if budget_goal:
+                return budget_goal
             
-            return budget_goal
-        except Exception:
+            # Priority 4: If no exact match, try to find any goal that could be relevant
+            # For monthly ranges, also check if there's a quarterly goal for that quarter
+            if days_diff <= 31:
+                quarter_num = (start_date.month - 1) // 3 + 1
+                period_detail = f'Q{quarter_num}'
+                budget_goal = existing_goals.filter(
+                    period_type='quarter',
+                    period_detail=period_detail
+                ).first()
+                
+                if budget_goal:
+                    return budget_goal
+            
+            return None
+            
+        except Exception as e:
             return None
     
     # Get the budget goal for the current date range
@@ -471,8 +480,8 @@ def home(request):
     # Calculate goal comparison metrics
     goal_comparison = {}
     if budget_goal and budget_goal.occupancy_goal and current_occ:
-        goal_comparison['occupancy_diff'] = float(budget_goal.occupancy_goal) - current_occ
-        goal_comparison['occupancy_met'] = current_occ >= float(budget_goal.occupancy_goal)
+        goal_comparison['occupancy_diff'] = float(budget_goal.occupancy_goal) - float(current_occ)
+        goal_comparison['occupancy_met'] = float(current_occ) >= float(budget_goal.occupancy_goal)
     
     context = {
         'hotel': hotel,

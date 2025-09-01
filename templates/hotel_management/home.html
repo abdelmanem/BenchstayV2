@@ -131,6 +131,7 @@
     {% endif %}
     
     <!-- Budget Goal Message -->
+    <!-- Debug: budget_goal = {{ budget_goal }}, summary.current_occ = {{ summary.current_occ }}, summary.current_adr = {{ summary.current_adr }}, summary.current_revpar = {{ summary.current_revpar }} -->
     {% if not budget_goal and summary.current_occ or summary.current_adr or summary.current_revpar %}
     <div class="col-12">
         <div class="alert alert-warning text-center">
@@ -152,10 +153,14 @@
                         <i class="fas fa-bullseye me-1"></i>Goal Set
                     </span>
                     {% endif %}
+                    <span id="occupancy-alert-icon" class="ms-2" style="display: none;">
+                        <i class="fas fa-exclamation-triangle text-warning" title="Performance below goal"></i>
+                    </span>
                 </h5>
             </div>
             
-            <div class="chart-container-compact">
+            <div class="chart-container-compact" id="occupancy-chart-container" 
+                 title="{% if budget_goal and budget_goal.occupancy_goal and summary.current_occ %}{% if goal_comparison.occupancy_met %}Meeting occupancy goal of {{ budget_goal.occupancy_goal|floatformat:1 }}%{% else %}Missing occupancy goal of {{ budget_goal.occupancy_goal|floatformat:1 }}% by {{ goal_comparison.occupancy_diff|floatformat:1 }}%{% endif %}{% else %}No goal set for this period{% endif %}">
                 <canvas id="occupancyChart"></canvas>
                 <div class="performance-indicator">
                     <div id="occupancy-value" class="value">{{ summary.current_occ|floatformat:1 }}%</div>
@@ -384,6 +389,41 @@
         align-items: center;
         justify-content: center;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+    
+    /* Goal-based chart container styling */
+    .chart-container-compact.goal-met {
+        border-color: #16A34A;
+        box-shadow: 0 4px 15px rgba(22, 163, 74, 0.2);
+        background: linear-gradient(145deg, #ffffff, #f0fdf4);
+    }
+    
+    .chart-container-compact.goal-missed {
+        border-color: #DC2626;
+        box-shadow: 0 4px 15px rgba(220, 38, 38, 0.2);
+        background: linear-gradient(145deg, #ffffff, #fef2f2);
+        animation: pulse-warning 2s infinite;
+    }
+    
+    .chart-container-compact.goal-missed .performance-indicator .value {
+        color: #DC2626;
+        animation: shake-warning 0.5s ease-in-out;
+    }
+    
+    @keyframes pulse-warning {
+        0%, 100% {
+            box-shadow: 0 4px 15px rgba(220, 38, 38, 0.2);
+        }
+        50% {
+            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+        }
+    }
+    
+    @keyframes shake-warning {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-2px); }
+        75% { transform: translateX(2px); }
     }
 
     .chart-container-compact canvas {
@@ -810,6 +850,36 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        // Update occupancy chart container styling based on goal status
+        const occupancyChartContainer = document.querySelector('#occupancyChart').closest('.chart-container-compact');
+        const alertIcon = document.getElementById('occupancy-alert-icon');
+        
+        if (occupancyChartContainer && budgetGoal && budgetGoal.occupancy_goal && data.current_occ !== null) {
+            const currentOcc = parseFloat(data.current_occ);
+            const goalOcc = parseFloat(budgetGoal.occupancy_goal);
+            
+            // Remove existing classes
+            occupancyChartContainer.classList.remove('goal-met', 'goal-missed');
+            
+            if (currentOcc >= goalOcc) {
+                occupancyChartContainer.classList.add('goal-met');
+                if (alertIcon) alertIcon.style.display = 'none';
+                // Update tooltip for goal met
+                occupancyChartContainer.title = `Meeting occupancy goal of ${goalOcc.toFixed(1)}%`;
+            } else {
+                occupancyChartContainer.classList.add('goal-missed');
+                if (alertIcon) alertIcon.style.display = 'inline';
+                // Update tooltip for goal missed
+                const diff = (goalOcc - currentOcc).toFixed(1);
+                occupancyChartContainer.title = `Missing occupancy goal of ${goalOcc.toFixed(1)}% by ${diff}%`;
+            }
+        } else {
+            // Remove goal-based styling if no goal or data
+            occupancyChartContainer.classList.remove('goal-met', 'goal-missed');
+            if (alertIcon) alertIcon.style.display = 'none';
+            occupancyChartContainer.title = 'No goal set for this period';
+        }
+        
         // Update ADR value
         const adrValueEl = document.getElementById('adr-value');
         if (adrValueEl) {
@@ -934,6 +1004,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const originalText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading...';
             submitBtn.disabled = true;
+            
+            // Log the form submission for debugging
+            console.log('Date filter form submitted');
+            console.log('Start date:', document.getElementById('start_date').value);
+            console.log('End date:', document.getElementById('end_date').value);
             
             // Let the form submit to refresh the page with new data
             // The Django view will handle the date filtering and return updated context
