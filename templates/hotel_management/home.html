@@ -130,12 +130,28 @@
     </div>
     {% endif %}
     
+    <!-- Budget Goal Message -->
+    {% if not budget_goal and summary.current_occ or summary.current_adr or summary.current_revpar %}
+    <div class="col-12">
+        <div class="alert alert-warning text-center">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>No budget goal found</strong> for the selected date range ({{ start_date|date:"F j, Y" }} - {{ end_date|date:"F j, Y" }}). 
+            <a href="{% url 'hotel_management:budget_goals' %}" class="alert-link">Set up budget goals</a> to see target comparisons.
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Occupancy Chart -->
     <div class="col-lg-4 mb-4">
         <div class="chart-section">
             <div class="section-header-small">
                 <h5 class="chart-title">
                     <i class="fas fa-bed me-2"></i>Occupancy Rate
+                    {% if budget_goal and budget_goal.occupancy_goal %}
+                    <span class="badge bg-success ms-2" title="Budget goal available for {{ budget_goal.fiscal_year }} {{ budget_goal.get_period_type_display }}{% if budget_goal.period_detail %} {{ budget_goal.period_detail }}{% endif %}">
+                        <i class="fas fa-bullseye me-1"></i>Goal Set
+                    </span>
+                    {% endif %}
                 </h5>
             </div>
             
@@ -143,7 +159,20 @@
                 <canvas id="occupancyChart"></canvas>
                 <div class="performance-indicator">
                     <div id="occupancy-value" class="value">{{ summary.current_occ|floatformat:1 }}%</div>
-                    <div class="label">Target: <span id="occupancy-target">86%</span></div>
+                    <div class="label">Target: <span id="occupancy-target">{% if budget_goal and budget_goal.occupancy_goal %}{{ budget_goal.occupancy_goal|floatformat:1 }}%{% else %}—{% endif %}</span></div>
+                    {% if budget_goal and budget_goal.occupancy_goal and summary.current_occ %}
+                    <div class="goal-comparison">
+                        {% if goal_comparison.occupancy_met %}
+                        <span class="badge bg-success" title="Meeting or exceeding goal">
+                            <i class="fas fa-check-circle me-1"></i>On Target
+                        </span>
+                        {% else %}
+                        <span class="badge bg-warning" title="Below goal">
+                            <i class="fas fa-exclamation-triangle me-1"></i>{{ goal_comparison.occupancy_diff|floatformat:1 }}% Below
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -471,6 +500,16 @@
         color: #64748b;
         margin-top: 0.25rem;
     }
+    
+    .goal-comparison {
+        margin-top: 0.5rem;
+    }
+    
+    .goal-comparison .badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 8px;
+    }
 
     /* Color customization styles */
     .form-control-color {
@@ -542,6 +581,18 @@ if (typeof Chart !== 'undefined') {
     "dates": {
         "start_date": "{{ start_date|date:'Y-m-d' }}",
         "end_date": "{{ end_date|date:'Y-m-d' }}"
+    },
+    "budget_goal": {
+        "occupancy_goal": {% if budget_goal and budget_goal.occupancy_goal %}{{ budget_goal.occupancy_goal|floatformat:1 }}{% else %}null{% endif %},
+        "adr_goal": {% if budget_goal and budget_goal.adr_goal %}{{ budget_goal.adr_goal|floatformat:2 }}{% else %}null{% endif %},
+        "revpar_goal": {% if budget_goal and budget_goal.revpar_goal %}{{ budget_goal.revpar_goal|floatformat:2 }}{% else %}null{% endif %},
+        "period_type": "{% if budget_goal %}{{ budget_goal.period_type }}{% endif %}",
+        "period_detail": "{% if budget_goal %}{{ budget_goal.period_detail }}{% endif %}",
+        "fiscal_year": {% if budget_goal %}{{ budget_goal.fiscal_year }}{% else %}null{% endif %}
+    },
+    "goal_comparison": {
+        "occupancy_diff": {% if goal_comparison.occupancy_diff %}{{ goal_comparison.occupancy_diff|floatformat:1 }}{% else %}null{% endif %},
+        "occupancy_met": {% if goal_comparison.occupancy_met %}true{% else %}false{% endif %}
     }
 }
 </script>
@@ -572,7 +623,9 @@ document.addEventListener('DOMContentLoaded', function() {
             backendData = {
                 summary: { current_occ: 0, current_adr: 0, current_revpar: 0, occ_change: 0, adr_change: 0, revpar_change: 0 },
                 indices: { current_mpi: 0, current_ari: 0, current_rgi: 0, mpi_rank: 0, ari_rank: 0, rgi_rank: 0, total_competitors: 0 },
-                dates: { start_date: '', end_date: '' }
+                dates: { start_date: '', end_date: '' },
+                budget_goal: { occupancy_goal: null, adr_goal: null, revpar_goal: null, period_type: '', period_detail: '', fiscal_year: null },
+                goal_comparison: { occupancy_diff: null, occupancy_met: false }
             };
         }
     } catch (error) {
@@ -580,7 +633,9 @@ document.addEventListener('DOMContentLoaded', function() {
         backendData = {
             summary: { current_occ: 0, current_adr: 0, current_revpar: 0, occ_change: 0, adr_change: 0, revpar_change: 0 },
             indices: { current_mpi: 0, current_ari: 0, current_rgi: 0, mpi_rank: 0, ari_rank: 0, rgi_rank: 0, total_competitors: 0 },
-            dates: { start_date: '', end_date: '' }
+            dates: { start_date: '', end_date: '' },
+            budget_goal: { occupancy_goal: null, adr_goal: null, revpar_goal: null, period_type: '', period_detail: '', fiscal_year: null },
+            goal_comparison: { occupancy_diff: null, occupancy_met: false }
         };
     }
 
@@ -588,7 +643,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const circularColorSchemes = {
         occupancy: {
             active: '#FF6B6B',
-            background: '#FFE5E5'
+            background: '#FFE5E5',
+            // Goal-based colors
+            goal_met: '#16A34A',      // Green when meeting goal
+            goal_missed: '#DC2626',   // Red when missing goal
+            goal_met_bg: '#DCFCE7',   // Light green background
+            goal_missed_bg: '#FEE2E2' // Light red background
         },
         adr: {
             active: '#4ECDC4',
@@ -615,7 +675,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Removed legacy circular progress charts (occupancy-circle, rate-index-circle, etc.)
     
     // Function to create simple circular charts for main metrics
-    function createSimpleCircularChart(canvasId, value, max, colorScheme) {
+    function createSimpleCircularChart(canvasId, value, max, colorScheme, goalInfo = null) {
         const canvas = document.getElementById(canvasId);
         if (!canvas) {
             console.warn(`Canvas element ${canvasId} not found`);
@@ -632,14 +692,33 @@ document.addEventListener('DOMContentLoaded', function() {
         const safeValue = Math.max(0, parseFloat(value) || 0);
         const safeMax = Math.max(safeValue + 1, parseFloat(max) || 100);
 
-        console.log(`Creating simple chart for ${canvasId}: value=${safeValue}, max=${safeMax}, colors=`, colorScheme);
+        // Determine colors based on goal status (for occupancy chart)
+        let activeColor = colorScheme.active;
+        let backgroundColor = colorScheme.background;
+        
+        if (canvasId === 'occupancyChart' && goalInfo && goalInfo.goal && goalInfo.currentValue !== null) {
+            const goalValue = parseFloat(goalInfo.goal);
+            const currentValue = parseFloat(goalInfo.currentValue);
+            
+            if (currentValue >= goalValue) {
+                // Meeting or exceeding goal - use green
+                activeColor = colorScheme.goal_met;
+                backgroundColor = colorScheme.goal_met_bg;
+            } else {
+                // Missing goal - use red
+                activeColor = colorScheme.goal_missed;
+                backgroundColor = colorScheme.goal_missed_bg;
+            }
+        }
+
+        console.log(`Creating simple chart for ${canvasId}: value=${safeValue}, max=${safeMax}, colors=`, { activeColor, backgroundColor });
         
         return new Chart(ctx, {
             type: 'doughnut',
             data: {
                 datasets: [{
                     data: [safeValue, safeMax - safeValue],
-                    backgroundColor: [colorScheme.active, colorScheme.background],
+                    backgroundColor: [activeColor, backgroundColor],
                     borderWidth: 0,
                     cutout: '75%'
                 }]
@@ -666,6 +745,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Use actual backend data
         const data = backendData.summary;
         const indices = backendData.indices;
+        const budgetGoal = backendData.budget_goal;
 
         // Check if we have data before creating charts
         if (!data || !indices) {
@@ -690,9 +770,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const rgiValue = parseFloat(indices.current_rgi) || 0;
 
         console.log('Chart values:', { occupancyValue, adrValue, revparValue, mpiValue, ariValue, rgiValue });
+        console.log('Budget goal:', budgetGoal);
 
         // Create charts with appropriate max values
-        window.occupancyChart = createSimpleCircularChart('occupancyChart', occupancyValue, 100, circularColorSchemes.occupancy);
+        // Pass goal information for occupancy chart
+        const occupancyGoalInfo = {
+            goal: budgetGoal && budgetGoal.occupancy_goal ? budgetGoal.occupancy_goal : null,
+            currentValue: occupancyValue
+        };
+        
+        window.occupancyChart = createSimpleCircularChart('occupancyChart', occupancyValue, 100, circularColorSchemes.occupancy, occupancyGoalInfo);
         window.adrChart = createSimpleCircularChart('adrChart', adrValue, Math.max(200, adrValue * 1.5), circularColorSchemes.adr);
         window.revparChart = createSimpleCircularChart('revparChart', revparValue, Math.max(150, revparValue * 1.5), circularColorSchemes.revpar);
         window.mpiChart = createSimpleCircularChart('mpiChart', mpiValue, Math.max(120, mpiValue * 1.2), circularColorSchemes.mpi);
@@ -700,17 +787,27 @@ document.addEventListener('DOMContentLoaded', function() {
         window.rgiChart = createSimpleCircularChart('rgiChart', rgiValue, Math.max(120, rgiValue * 1.2), circularColorSchemes.rgi);
         
         // Update the performance indicator values in the HTML
-        updatePerformanceIndicators(data, indices);
+        updatePerformanceIndicators(data, indices, budgetGoal);
         
         console.log('Charts initialized successfully');
     }
 
     // Function to update performance indicator values in the HTML
-    function updatePerformanceIndicators(data, indices) {
+    function updatePerformanceIndicators(data, indices, budgetGoal) {
         // Update occupancy value
         const occupancyValueEl = document.getElementById('occupancy-value');
         if (occupancyValueEl) {
             occupancyValueEl.textContent = `${parseFloat(data.current_occ || 0).toFixed(1)}%`;
+        }
+        
+        // Update occupancy target
+        const occupancyTargetEl = document.getElementById('occupancy-target');
+        if (occupancyTargetEl) {
+            if (budgetGoal && budgetGoal.occupancy_goal) {
+                occupancyTargetEl.textContent = `${parseFloat(budgetGoal.occupancy_goal).toFixed(1)}%`;
+            } else {
+                occupancyTargetEl.textContent = '—';
+            }
         }
         
         // Update ADR value
