@@ -191,14 +191,24 @@
             <div class="section-header-small">
                 <h5 class="chart-title">
                     <i class="fas fa-dollar-sign me-2"></i>Average Daily Rate
+                    {% if budget_goal and budget_goal.adr_goal %}
+                    <span class="badge bg-success ms-2" title="Budget goal available for {{ budget_goal.fiscal_year }} {{ budget_goal.get_period_type_display }}{% if budget_goal.period_detail %} {{ budget_goal.period_detail }}{% endif %}">
+                        <i class="fas fa-bullseye me-1"></i>Goal Set
+                    </span>
+                    {% endif %}
+                    <span id="adr-alert-icon" class="ms-2" style="display: none;">
+                        <i class="fas fa-exclamation-triangle text-warning" title="Performance below goal"></i>
+                    </span>
                 </h5>
             </div>
             
-            <div class="chart-container-compact">
+            <div class="chart-container-compact" id="adr-chart-container" 
+                 title="{% if budget_goal and budget_goal.adr_goal and summary.current_adr %}{% if summary.current_adr >= budget_goal.adr_goal %}Meeting ADR goal of {{ budget_goal.adr_goal|floatformat:2 }}{% else %}Missing ADR goal of {{ budget_goal.adr_goal|floatformat:2 }} by {{ budget_goal.adr_goal|floatformat:2|add:'-'|add:summary.current_adr|floatformat:2 }}{% endif %}{% else %}No goal set for this period{% endif %}">
                 <canvas id="adrChart"></canvas>
                 <div class="performance-indicator">
                     <div id="adr-value" class="value">{{ summary.current_adr|floatformat:2 }}</div>
-                    <div class="label">Current ADR</div>
+                    <div class="label">Target: <span id="adr-target">{% if budget_goal and budget_goal.adr_goal %}{{ budget_goal.adr_goal|floatformat:2 }}{% else %}—{% endif %}</span></div>
+                    <div id="adr-goal-comparison" class="goal-comparison" style="display: none;"></div>
                 </div>
             </div>
         </div>
@@ -210,14 +220,24 @@
             <div class="section-header-small">
                 <h5 class="chart-title">
                     <i class="fas fa-chart-line me-2"></i>RevPAR
+                    {% if budget_goal and budget_goal.revpar_goal %}
+                    <span class="badge bg-success ms-2" title="Budget goal available for {{ budget_goal.fiscal_year }} {{ budget_goal.get_period_type_display }}{% if budget_goal.period_detail %} {{ budget_goal.period_detail }}{% endif %}">
+                        <i class="fas fa-bullseye me-1"></i>Goal Set
+                    </span>
+                    {% endif %}
+                    <span id="revpar-alert-icon" class="ms-2" style="display: none;">
+                        <i class="fas fa-exclamation-triangle text-warning" title="Performance below goal"></i>
+                    </span>
                 </h5>
             </div>
             
-            <div class="chart-container-compact">
+            <div class="chart-container-compact" id="revpar-chart-container"
+                 title="{% if budget_goal and budget_goal.revpar_goal and summary.current_revpar %}{% if summary.current_revpar >= budget_goal.revpar_goal %}Meeting RevPAR goal of {{ budget_goal.revpar_goal|floatformat:2 }}{% else %}Missing RevPAR goal of {{ budget_goal.revpar_goal|floatformat:2 }} by {{ budget_goal.revpar_goal|floatformat:2|add:'-'|add:summary.current_revpar|floatformat:2 }}{% endif %}{% else %}No goal set for this period{% endif %}">
                 <canvas id="revparChart"></canvas>
                 <div class="performance-indicator">
                     <div id="revpar-value" class="value">{{ summary.current_revpar|floatformat:2 }}</div>
-                    <div class="label">Current RevPAR</div>
+                    <div class="label">Target: <span id="revpar-target">{% if budget_goal and budget_goal.revpar_goal %}{{ budget_goal.revpar_goal|floatformat:2 }}{% else %}—{% endif %}</span></div>
+                    <div id="revpar-goal-comparison" class="goal-comparison" style="display: none;"></div>
                 </div>
             </div>
         </div>
@@ -734,11 +754,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const safeValue = Math.max(0, parseFloat(value) || 0);
         const safeMax = Math.max(safeValue + 1, parseFloat(max) || 100);
 
-        // Determine colors based on goal status (for occupancy chart)
+        // Determine colors based on goal status (for charts with goals: occupancy, ADR, RevPAR)
         let activeColor = colorScheme.active;
         let backgroundColor = colorScheme.background;
         
-        if (canvasId === 'occupancyChart' && goalInfo && goalInfo.goal && goalInfo.currentValue !== null) {
+        if (goalInfo && goalInfo.goal && goalInfo.currentValue !== null) {
             const goalValue = parseFloat(goalInfo.goal);
             const currentValue = parseFloat(goalInfo.currentValue);
             
@@ -822,8 +842,18 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         
         window.occupancyChart = createSimpleCircularChart('occupancyChart', occupancyValue, 100, circularColorSchemes.occupancy, occupancyGoalInfo);
-        window.adrChart = createSimpleCircularChart('adrChart', adrValue, Math.max(200, adrValue * 1.5), circularColorSchemes.adr);
-        window.revparChart = createSimpleCircularChart('revparChart', revparValue, Math.max(150, revparValue * 1.5), circularColorSchemes.revpar);
+
+        const adrGoalInfo = {
+            goal: budgetGoal && budgetGoal.adr_goal ? budgetGoal.adr_goal : null,
+            currentValue: adrValue
+        };
+        window.adrChart = createSimpleCircularChart('adrChart', adrValue, Math.max(200, adrValue * 1.5), circularColorSchemes.adr, adrGoalInfo);
+
+        const revparGoalInfo = {
+            goal: budgetGoal && budgetGoal.revpar_goal ? budgetGoal.revpar_goal : null,
+            currentValue: revparValue
+        };
+        window.revparChart = createSimpleCircularChart('revparChart', revparValue, Math.max(150, revparValue * 1.5), circularColorSchemes.revpar, revparGoalInfo);
         window.mpiChart = createSimpleCircularChart('mpiChart', mpiValue, Math.max(120, mpiValue * 1.2), circularColorSchemes.mpi);
         window.ariChart = createSimpleCircularChart('ariChart', ariValue, Math.max(120, ariValue * 1.2), circularColorSchemes.ari);
         window.rgiChart = createSimpleCircularChart('rgiChart', rgiValue, Math.max(120, rgiValue * 1.2), circularColorSchemes.rgi);
@@ -887,11 +917,73 @@ document.addEventListener('DOMContentLoaded', function() {
         if (adrValueEl) {
             adrValueEl.textContent = parseFloat(data.current_adr || 0).toFixed(2);
         }
-        
+        // Update ADR target and styling
+        const adrTargetEl = document.getElementById('adr-target');
+        const adrChartContainer = document.getElementById('adr-chart-container');
+        const adrAlertIcon = document.getElementById('adr-alert-icon');
+        const currentAdr = parseFloat(data.current_adr);
+        if (adrTargetEl) {
+            if (budgetGoal && budgetGoal.adr_goal) {
+                adrTargetEl.textContent = `${parseFloat(budgetGoal.adr_goal).toFixed(2)}`;
+            } else {
+                adrTargetEl.textContent = '—';
+            }
+        }
+        if (adrChartContainer) {
+            adrChartContainer.classList.remove('goal-met', 'goal-missed');
+            if (budgetGoal && budgetGoal.adr_goal && !isNaN(currentAdr)) {
+                const goalAdr = parseFloat(budgetGoal.adr_goal);
+                if (currentAdr >= goalAdr) {
+                    adrChartContainer.classList.add('goal-met');
+                    if (adrAlertIcon) adrAlertIcon.style.display = 'none';
+                    adrChartContainer.title = `Meeting ADR goal of ${goalAdr.toFixed(2)}`;
+                } else {
+                    adrChartContainer.classList.add('goal-missed');
+                    if (adrAlertIcon) adrAlertIcon.style.display = 'inline';
+                    const diffAdr = (goalAdr - currentAdr).toFixed(2);
+                    adrChartContainer.title = `Missing ADR goal of ${goalAdr.toFixed(2)} by ${diffAdr}`;
+                }
+            } else {
+                if (adrAlertIcon) adrAlertIcon.style.display = 'none';
+                adrChartContainer.title = 'No goal set for this period';
+            }
+        }
+
         // Update RevPAR value
         const revparValueEl = document.getElementById('revpar-value');
         if (revparValueEl) {
             revparValueEl.textContent = parseFloat(data.current_revpar || 0).toFixed(2);
+        }
+        // Update RevPAR target and styling
+        const revparTargetEl = document.getElementById('revpar-target');
+        const revparChartContainer = document.getElementById('revpar-chart-container');
+        const revparAlertIcon = document.getElementById('revpar-alert-icon');
+        const currentRevpar = parseFloat(data.current_revpar);
+        if (revparTargetEl) {
+            if (budgetGoal && budgetGoal.revpar_goal) {
+                revparTargetEl.textContent = `${parseFloat(budgetGoal.revpar_goal).toFixed(2)}`;
+            } else {
+                revparTargetEl.textContent = '—';
+            }
+        }
+        if (revparChartContainer) {
+            revparChartContainer.classList.remove('goal-met', 'goal-missed');
+            if (budgetGoal && budgetGoal.revpar_goal && !isNaN(currentRevpar)) {
+                const goalRevpar = parseFloat(budgetGoal.revpar_goal);
+                if (currentRevpar >= goalRevpar) {
+                    revparChartContainer.classList.add('goal-met');
+                    if (revparAlertIcon) revparAlertIcon.style.display = 'none';
+                    revparChartContainer.title = `Meeting RevPAR goal of ${goalRevpar.toFixed(2)}`;
+                } else {
+                    revparChartContainer.classList.add('goal-missed');
+                    if (revparAlertIcon) revparAlertIcon.style.display = 'inline';
+                    const diffRevpar = (goalRevpar - currentRevpar).toFixed(2);
+                    revparChartContainer.title = `Missing RevPAR goal of ${goalRevpar.toFixed(2)} by ${diffRevpar}`;
+                }
+            } else {
+                if (revparAlertIcon) revparAlertIcon.style.display = 'none';
+                revparChartContainer.title = 'No goal set for this period';
+            }
         }
         
         // Update MPI value
