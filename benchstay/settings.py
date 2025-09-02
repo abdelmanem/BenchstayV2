@@ -84,7 +84,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',  # Database engine
         'NAME': 'Benchstay',                       # Database name
         'USER': 'Benchstaydbuser',                 # PostgreSQL username
-        'PASSWORD': 'J5brHrAXFLQSif0Kchangetonewpasswored',  # PostgreSQL password (removed extra spaces)
+        'PASSWORD': 'Radisson1234',  # PostgreSQL password (removed extra spaces)
         'HOST': 'localhost',                       # Database server
         'PORT': '5432',                            # Database port (standard PostgreSQL port)
         'CONN_MAX_AGE': 300,                       # Max database connection age
@@ -144,7 +144,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://172.19.209.108:6379/1',
+        'LOCATION': 'redis://localhost:6379/1',
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }

@@ -132,14 +132,16 @@
     
     <!-- Budget Goal Message -->
     <!-- Debug: budget_goal = {{ budget_goal }}, summary.current_occ = {{ summary.current_occ }}, summary.current_adr = {{ summary.current_adr }}, summary.current_revpar = {{ summary.current_revpar }} -->
-    {% if not budget_goal and summary.current_occ or summary.current_adr or summary.current_revpar %}
-    <div class="col-12">
-        <div class="alert alert-warning text-center">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <strong>No budget goal found</strong> for the selected date range ({{ start_date|date:"F j, Y" }} - {{ end_date|date:"F j, Y" }}). 
-            <a href="{% url 'hotel_management:budget_goals' %}" class="alert-link">Set up budget goals</a> to see target comparisons.
+    {% if not budget_goal %}
+        {% if summary.current_occ or summary.current_adr or summary.current_revpar %}
+        <div class="col-12">
+            <div class="alert alert-warning text-center">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>No budget goal found</strong> for the selected date range ({{ start_date|date:"F j, Y" }} - {{ end_date|date:"F j, Y" }}). 
+                <a href="{% url 'hotel_management:budget_goals' %}" class="alert-link">Set up budget goals</a> to see target comparisons.
+            </div>
         </div>
-    </div>
+        {% endif %}
     {% endif %}
     
     <!-- Occupancy Chart -->
