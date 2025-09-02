@@ -295,6 +295,19 @@ def admin_settings(request):
                 system_settings.support_email = request.POST.get('support_email', '')
                 system_settings.enable_email_notifications = request.POST.get('enable_email_notifications') == 'on'
                 system_settings.items_per_page = int(request.POST.get('items_per_page', 25))
+
+                # Number formatting: decimal places
+                try:
+                    percentage_dp = int(request.POST.get('decimal_places_percentage', system_settings.decimal_places_percentage))
+                except (TypeError, ValueError):
+                    percentage_dp = system_settings.decimal_places_percentage
+                try:
+                    currency_dp = int(request.POST.get('decimal_places_currency', system_settings.decimal_places_currency))
+                except (TypeError, ValueError):
+                    currency_dp = system_settings.decimal_places_currency
+                # Clamp to sane bounds 0-3
+                system_settings.decimal_places_percentage = max(0, min(3, percentage_dp))
+                system_settings.decimal_places_currency = max(0, min(3, currency_dp))
                 
                 # Handle company logo upload
                 if 'company_logo' in request.FILES:

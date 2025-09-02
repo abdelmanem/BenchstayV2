@@ -49,6 +49,10 @@ class SystemSettings(models.Model):
     # Email settings
     enable_email_notifications = models.BooleanField(default=True)
     
+    # Number formatting settings
+    decimal_places_percentage = models.IntegerField(default=1, help_text='Decimal places for percentages (e.g., occupancy, indices)')
+    decimal_places_currency = models.IntegerField(default=2, help_text='Decimal places for currency values (e.g., ADR, RevPAR)')
+
     # Performance settings
     items_per_page = models.IntegerField(default=25, help_text='Number of items to display per page in tables')
     
@@ -96,6 +100,14 @@ class SystemSettings(models.Model):
         if self.currency_symbol:
             return self.currency_symbol
         return self.get_currency_symbol()
+
+    def clamp_decimal_places(self, value: int) -> int:
+        """Ensure decimal places are within a sane range 0-3."""
+        try:
+            v = int(value)
+        except (TypeError, ValueError):
+            return 0
+        return max(0, min(3, v))
     
     def __str__(self):
         return f"System Settings (Last updated: {self.updated_at})"

@@ -255,7 +255,7 @@
                             
                             <div class="row mb-4">
                                 <div class="col-md-12">
-                                    <h5 class="border-bottom pb-2">Currency & Date Settings</h5>
+                                    <h5 class="border-bottom pb-2">Currency, Date & Number Formatting</h5>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label for="currency" class="form-label">Currency</label>
@@ -277,6 +277,16 @@
                                             <option value="{{ format }}" {% if system_settings.date_format == format %}selected{% endif %}>{{ display }}</option>
                                         {% endfor %}
                                     </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="decimal_places_percentage" class="form-label">Percentage Decimal Places</label>
+                                    <input type="number" class="form-control" id="decimal_places_percentage" name="decimal_places_percentage" value="{{ system_settings.decimal_places_percentage }}" min="0" max="3">
+                                    <div class="form-text">Number of digits after the dot for percentages</div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="decimal_places_currency" class="form-label">Currency Decimal Places</label>
+                                    <input type="number" class="form-control" id="decimal_places_currency" name="decimal_places_currency" value="{{ system_settings.decimal_places_currency }}" min="0" max="3">
+                                    <div class="form-text">Number of digits after the dot for currency (ADR, RevPAR)</div>
                                 </div>
                             </div>
                             

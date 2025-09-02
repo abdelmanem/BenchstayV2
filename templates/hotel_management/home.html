@@ -67,9 +67,9 @@
                     {{ summary.occ_change|floatformat:1 }}%
                 </div>
             </div>
-            <div class="metric-value">{{ summary.current_occ|floatformat:1 }}%</div>
+            <div class="metric-value">{{ summary.current_occ|floatformat:system_settings.decimal_places_percentage }}%</div>
             <div class="text-muted small">
-                Prior Year: {{ summary.prior_year_occ|floatformat:1 }}%
+                Prior Year: {{ summary.prior_year_occ|floatformat:system_settings.decimal_places_percentage }}%
             </div>
         </div>
     </div>
@@ -85,9 +85,9 @@
                     {{ summary.adr_change|floatformat:1 }}%
                 </div>
             </div>
-            <div class="metric-value">{{ system_settings.effective_currency_symbol }} {{ summary.current_adr|floatformat:2 }}</div>
+            <div class="metric-value">{{ system_settings.effective_currency_symbol }} {{ summary.current_adr|floatformat:system_settings.decimal_places_currency }}</div>
             <div class="text-muted small">
-                Prior Year: {{ system_settings.effective_currency_symbol }} {{ summary.prior_year_adr|floatformat:2 }}
+                Prior Year: {{ system_settings.effective_currency_symbol }} {{ summary.prior_year_adr|floatformat:system_settings.decimal_places_currency }}
             </div>
         </div>
     </div>
@@ -103,9 +103,9 @@
                     {{ summary.revpar_change|floatformat:1 }}%
                 </div>
             </div>
-            <div class="metric-value">{{ system_settings.effective_currency_symbol }} {{ summary.current_revpar|floatformat:2 }}</div>
+            <div class="metric-value">{{ system_settings.effective_currency_symbol }} {{ summary.current_revpar|floatformat:system_settings.decimal_places_currency }}</div>
             <div class="text-muted small">
-                Prior Year: {{ system_settings.effective_currency_symbol }} {{ summary.prior_year_revpar|floatformat:2 }}
+                Prior Year: {{ system_settings.effective_currency_symbol }} {{ summary.prior_year_revpar|floatformat:system_settings.decimal_places_currency }}
             </div>
         </div>
     </div>
@@ -165,7 +165,7 @@
                  title="{% if budget_goal and budget_goal.occupancy_goal and summary.current_occ %}{% if goal_comparison.occupancy_met %}Meeting occupancy goal of {{ budget_goal.occupancy_goal|floatformat:1 }}%{% else %}Missing occupancy goal of {{ budget_goal.occupancy_goal|floatformat:1 }}% by {{ goal_comparison.occupancy_diff|floatformat:1 }}%{% endif %}{% else %}No goal set for this period{% endif %}">
                 <canvas id="occupancyChart"></canvas>
                 <div class="performance-indicator">
-                    <div id="occupancy-value" class="value">{{ summary.current_occ|floatformat:1 }}%</div>
+                    <div id="occupancy-value" class="value">{{ summary.current_occ|floatformat:system_settings.decimal_places_percentage }}%</div>
                     <div class="label">Target: <span id="occupancy-target">{% if budget_goal and budget_goal.occupancy_goal %}{{ budget_goal.occupancy_goal|floatformat:1 }}%{% else %}—{% endif %}</span></div>
                     {% if budget_goal and budget_goal.occupancy_goal and summary.current_occ %}
                     <div class="goal-comparison">
@@ -206,7 +206,7 @@
                  title="{% if budget_goal and budget_goal.adr_goal and summary.current_adr %}{% if summary.current_adr >= budget_goal.adr_goal %}Meeting ADR goal of {{ budget_goal.adr_goal|floatformat:2 }}{% else %}Missing ADR goal of {{ budget_goal.adr_goal|floatformat:2 }} by {{ budget_goal.adr_goal|floatformat:2|add:'-'|add:summary.current_adr|floatformat:2 }}{% endif %}{% else %}No goal set for this period{% endif %}">
                 <canvas id="adrChart"></canvas>
                 <div class="performance-indicator">
-                    <div id="adr-value" class="value">{{ summary.current_adr|floatformat:2 }}</div>
+                    <div id="adr-value" class="value">{{ summary.current_adr|floatformat:system_settings.decimal_places_currency }}</div>
                     <div class="label">Target: <span id="adr-target">{% if budget_goal and budget_goal.adr_goal %}{{ budget_goal.adr_goal|floatformat:2 }}{% else %}—{% endif %}</span></div>
                     <div id="adr-goal-comparison" class="goal-comparison" style="display: none;"></div>
                 </div>
@@ -235,7 +235,7 @@
                  title="{% if budget_goal and budget_goal.revpar_goal and summary.current_revpar %}{% if summary.current_revpar >= budget_goal.revpar_goal %}Meeting RevPAR goal of {{ budget_goal.revpar_goal|floatformat:2 }}{% else %}Missing RevPAR goal of {{ budget_goal.revpar_goal|floatformat:2 }} by {{ budget_goal.revpar_goal|floatformat:2|add:'-'|add:summary.current_revpar|floatformat:2 }}{% endif %}{% else %}No goal set for this period{% endif %}">
                 <canvas id="revparChart"></canvas>
                 <div class="performance-indicator">
-                    <div id="revpar-value" class="value">{{ summary.current_revpar|floatformat:2 }}</div>
+                    <div id="revpar-value" class="value">{{ summary.current_revpar|floatformat:system_settings.decimal_places_currency }}</div>
                     <div class="label">Target: <span id="revpar-target">{% if budget_goal and budget_goal.revpar_goal %}{{ budget_goal.revpar_goal|floatformat:2 }}{% else %}—{% endif %}</span></div>
                     <div id="revpar-goal-comparison" class="goal-comparison" style="display: none;"></div>
                 </div>
@@ -272,33 +272,33 @@
                     <tbody>
                         <tr>
                             <td class="fw-semibold"><i class="fas fa-users text-primary me-2"></i>MPI</td>
-                            <td class="text-center fw-bold">{{ indices.current_mpi|floatformat:1 }}</td>
-                            <td class="text-center">{{ indices.prior_year_mpi|floatformat:1 }}</td>
+                            <td class="text-center fw-bold">{{ indices.current_mpi|floatformat:system_settings.decimal_places_percentage }}</td>
+                            <td class="text-center">{{ indices.prior_year_mpi|floatformat:system_settings.decimal_places_percentage }}</td>
                             <td class="text-center">
                                 <span class="change-badge {% if indices.mpi_change > 0 %}positive{% else %}negative{% endif %}">
-                                    <i class="fas fa-arrow-{% if indices.mpi_change > 0 %}up{% else %}down{% endif %}"></i>{{ indices.mpi_change|floatformat:1 }}%
+                                    <i class="fas fa-arrow-{% if indices.mpi_change > 0 %}up{% else %}down{% endif %}"></i>{{ indices.mpi_change|floatformat:system_settings.decimal_places_percentage }}%
                                 </span>
                             </td>
                             <td class="text-center"><span class="rank-badge">{{ indices.mpi_rank }} of {{ indices.total_competitors }}</span></td>
                         </tr>
                         <tr>
                             <td class="fw-semibold"><i class="fas fa-money-bill-wave text-success me-2"></i>ARI</td>
-                            <td class="text-center fw-bold">{{ indices.current_ari|floatformat:1 }}</td>
-                            <td class="text-center">{{ indices.prior_year_ari|floatformat:1 }}</td>
+                            <td class="text-center fw-bold">{{ indices.current_ari|floatformat:system_settings.decimal_places_percentage }}</td>
+                            <td class="text-center">{{ indices.prior_year_ari|floatformat:system_settings.decimal_places_percentage }}</td>
                             <td class="text-center">
                                 <span class="change-badge {% if indices.ari_change > 0 %}positive{% else %}negative{% endif %}">
-                                    <i class="fas fa-arrow-{% if indices.ari_change > 0 %}up{% else %}down{% endif %}"></i>{{ indices.ari_change|floatformat:1 }}%
+                                    <i class="fas fa-arrow-{% if indices.ari_change > 0 %}up{% else %}down{% endif %}"></i>{{ indices.ari_change|floatformat:system_settings.decimal_places_percentage }}%
                                 </span>
                             </td>
                             <td class="text-center"><span class="rank-badge">{{ indices.ari_rank }} of {{ indices.total_competitors }}</span></td>
                         </tr>
                         <tr>
                             <td class="fw-semibold"><i class="fas fa-trophy text-warning me-2"></i>RGI</td>
-                            <td class="text-center fw-bold">{{ indices.current_rgi|floatformat:1 }}</td>
-                            <td class="text-center">{{ indices.prior_year_rgi|floatformat:1 }}</td>
+                            <td class="text-center fw-bold">{{ indices.current_rgi|floatformat:system_settings.decimal_places_percentage }}</td>
+                            <td class="text-center">{{ indices.prior_year_rgi|floatformat:system_settings.decimal_places_percentage }}</td>
                             <td class="text-center">
                                 <span class="change-badge {% if indices.rgi_change > 0 %}positive{% else %}negative{% endif %}">
-                                    <i class="fas fa-arrow-{% if indices.rgi_change > 0 %}up{% else %}down{% endif %}"></i>{{ indices.rgi_change|floatformat:1 }}%
+                                    <i class="fas fa-arrow-{% if indices.rgi_change > 0 %}up{% else %}down{% endif %}"></i>{{ indices.rgi_change|floatformat:system_settings.decimal_places_percentage }}%
                                 </span>
                             </td>
                             <td class="text-center"><span class="rank-badge">{{ indices.rgi_rank }} of {{ indices.total_competitors }}</span></td>
@@ -340,7 +340,7 @@
             <div class="chart-container-compact">
                 <canvas id="mpiChart"></canvas>
                 <div class="performance-indicator">
-                    <div id="market-share-value" class="value">{{ indices.current_mpi|floatformat:1 }}</div>
+                    <div id="market-share-value" class="value">{{ indices.current_mpi|floatformat:system_settings.decimal_places_percentage }}</div>
                     <div class="label">of Competitive Set</div>
                 </div>
             </div>
@@ -359,7 +359,7 @@
             <div class="chart-container-compact">
                 <canvas id="ariChart"></canvas>
                 <div class="performance-indicator">
-                    <div id="rate-index-value" class="value">{{ indices.current_ari|floatformat:1 }}</div>
+                    <div id="rate-index-value" class="value">{{ indices.current_ari|floatformat:system_settings.decimal_places_percentage }}</div>
                     <div id="rate-index-label" class="label">Above Market</div>
                 </div>
             </div>
@@ -378,7 +378,7 @@
             <div class="chart-container-compact">
                 <canvas id="rgiChart"></canvas>
                 <div class="performance-indicator">
-                    <div id="revpar-index-value" class="value">{{ indices.current_rgi|floatformat:1 }}</div>
+                    <div id="revpar-index-value" class="value">{{ indices.current_rgi|floatformat:system_settings.decimal_places_percentage }}</div>
                     <div id="revpar-index-label" class="label">Fair Share</div>
                 </div>
             </div>
@@ -655,6 +655,10 @@ if (typeof Chart !== 'undefined') {
     "goal_comparison": {
         "occupancy_diff": {% if goal_comparison.occupancy_diff %}{{ goal_comparison.occupancy_diff|floatformat:1 }}{% else %}null{% endif %},
         "occupancy_met": {% if goal_comparison.occupancy_met %}true{% else %}false{% endif %}
+    },
+    "formatting": {
+        "decimal_places_percentage": {{ system_settings.decimal_places_percentage|default:1 }},
+        "decimal_places_currency": {{ system_settings.decimal_places_currency|default:2 }}
     }
 }
 </script>
@@ -866,10 +870,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to update performance indicator values in the HTML
     function updatePerformanceIndicators(data, indices, budgetGoal) {
+        // Use system decimal settings from the template via data attributes if available in the future.
         // Update occupancy value
         const occupancyValueEl = document.getElementById('occupancy-value');
+        const percentageDP = (backendData && backendData.formatting && Number.isInteger(backendData.formatting.decimal_places_percentage)) ? backendData.formatting.decimal_places_percentage : 1;
+        const currencyDP = (backendData && backendData.formatting && Number.isInteger(backendData.formatting.decimal_places_currency)) ? backendData.formatting.decimal_places_currency : 2;
         if (occupancyValueEl) {
-            occupancyValueEl.textContent = `${parseFloat(data.current_occ || 0).toFixed(1)}%`;
+            occupancyValueEl.textContent = `${parseFloat(data.current_occ || 0).toFixed(percentageDP)}%`;
         }
         
         // Update occupancy target
@@ -915,7 +922,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update ADR value
         const adrValueEl = document.getElementById('adr-value');
         if (adrValueEl) {
-            adrValueEl.textContent = parseFloat(data.current_adr || 0).toFixed(2);
+            adrValueEl.textContent = parseFloat(data.current_adr || 0).toFixed(currencyDP);
         }
         // Update ADR target and styling
         const adrTargetEl = document.getElementById('adr-target');
@@ -952,7 +959,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update RevPAR value
         const revparValueEl = document.getElementById('revpar-value');
         if (revparValueEl) {
-            revparValueEl.textContent = parseFloat(data.current_revpar || 0).toFixed(2);
+            revparValueEl.textContent = parseFloat(data.current_revpar || 0).toFixed(currencyDP);
         }
         // Update RevPAR target and styling
         const revparTargetEl = document.getElementById('revpar-target');
@@ -989,19 +996,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update MPI value
         const mpiValueEl = document.getElementById('market-share-value');
         if (mpiValueEl) {
-            mpiValueEl.textContent = parseFloat(indices.current_mpi || 0).toFixed(1);
+            mpiValueEl.textContent = parseFloat(indices.current_mpi || 0).toFixed(percentageDP);
         }
         
         // Update ARI value
         const ariValueEl = document.getElementById('rate-index-value');
         if (ariValueEl) {
-            ariValueEl.textContent = parseFloat(indices.current_ari || 0).toFixed(1);
+            ariValueEl.textContent = parseFloat(indices.current_ari || 0).toFixed(percentageDP);
         }
         
         // Update RGI value
         const rgiValueEl = document.getElementById('revpar-index-value');
         if (rgiValueEl) {
-            rgiValueEl.textContent = parseFloat(indices.current_rgi || 0).toFixed(1);
+            rgiValueEl.textContent = parseFloat(indices.current_rgi || 0).toFixed(percentageDP);
         }
     }
 
@@ -1088,7 +1095,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         updateChartColors();
     }
-
+    
     // Set up date filter form event listener
     const dateFilterForm = document.getElementById('date-filter-form');
     if (dateFilterForm) {

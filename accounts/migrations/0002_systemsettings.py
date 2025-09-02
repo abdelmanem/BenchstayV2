@@ -23,6 +23,8 @@ class Migration(migrations.Migration):
                 ('company_logo', models.ImageField(blank=True, null=True, upload_to='company_logos/')),
                 ('support_email', models.EmailField(blank=True, max_length=254, null=True)),
                 ('enable_email_notifications', models.BooleanField(default=True)),
+                ('decimal_places_percentage', models.IntegerField(default=1, help_text='Decimal places for percentages (e.g., occupancy, indices)')),
+                ('decimal_places_currency', models.IntegerField(default=2, help_text='Decimal places for currency values (e.g., ADR, RevPAR)')),
                 ('items_per_page', models.IntegerField(default=25, help_text='Number of items to display per page in tables')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
