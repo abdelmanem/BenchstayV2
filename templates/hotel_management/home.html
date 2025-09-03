@@ -718,11 +718,21 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         adr: {
             active: '#4ECDC4',
-            background: '#E0F7F5'
+            background: '#E0F7F5',
+            // Goal-based colors
+            goal_met: '#16A34A',
+            goal_missed: '#DC2626',
+            goal_met_bg: '#DCFCE7',
+            goal_missed_bg: '#FEE2E2'
         },
         revpar: {
             active: '#45B7D1',
-            background: '#E3F2FD'
+            background: '#E3F2FD',
+            // Goal-based colors
+            goal_met: '#16A34A',
+            goal_missed: '#DC2626',
+            goal_met_bg: '#DCFCE7',
+            goal_missed_bg: '#FEE2E2'
         },
         mpi: {
             active: '#96CEB4',
@@ -1053,8 +1063,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
 
-        // Update global color schemes
-        Object.assign(circularColorSchemes, newColors);
+        // Update global color schemes without overwriting goal-based colors
+        ['occupancy', 'adr', 'revpar', 'mpi', 'ari', 'rgi'].forEach((key) => {
+            if (circularColorSchemes[key] && newColors[key]) {
+                circularColorSchemes[key].active = newColors[key].active;
+                circularColorSchemes[key].background = newColors[key].background;
+            }
+        });
 
         // Recreate all charts with new colors
         refreshAllCharts();
