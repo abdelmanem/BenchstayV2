@@ -383,6 +383,16 @@
                     </button>
                 </div>
             </form>
+
+            <!-- Quick Filters -->
+            <div class="d-flex flex-wrap gap-2 mt-3" aria-label="Quick date filters">
+                <button type="button" class="btn btn-primary btn-enhanced" data-qf="today">Today</button>
+                <button type="button" class="btn btn-primary btn-enhanced" data-qf="last7">Last 7 Days</button>
+                <button type="button" class="btn btn-primary btn-enhanced" data-qf="last30">Last 30 Days</button>
+                <button type="button" class="btn btn-primary btn-enhanced" data-qf="thisMonth">This Month</button>
+                <button type="button" class="btn btn-primary btn-enhanced" data-qf="lastMonth">Last Month</button>
+                <button type="button" class="btn btn-primary btn-enhanced" data-qf="ytd">Year to Date</button>
+            </div>
         </div>
     </div>
 
@@ -545,6 +555,8 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Setup form handlers
     setupFormHandlers();
+    // Setup quick filters
+    setupQuickFilters();
     
     // Add responsive table handling
     handleResponsiveTables();
@@ -757,6 +769,65 @@ function setupFormHandlers() {
         
         // Let form submit naturally
         return true;
+    });
+}
+
+function setupQuickFilters() {
+    const form = document.getElementById('date-filter-form');
+    const startInput = document.getElementById('start_date');
+    const endInput = document.getElementById('end_date');
+    const overlay = document.getElementById('loadingOverlay');
+    if (!form || !startInput || !endInput) return;
+
+    function format(d) {
+        const m = d.getMonth() + 1;
+        const day = d.getDate();
+        return `${d.getFullYear()}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    }
+
+    function setRangeAndSubmit(start, end) {
+        startInput.value = format(start);
+        endInput.value = format(end);
+        if (overlay) overlay.style.display = 'flex';
+        form.submit();
+    }
+
+    function handleClick(range) {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        switch(range) {
+            case 'today':
+                setRangeAndSubmit(today, today);
+                break;
+            case 'last7': {
+                const start = new Date(today);
+                start.setDate(start.getDate() - 6);
+                setRangeAndSubmit(start, today);
+                break; }
+            case 'last30': {
+                const start = new Date(today);
+                start.setDate(start.getDate() - 29);
+                setRangeAndSubmit(start, today);
+                break; }
+            case 'thisMonth': {
+                const start = new Date(today.getFullYear(), today.getMonth(), 1);
+                const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                setRangeAndSubmit(start, end);
+                break; }
+            case 'lastMonth': {
+                const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                const end = new Date(today.getFullYear(), today.getMonth(), 0);
+                setRangeAndSubmit(start, end);
+                break; }
+            case 'ytd': {
+                const start = new Date(today.getFullYear(), 0, 1);
+                setRangeAndSubmit(start, today);
+                break; }
+        }
+    }
+
+    document.querySelectorAll('[data-qf]').forEach(btn => {
+        btn.addEventListener('click', () => handleClick(btn.getAttribute('data-qf')));
     });
 }
 
