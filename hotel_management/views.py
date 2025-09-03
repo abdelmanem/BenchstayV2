@@ -338,19 +338,49 @@ def home(request):
     ari_change = ((current_ari - prior_year_ari) / prior_year_ari * 100) if prior_year_ari != 0 else 0
     rgi_change = ((current_rgi - prior_year_rgi) / prior_year_rgi * 100) if prior_year_rgi != 0 else 0
     
+    # Compute hotel's market rank vs competitors for the selected period
+    competitor_avgs = PerformanceIndex.objects.filter(
+        hotel=hotel,
+        competitor__isnull=False,
+        date__gte=start_date,
+        date__lte=end_date
+    ).values('competitor_id').annotate(
+        c_mpi=Avg('mpi'),
+        c_ari=Avg('ari'),
+        c_rgi=Avg('rgi')
+    )
+
+    competitor_mpi_values = [row['c_mpi'] for row in competitor_avgs if row['c_mpi'] is not None]
+    competitor_ari_values = [row['c_ari'] for row in competitor_avgs if row['c_ari'] is not None]
+    competitor_rgi_values = [row['c_rgi'] for row in competitor_avgs if row['c_rgi'] is not None]
+
+    def compute_rank(value, competitor_values):
+        if value is None:
+            return 0
+        try:
+            v = float(value)
+        except (TypeError, ValueError):
+            return 0
+        higher = sum(1 for c in competitor_values if c is not None and float(c) > v)
+        return higher + 1
+
+    hotel_mpi_rank = compute_rank(current_mpi, competitor_mpi_values)
+    hotel_ari_rank = compute_rank(current_ari, competitor_ari_values)
+    hotel_rgi_rank = compute_rank(current_rgi, competitor_rgi_values)
+
     indices = {
         'current_mpi': current_mpi,
         'prior_year_mpi': prior_year_mpi,
         'mpi_change': mpi_change,
-        'mpi_rank': int(current_period_indices['avg_mpi_rank'] or 0),
+        'mpi_rank': hotel_mpi_rank,
         'current_ari': current_ari,
         'prior_year_ari': prior_year_ari,
         'ari_change': ari_change,
-        'ari_rank': int(current_period_indices['avg_ari_rank'] or 0),
+        'ari_rank': hotel_ari_rank,
         'current_rgi': current_rgi,
         'prior_year_rgi': prior_year_rgi,
         'rgi_change': rgi_change,
-        'rgi_rank': int(current_period_indices['avg_rgi_rank'] or 0),
+        'rgi_rank': hotel_rgi_rank,
         'total_competitors': Competitor.objects.filter(is_active=True).count()
     }
     

@@ -935,6 +935,8 @@
     .formatted-revenue {
         font-family: 'SF Mono', 'Monaco', 'Cascadia Code', 'Roboto Mono', monospace;
     }
+
+    
 </style>
 {% endblock %}
 
@@ -1140,12 +1142,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         alertContainer.innerHTML = alertHTML;
         
-        // Auto-dismiss after specified duration
+        // Auto-dismiss after specified duration (guard against removed elements)
         setTimeout(() => {
             const alert = document.getElementById(alertId);
-            if (alert) {
-                const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
-                bsAlert.close();
+            if (!alert) return;
+            const existing = bootstrap.Alert.getInstance(alert);
+            const bsAlert = existing || new bootstrap.Alert(alert);
+            if (alert.isConnected) {
+                try { bsAlert.close(); } catch (e) { /* ignore */ }
             }
         }, duration);
     }
@@ -1215,13 +1219,31 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
 
-        const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+        const modalEl = document.getElementById('previewModal');
+        const previouslyFocused = document.activeElement;
+        if (previouslyFocused && typeof previouslyFocused.blur === 'function') {
+            previouslyFocused.blur();
+        }
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: 'static', keyboard: false, focus: true });
         modal.show();
+        // Move focus inside the modal to avoid background focus retention
+        setTimeout(() => {
+            const focusTarget = modalEl.querySelector('[data-bs-dismiss="modal"], button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            if (focusTarget && typeof focusTarget.focus === 'function') {
+                focusTarget.focus();
+            }
+        }, 0);
 
         document.getElementById('confirmSave').onclick = () => {
             modal.hide();
             form.submit();
         };
+        // Restore focus to previously focused control once modal fully hidden
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+                previouslyFocused.focus();
+            }
+        }, { once: true });
     }
 
     function getPeriodDisplay(periodType) {

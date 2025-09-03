@@ -1052,22 +1052,12 @@ def export_competitor_analytics_pdf(request, hotel_id):
     
     story.append(Spacer(1, 10*mm))
     
-    # Table configurations
+    # Table configurations (only selected date range to match on-screen report)
     table_configs = [
         {
             'data': daily_data,
             'title': 'Custom Date Range Performance Metrics',
             'color': colors.HexColor('#d97706'),
-        },
-        {
-            'data': mtd_data,
-            'title': 'Month-to-Date Performance Metrics',
-            'color': colors.HexColor('#059669'),
-        },
-        {
-            'data': ytd_data,
-            'title': 'Year-to-Date Performance Metrics',
-            'color': colors.HexColor('#2563eb'),
         }
     ]
     
@@ -1694,9 +1684,7 @@ def export_competitor_analytics(request):
         
         # Create worksheets for each period
         periods = [
-            ('Daily Performance', context.get('daily_data', {}), context.get('daily_totals', {})),
-            ('MTD Performance', context.get('mtd_data', {}), context.get('mtd_totals', {})),
-            ('YTD Performance', context.get('ytd_data', {}), context.get('ytd_totals', {}))
+            ('Custom Date Range Performance', context.get('daily_data', {}), context.get('daily_totals', {}))
         ]
         
         for sheet_name, data, totals in periods:
@@ -1800,9 +1788,7 @@ def export_competitor_analytics(request):
         
         # Create tables for each period
         periods = [
-            ('Daily Performance Metrics', context.get('daily_data', {}), context.get('daily_totals', {})),
-            ('Month-to-Date Performance Metrics', context.get('mtd_data', {}), context.get('mtd_totals', {})),
-            ('Year-to-Date Performance Metrics', context.get('ytd_data', {}), context.get('ytd_totals', {}))
+            ('Custom Date Range Performance Metrics', context.get('daily_data', {}), context.get('daily_totals', {}))
         ]
         
         for title, data, totals in periods:
