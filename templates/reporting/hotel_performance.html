@@ -13,6 +13,40 @@
         </div>
     </div>
 
+    <!-- Date Filter + Quick Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" id="date-filter-form" class="row g-3 align-items-end">
+                        {% csrf_token %}
+                        <div class="col-md-4">
+                            <label for="start_date" class="form-label fw-semibold">From</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="end_date" class="form-label fw-semibold">To</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-funnel"></i> Apply
+                            </button>
+                        </div>
+                    </form>
+                    <div class="d-flex flex-wrap gap-2 mt-3" aria-label="Quick date filters">
+                        <button type="button" class="btn btn-outline-primary" data-qf="today">Today</button>
+                        <button type="button" class="btn btn-outline-primary" data-qf="last7">Last 7 Days</button>
+                        <button type="button" class="btn btn-outline-primary" data-qf="last30">Last 30 Days</button>
+                        <button type="button" class="btn btn-outline-primary" data-qf="thisMonth">This Month</button>
+                        <button type="button" class="btn btn-outline-primary" data-qf="lastMonth">Last Month</button>
+                        <button type="button" class="btn btn-outline-primary" data-qf="ytd">YTD</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Snapshot Metrics -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
@@ -119,4 +153,66 @@
 
 {% block extra_js %}
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setupQuickFilters();
+});
+
+function setupQuickFilters() {
+    const form = document.getElementById('date-filter-form');
+    const startInput = document.getElementById('start_date');
+    const endInput = document.getElementById('end_date');
+    if (!form || !startInput || !endInput) return;
+
+    function fmt(d) {
+        const m = d.getMonth() + 1;
+        const day = d.getDate();
+        return `${d.getFullYear()}-${String(m).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    }
+
+    function setAndSubmit(start, end) {
+        startInput.value = fmt(start);
+        endInput.value = fmt(end);
+        form.submit();
+    }
+
+    function onQuick(range) {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        switch(range) {
+            case 'today':
+                setAndSubmit(today, today);
+                break;
+            case 'last7': {
+                const s = new Date(today);
+                s.setDate(s.getDate() - 6);
+                setAndSubmit(s, today);
+                break; }
+            case 'last30': {
+                const s = new Date(today);
+                s.setDate(s.getDate() - 29);
+                setAndSubmit(s, today);
+                break; }
+            case 'thisMonth': {
+                const s = new Date(today.getFullYear(), today.getMonth(), 1);
+                const e = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                setAndSubmit(s, e);
+                break; }
+            case 'lastMonth': {
+                const s = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                const e = new Date(today.getFullYear(), today.getMonth(), 0);
+                setAndSubmit(s, e);
+                break; }
+            case 'ytd': {
+                const s = new Date(today.getFullYear(), 0, 1);
+                setAndSubmit(s, today);
+                break; }
+        }
+    }
+
+    document.querySelectorAll('[data-qf]').forEach(btn => {
+        btn.addEventListener('click', () => onQuick(btn.getAttribute('data-qf')));
+    });
+}
+</script>
 {% endblock %}
