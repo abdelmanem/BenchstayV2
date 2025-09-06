@@ -236,13 +236,44 @@ class RepairsDashboardView(TemplateView):
         context = super().get_context_data(**kwargs)
         
         # Get date filters from query parameters
-        start_date = self.request.GET.get('start_date')
-        end_date = self.request.GET.get('end_date')
+        start_date_str = self.request.GET.get('start_date')
+        end_date_str = self.request.GET.get('end_date')
         
-        if start_date:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        if end_date:
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        # Parse dates
+        start_date = None
+        end_date = None
+        
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+                
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        # If no dates provided, default to last month
+        if not start_date and not end_date:
+            from datetime import date
+            import calendar
+            today = date.today()
+            
+            # Calculate first day of last month
+            if today.month == 1:
+                start_date = date(today.year - 1, 12, 1)
+            else:
+                start_date = date(today.year, today.month - 1, 1)
+            
+            # Calculate last day of last month
+            if today.month == 1:
+                end_date = date(today.year - 1, 12, 31)
+            else:
+                # Get last day of previous month
+                last_day = calendar.monthrange(today.year, today.month - 1)[1]
+                end_date = date(today.year, today.month - 1, last_day)
         
         # Get KPIs
         kpis = get_repair_kpis(start_date, end_date)
