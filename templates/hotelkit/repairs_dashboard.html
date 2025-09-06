@@ -1,0 +1,419 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+{% load repairs_filters %}
+
+{% block title %}Repairs Analytics Dashboard{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .chart-container {
+        position: relative;
+        height: 400px;
+        width: 100%;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Dashboard Header -->
+<div class="dashboard-header">
+    <div class="hotel-info d-flex align-items-center">
+        <div class="flex-grow-1">
+            <h1 class="mb-2">Repairs Analytics Dashboard</h1>
+            <p class="mb-0 opacity-90">Monitor and analyze repair request performance</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'repairs-template' %}" class="btn btn-light">
+                <i class="fas fa-download me-2"></i>Download Template
+            </a>
+            <button onclick="document.getElementById('fileInput').click()" class="btn btn-success">
+                <i class="fas fa-upload me-2"></i>Import Data
+            </button>
+            <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;" onchange="uploadFile()">
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">End Date</label>
+                <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter me-2"></i>Apply Filters
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="container-fluid">
+        <!-- KPI Cards -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="metric-card">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <i class="fas fa-clock text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                        <div>
+                            <div class="metric-label">Avg Response Time</div>
+                            <div class="metric-value">
+                                {% if kpis.avg_response_time %}
+                                    {{ kpis.avg_response_time|hours_from_seconds }}h
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="metric-card">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <i class="fas fa-check-circle text-success" style="font-size: 2rem;"></i>
+                        </div>
+                        <div>
+                            <div class="metric-label">Avg Completion Time</div>
+                            <div class="metric-value">
+                                {% if kpis.avg_completion_time %}
+                                    {{ kpis.avg_completion_time|hours_from_seconds }}h
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="metric-card">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <i class="fas fa-bolt text-warning" style="font-size: 2rem;"></i>
+                        </div>
+                        <div>
+                            <div class="metric-label">Avg Execution Time</div>
+                            <div class="metric-value">
+                                {% if kpis.avg_execution_time %}
+                                    {{ kpis.avg_execution_time|hours_from_seconds }}h
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="metric-card">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <i class="fas fa-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
+                        </div>
+                        <div>
+                            <div class="metric-label">Open Requests</div>
+                            <div class="metric-value">{{ kpis.open_requests }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 1 -->
+        <div class="row mb-4">
+            <!-- Trend Chart -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Request Trends</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Types Chart -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Request Types Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="typesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 2 -->
+        <div class="row mb-4">
+            <!-- Heatmap -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Location Heatmap</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="heatmapChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLA Compliance -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">SLA Compliance</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="slaChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tables Row -->
+        <div class="row mb-4">
+            <!-- Top Rooms -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Top Rooms by Request Count</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table performance-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Location</th>
+                                        <th>Count</th>
+                                        <th>Avg Completion</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for room in top_rooms %}
+                                    <tr>
+                                        <td class="fw-medium">{{ room.location }}</td>
+                                        <td>{{ room.count }}</td>
+                                        <td>
+                                            {% if room.avg_completion_time %}
+                                                {{ room.avg_completion_time|hours_from_seconds }}h
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Technicians -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Technician Performance</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table performance-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Technician</th>
+                                        <th>Count</th>
+                                        <th>Avg Response</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for tech in technicians %}
+                                    <tr>
+                                        <td class="fw-medium">{{ tech.technician }}</td>
+                                        <td>{{ tech.count }}</td>
+                                        <td>
+                                            {% if tech.avg_response_time %}
+                                                {{ tech.avg_response_time|hours_from_seconds }}h
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Form (Hidden) -->
+<form id="importForm" method="post" action="{% url 'repairs_import' %}" enctype="multipart/form-data" style="display: none;">
+    {% csrf_token %}
+    <input type="file" name="file" id="hiddenFileInput" accept=".xlsx,.xls">
+</form>
+
+{% block extra_js %}
+<script>
+// Chart.js configurations
+const trendData = JSON.parse('{{ trends|escapejs }}');
+const typesData = JSON.parse('{{ types|escapejs }}');
+const heatmapData = JSON.parse('{{ heatmap|escapejs }}');
+const slaData = JSON.parse('{{ sla_data|escapejs }}');
+
+// Trend Chart
+const trendCtx = document.getElementById('trendChart').getContext('2d');
+new Chart(trendCtx, {
+    type: 'line',
+    data: {
+        labels: trendData.map(item => item.date),
+        datasets: [{
+            label: 'Created',
+            data: trendData.map(item => item.created_count),
+            borderColor: 'rgb(59, 130, 246)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.1
+        }, {
+            label: 'Closed',
+            data: trendData.map(item => item.closed_count),
+            borderColor: 'rgb(16, 185, 129)',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Types Chart
+const typesCtx = document.getElementById('typesChart').getContext('2d');
+new Chart(typesCtx, {
+    type: 'doughnut',
+    data: {
+        labels: typesData.map(item => item.type),
+        datasets: [{
+            data: typesData.map(item => item.count),
+            backgroundColor: [
+                '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+                '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6B7280'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Heatmap Chart
+const heatmapCtx = document.getElementById('heatmapChart').getContext('2d');
+new Chart(heatmapCtx, {
+    type: 'bar',
+    data: {
+        labels: heatmapData.slice(0, 10).map(item => item.location),
+        datasets: [{
+            label: 'Request Count',
+            data: heatmapData.slice(0, 10).map(item => item.count),
+            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+            borderColor: 'rgb(59, 130, 246)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// SLA Chart
+const slaCtx = document.getElementById('slaChart').getContext('2d');
+new Chart(slaCtx, {
+    type: 'bar',
+    data: {
+        labels: slaData.map(item => item.sla_period),
+        datasets: [{
+            label: 'Compliance Rate (%)',
+            data: slaData.map(item => item.compliance_rate),
+            backgroundColor: [
+                'rgba(239, 68, 68, 0.8)',
+                'rgba(245, 158, 11, 0.8)',
+                'rgba(16, 185, 129, 0.8)'
+            ],
+            borderColor: [
+                'rgb(239, 68, 68)',
+                'rgb(245, 158, 11)',
+                'rgb(16, 185, 129)'
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100
+            }
+        }
+    }
+});
+
+// File upload function
+function uploadFile() {
+    const fileInput = document.getElementById('fileInput');
+    const hiddenFileInput = document.getElementById('hiddenFileInput');
+    
+    if (fileInput.files.length > 0) {
+        hiddenFileInput.files = fileInput.files;
+        document.getElementById('importForm').submit();
+    }
+}
+</script>
+{% endblock %}
+{% endblock %}
