@@ -1,0 +1,288 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+{% load repairs_filters %}
+
+{% block title %}Repair Request #{{ repair.id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .repair-detail-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .repair-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 8px 8px 0 0;
+    }
+    .repair-body {
+        padding: 1.5rem;
+    }
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    .status-open { background-color: #fef3c7; color: #92400e; }
+    .status-in-progress { background-color: #dbeafe; color: #1e40af; }
+    .status-done { background-color: #d1fae5; color: #065f46; }
+    .status-evaluation { background-color: #f3e8ff; color: #7c3aed; }
+    .priority-high { color: #dc2626; font-weight: 600; }
+    .priority-medium { color: #d97706; font-weight: 600; }
+    .priority-low { color: #059669; font-weight: 600; }
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    .info-label {
+        font-weight: 600;
+        color: #374151;
+        min-width: 150px;
+    }
+    .info-value {
+        color: #1f2937;
+        flex: 1;
+        text-align: right;
+    }
+    .duration-value {
+        font-weight: 500;
+    }
+    .duration-success { color: #059669; }
+    .duration-warning { color: #d97706; }
+    .duration-danger { color: #dc2626; }
+    .description-box {
+        background-color: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+    }
+    .comments-box {
+        background-color: #fefce8;
+        border: 1px solid #fde047;
+        border-radius: 6px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="dashboard-header">
+    <div class="hotel-info d-flex align-items-center">
+        <div class="flex-grow-1">
+            <h1 class="mb-2">Repair Request #{{ repair.id }}</h1>
+            <p class="mb-0 opacity-90">Detailed view of repair request</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'repairs_by_type' %}" class="btn btn-light">
+                <i class="fas fa-arrow-left me-2"></i>Back to List
+            </a>
+            <a href="{% url 'repair_edit' repair.id %}" class="btn btn-primary">
+                <i class="fas fa-edit me-2"></i>Edit
+            </a>
+            {% if user.is_staff or user.is_superuser %}
+            <a href="{% url 'repair_delete' repair.id %}" class="btn btn-danger"
+               onclick="return confirm('Are you sure you want to delete repair request #{{ repair.id }}?')">
+                <i class="fas fa-trash me-2"></i>Delete
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Repair Details -->
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="repair-detail-card">
+                <div class="repair-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-1">Repair Request #{{ repair.id }}</h3>
+                            <p class="mb-0 opacity-90">{{ repair.type|default:"Uncategorized" }}</p>
+                        </div>
+                        <span class="status-badge status-{{ repair.state|lower|slugify }}">
+                            {{ repair.state }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="repair-body">
+                    <!-- Basic Information -->
+                    <h5 class="mb-3">Basic Information</h5>
+                    <div class="info-row">
+                        <span class="info-label">Creation Date:</span>
+                        <span class="info-value">{{ repair.creation_date|date:"F d, Y H:i" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Priority:</span>
+                        <span class="info-value priority-{{ repair.priority|lower }}">{{ repair.priority }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Creator:</span>
+                        <span class="info-value">{{ repair.creator }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Assigned To:</span>
+                        <span class="info-value">{{ repair.recipients|default:"Unassigned" }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Location:</span>
+                        <span class="info-value">
+                            {{ repair.location }}
+                            {% if repair.location_path %}
+                                <br><small class="text-muted">{{ repair.location_path }}</small>
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <!-- Description -->
+                    {% if repair.text %}
+                    <h5 class="mb-3 mt-4">Description</h5>
+                    <div class="description-box">
+                        {{ repair.text|linebreaks }}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Comments -->
+                    {% if repair.comments %}
+                    <h5 class="mb-3 mt-4">Comments</h5>
+                    <div class="comments-box">
+                        {{ repair.comments|linebreaks }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Timing Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Timing Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <span class="info-label">Response Time:</span>
+                        <span class="info-value">
+                            {% if repair.response_time %}
+                                <span class="duration-value duration-success">
+                                    {{ repair.response_time|hours_from_seconds }}h
+                                </span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Work Start Delay:</span>
+                        <span class="info-value">
+                            {% if repair.work_start_delay %}
+                                <span class="duration-value duration-warning">
+                                    {{ repair.work_start_delay|hours_from_seconds }}h
+                                </span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Completion Time:</span>
+                        <span class="info-value">
+                            {% if repair.completion_time %}
+                                <span class="duration-value duration-success">
+                                    {{ repair.completion_time|hours_from_seconds }}h
+                                </span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Execution Time:</span>
+                        <span class="info-value">
+                            {% if repair.execution_time %}
+                                <span class="duration-value duration-success">
+                                    {{ repair.execution_time|hours_from_seconds }}h
+                                </span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Evaluation Time:</span>
+                        <span class="info-value">
+                            {% if repair.evaluation_time %}
+                                <span class="duration-value duration-warning">
+                                    {{ repair.evaluation_time|hours_from_seconds }}h
+                                </span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Additional Information -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Additional Information</h5>
+                </div>
+                <div class="card-body">
+                    {% if repair.ticket %}
+                    <div class="info-row">
+                        <span class="info-label">Ticket:</span>
+                        <span class="info-value">{{ repair.ticket }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if repair.link %}
+                    <div class="info-row">
+                        <span class="info-label">Link:</span>
+                        <span class="info-value">
+                            <a href="{{ repair.link }}" target="_blank" class="text-primary">
+                                {{ repair.link|truncatechars:30 }}
+                            </a>
+                        </span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if repair.submitted_result %}
+                    <div class="info-row">
+                        <span class="info-label">Submitted Result:</span>
+                        <span class="info-value">{{ repair.submitted_result }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if repair.parking_reason %}
+                    <div class="info-row">
+                        <span class="info-label">Parking Reason:</span>
+                        <span class="info-value">{{ repair.parking_reason }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if repair.parking_information %}
+                    <div class="info-row">
+                        <span class="info-label">Parking Information:</span>
+                        <span class="info-value">{{ repair.parking_information }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

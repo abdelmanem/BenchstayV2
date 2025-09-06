@@ -1,0 +1,105 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Delete Repair Request #{{ repair.id }}{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="dashboard-header">
+    <div class="hotel-info d-flex align-items-center">
+        <div class="flex-grow-1">
+            <h1 class="mb-2">Delete Repair Request #{{ repair.id }}</h1>
+            <p class="mb-0 opacity-90">Confirm deletion of repair request</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'repair_detail' repair.id %}" class="btn btn-light">
+                <i class="fas fa-eye me-2"></i>View Details
+            </a>
+            <a href="{% url 'repairs_by_type' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to List
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation -->
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Confirm Deletion
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-warning me-2"></i>
+                        <strong>Warning:</strong> This action cannot be undone. The repair request will be permanently deleted.
+                    </div>
+                    
+                    <h6>Repair Request Details:</h6>
+                    <div class="bg-light p-3 rounded mb-3">
+                        <div class="row">
+                            <div class="col-sm-4"><strong>ID:</strong></div>
+                            <div class="col-sm-8">#{{ repair.id }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-4"><strong>Type:</strong></div>
+                            <div class="col-sm-8">{{ repair.type|default:"Uncategorized" }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-4"><strong>Location:</strong></div>
+                            <div class="col-sm-8">{{ repair.location }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-4"><strong>Status:</strong></div>
+                            <div class="col-sm-8">
+                                <span class="badge bg-{% if repair.state == 'Done' %}success{% elif repair.state == 'In Progress' %}primary{% elif repair.state == 'Open' %}warning{% else %}secondary{% endif %}">
+                                    {{ repair.state }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-4"><strong>Priority:</strong></div>
+                            <div class="col-sm-8">
+                                <span class="text-{% if repair.priority == 'High' %}danger{% elif repair.priority == 'Medium' %}warning{% else %}success{% endif %}">
+                                    {{ repair.priority }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-4"><strong>Creator:</strong></div>
+                            <div class="col-sm-8">{{ repair.creator }}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-4"><strong>Created:</strong></div>
+                            <div class="col-sm-8">{{ repair.creation_date|date:"F d, Y H:i" }}</div>
+                        </div>
+                    </div>
+                    
+                    {% if repair.text %}
+                    <h6>Description:</h6>
+                    <div class="bg-light p-3 rounded mb-3">
+                        {{ repair.text|truncatewords:30 }}
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-2"></i>Yes, Delete Repair Request
+                            </button>
+                            <a href="{% url 'repair_detail' repair.id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

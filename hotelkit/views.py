@@ -3,7 +3,11 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, ListView, DetailView, UpdateView, DeleteView
+from django.core.paginator import Paginator
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.urls import reverse_lazy
+from django.contrib import messages
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -308,6 +312,194 @@ class RepairsDashboardView(TemplateView):
         context['end_date'] = end_date.strftime('%Y-%m-%d') if end_date else ''
         
         return context
+
+
+class RepairsByTypeView(ListView):
+    """View to display all repairs organized by type."""
+    model = RepairRequest
+    template_name = 'hotelkit/repairs_by_type.html'
+    context_object_name = 'repairs_by_type'
+    paginate_by = 50
+    
+    def get_queryset(self):
+        """Get repairs filtered by date and status."""
+        queryset = RepairRequest.objects.all()
+        
+        # Date filters
+        start_date = self.request.GET.get('start_date')
+        end_date = self.request.GET.get('end_date')
+        
+        if start_date:
+            try:
+                start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+                queryset = queryset.filter(creation_date__date__gte=start_date)
+            except ValueError:
+                pass
+                
+        if end_date:
+            try:
+                end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+                queryset = queryset.filter(creation_date__date__lte=end_date)
+            except ValueError:
+                pass
+        
+        # Status filter
+        status = self.request.GET.get('status')
+        if status:
+            queryset = queryset.filter(state=status)
+        
+        # Type filter
+        repair_type = self.request.GET.get('type')
+        if repair_type:
+            queryset = queryset.filter(type=repair_type)
+        
+        # If no filters, default to last month
+        if not start_date and not end_date and not status and not repair_type:
+            from datetime import date
+            import calendar
+            today = date.today()
+            
+            # Calculate first day of last month
+            if today.month == 1:
+                start_date = date(today.year - 1, 12, 1)
+            else:
+                start_date = date(today.year, today.month - 1, 1)
+            
+            # Calculate last day of last month
+            if today.month == 1:
+                end_date = date(today.year - 1, 12, 31)
+            else:
+                last_day = calendar.monthrange(today.year, today.month - 1)[1]
+                end_date = date(today.year, today.month - 1, last_day)
+            
+            queryset = queryset.filter(creation_date__date__gte=start_date, creation_date__date__lte=end_date)
+        
+        return queryset.order_by('type', '-creation_date')
+    
+    def get_context_data(self, **kwargs):
+        """Organize repairs by type and add pagination."""
+        context = super().get_context_data(**kwargs)
+        
+        # Get all repairs (not paginated for grouping)
+        all_repairs = self.get_queryset()
+        
+        # Group repairs by type
+        repairs_by_type = {}
+        for repair in all_repairs:
+            type_name = repair.type or 'Uncategorized'
+            if type_name not in repairs_by_type:
+                repairs_by_type[type_name] = []
+            repairs_by_type[type_name].append(repair)
+        
+        # Calculate stats for each type
+        for type_name, repairs in repairs_by_type.items():
+            if repairs:
+                # Calculate average response time for this type
+                response_times = [r.response_time for r in repairs if r.response_time]
+                if response_times:
+                    avg_response = sum(response_times, timedelta()) / len(response_times)
+                else:
+                    avg_response = None
+                
+                # Calculate average completion time for this type
+                completion_times = [r.completion_time for r in repairs if r.completion_time]
+                if completion_times:
+                    avg_completion = sum(completion_times, timedelta()) / len(completion_times)
+                else:
+                    avg_completion = None
+                
+                # Add stats to first repair in the list for template access
+                repairs[0].avg_response_time = avg_response
+                repairs[0].avg_completion_time = avg_completion
+        
+        context['repairs_by_type'] = repairs_by_type
+        
+        # Get available types for filter dropdown
+        available_types = RepairRequest.objects.values_list('type', flat=True).distinct().exclude(type__isnull=True).exclude(type='').order_by('type')
+        context['available_types'] = available_types
+        
+        # Add filter values for template - check if we have default dates
+        start_date_str = self.request.GET.get('start_date')
+        end_date_str = self.request.GET.get('end_date')
+        
+        if not start_date_str and not end_date_str:
+            # Set default dates to last month
+            from datetime import date
+            import calendar
+            today = date.today()
+            
+            if today.month == 1:
+                default_start = date(today.year - 1, 12, 1)
+                default_end = date(today.year - 1, 12, 31)
+            else:
+                default_start = date(today.year, today.month - 1, 1)
+                last_day = calendar.monthrange(today.year, today.month - 1)[1]
+                default_end = date(today.year, today.month - 1, last_day)
+            
+            context['start_date'] = default_start.strftime('%Y-%m-%d')
+            context['end_date'] = default_end.strftime('%Y-%m-%d')
+        else:
+            context['start_date'] = start_date_str or ''
+            context['end_date'] = end_date_str or ''
+        
+        context['status'] = self.request.GET.get('status', '')
+        context['repair_type'] = self.request.GET.get('type', '')
+        
+        return context
+
+
+class RepairDetailView(LoginRequiredMixin, DetailView):
+    """View for displaying repair request details."""
+    model = RepairRequest
+    template_name = 'hotelkit/repair_detail.html'
+    context_object_name = 'repair'
+    pk_url_kwarg = 'id'
+
+
+class RepairUpdateView(LoginRequiredMixin, UpdateView):
+    """View for editing repair requests."""
+    model = RepairRequest
+    template_name = 'hotelkit/repair_edit.html'
+    fields = ['state', 'priority', 'recipients', 'text', 'comments']
+    pk_url_kwarg = 'id'
+    context_object_name = 'repair'
+    
+    def get_success_url(self):
+        return reverse_lazy('repairs_by_type')
+    
+    def form_valid(self, form):
+        messages.success(self.request, f'Repair request #{self.object.id} updated successfully.')
+        return super().form_valid(form)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Ensure the repair object is available in the template
+        context['repair'] = self.get_object()
+        return context
+
+
+class RepairDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    """View for deleting repair requests (admin/superuser only)."""
+    model = RepairRequest
+    template_name = 'hotelkit/repair_confirm_delete.html'
+    pk_url_kwarg = 'id'
+    context_object_name = 'repair'
+    success_url = reverse_lazy('repairs_by_type')
+    
+    def test_func(self):
+        """Only admin or superuser can delete repair requests."""
+        return self.request.user.is_staff or self.request.user.is_superuser
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Ensure the repair object is available in the template
+        context['repair'] = self.get_object()
+        return context
+    
+    def delete(self, request, *args, **kwargs):
+        repair_id = self.get_object().id
+        messages.success(request, f'Repair request #{repair_id} deleted successfully.')
+        return super().delete(request, *args, **kwargs)
 
 
 def repairs_import_view(request):

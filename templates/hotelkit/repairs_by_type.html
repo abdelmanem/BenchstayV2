@@ -1,0 +1,341 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+{% load repairs_filters %}
+
+{% block title %}Repairs by Type{% endblock %}
+
+{% block extra_css %}
+<style>
+    .type-section {
+        margin-bottom: 2rem;
+    }
+    .type-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    .stats-row {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .stat-item {
+        background-color: rgba(255, 255, 255, 0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+    .repairs-table {
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .status-open { background-color: #fef3c7; color: #92400e; }
+    .status-in-progress { background-color: #dbeafe; color: #1e40af; }
+    .status-done { background-color: #d1fae5; color: #065f46; }
+    .status-evaluation { background-color: #f3e8ff; color: #7c3aed; }
+    .priority-high { color: #dc2626; font-weight: 600; }
+    .priority-medium { color: #d97706; font-weight: 600; }
+    .priority-low { color: #059669; font-weight: 600; }
+    .table th {
+        background-color: #f8fafc;
+        border-bottom: 2px solid #e5e7eb;
+        font-weight: 600;
+        color: #374151;
+    }
+    .table td {
+        vertical-align: middle;
+        border-bottom: 1px solid #f3f4f6;
+    }
+    .description-cell {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .location-cell {
+        font-weight: 500;
+        color: #1f2937;
+    }
+    .duration-cell {
+        font-weight: 500;
+    }
+    .duration-success { color: #059669; }
+    .duration-warning { color: #d97706; }
+    .duration-danger { color: #dc2626; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="dashboard-header">
+    <div class="hotel-info d-flex align-items-center">
+        <div class="flex-grow-1">
+            <h1 class="mb-2">Repairs by Type</h1>
+            <p class="mb-0 opacity-90">All repair requests organized by type in table format</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'repairs_dashboard' %}" class="btn btn-light">
+                <i class="fas fa-chart-bar me-2"></i>Analytics Dashboard
+            </a>
+            <a href="{% url 'repairs-template' %}" class="btn btn-success">
+                <i class="fas fa-download me-2"></i>Download Template
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">End Date</label>
+                <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-control">
+                    <option value="">All Statuses</option>
+                    <option value="Open" {% if status == 'Open' %}selected{% endif %}>Open</option>
+                    <option value="In Progress" {% if status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                    <option value="Done" {% if status == 'Done' %}selected{% endif %}>Done</option>
+                    <option value="In Evaluation" {% if status == 'In Evaluation' %}selected{% endif %}>In Evaluation</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Repair Type</label>
+                <select name="type" class="form-control">
+                    <option value="">All Types</option>
+                    {% for type_option in available_types %}
+                        <option value="{{ type_option }}" {% if repair_type == type_option %}selected{% endif %}>
+                            {{ type_option }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-filter me-2"></i>Apply Filters
+                </button>
+                <a href="{% url 'repairs_by_type' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-2"></i>Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Repairs by Type -->
+<div class="container-fluid">
+    {% if repairs_by_type %}
+        {% for type_name, repairs in repairs_by_type.items %}
+        <div class="type-section">
+            <div class="type-header">
+                <h3 class="mb-0">{{ type_name }}</h3>
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <i class="fas fa-list me-1"></i>
+                        Total: {{ repairs|length }} requests
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-clock me-1"></i>
+                        Avg Response: 
+                        {% if repairs.0.avg_response_time %}
+                            {{ repairs.0.avg_response_time|hours_from_seconds }}h
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Avg Completion: 
+                        {% if repairs.0.avg_completion_time %}
+                            {{ repairs.0.avg_completion_time|hours_from_seconds }}h
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="repairs-table">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">ID</th>
+                                <th style="width: 120px;">Date</th>
+                                <th style="width: 100px;">Status</th>
+                                <th style="width: 100px;">Priority</th>
+                                <th style="width: 120px;">Location</th>
+                                <th>Description</th>
+                                <th style="width: 120px;">Creator</th>
+                                <th style="width: 120px;">Assigned To</th>
+                                <th style="width: 100px;">Response Time</th>
+                                <th style="width: 100px;">Completion Time</th>
+                                <th style="width: 80px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for repair in repairs %}
+                            <tr>
+                                <td>
+                                    <span class="fw-bold text-primary">#{{ repair.id }}</span>
+                                </td>
+                                <td>
+                                    <div class="small">
+                                        {{ repair.creation_date|date:"M d, Y" }}
+                                        <br>
+                                        <span class="text-muted">{{ repair.creation_date|date:"H:i" }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="status-badge status-{{ repair.state|lower|slugify }}">
+                                        {{ repair.state }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="priority-{{ repair.priority|lower }}">
+                                        {{ repair.priority }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="location-cell">
+                                        {{ repair.location }}
+                                        {% if repair.location_path %}
+                                            <br>
+                                            <small class="text-muted">{{ repair.location_path }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="description-cell" title="{{ repair.text }}">
+                                        {% if repair.text %}
+                                            {{ repair.text|truncatewords:10 }}
+                                        {% else %}
+                                            <span class="text-muted">No description</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-medium">{{ repair.creator }}</span>
+                                </td>
+                                <td>
+                                    {% if repair.recipients %}
+                                        <span class="fw-medium">{{ repair.recipients }}</span>
+                                    {% else %}
+                                        <span class="text-muted">Unassigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if repair.response_time %}
+                                        <span class="duration-cell duration-success">
+                                            {{ repair.response_time|hours_from_seconds }}h
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if repair.completion_time %}
+                                        <span class="duration-cell duration-success">
+                                            {{ repair.completion_time|hours_from_seconds }}h
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{% url 'repair_detail' repair.id %}" class="btn btn-outline-primary btn-sm" 
+                                           data-bs-toggle="tooltip" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'repair_edit' repair.id %}" class="btn btn-outline-secondary btn-sm" 
+                                           data-bs-toggle="tooltip" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        {% if user.is_staff or user.is_superuser %}
+                                        <a href="{% url 'repair_delete' repair.id %}" class="btn btn-outline-danger btn-sm" 
+                                           data-bs-toggle="tooltip" title="Delete" 
+                                           onclick="return confirm('Are you sure you want to delete repair request #{{ repair.id }}?')">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-tools fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No repairs found</h4>
+            <p class="text-muted">Try adjusting your filters or import some repair data.</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Pagination -->
+{% if is_paginated %}
+<div class="d-flex justify-content-center mt-4">
+    <nav aria-label="Repairs pagination">
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if repair_type %}&type={{ repair_type }}{% endif %}">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if repair_type %}&type={{ repair_type }}{% endif %}">Previous</a>
+                </li>
+            {% endif %}
+            
+            <li class="page-item active">
+                <span class="page-link">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+            </li>
+            
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if repair_type %}&type={{ repair_type }}{% endif %}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if repair_type %}&type={{ repair_type }}{% endif %}">Last</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize tooltips
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+});
+</script>
+{% endblock %}
