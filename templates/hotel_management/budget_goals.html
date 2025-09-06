@@ -146,12 +146,12 @@
                                     <div class="col-md-6">
                                         <label for="revpar_goal" class="form-label fw-semibold">
                                             RevPAR Goal
-                                            <small class="text-muted">(Auto-calculated)</small>
+                                            <small class="text-muted">(Auto-calculated when Occupancy & ADR are set; or drives ADR if edited)</small>
                                         </label>
                                         <div class="input-group input-group-enhanced">
                                             <span class="input-group-text">{{ system_settings.effective_currency_symbol }}</span>
                                             <input type="number" class="form-control" id="revpar_goal" name="revpar_goal" 
-                                                   value="{{ revpar_goal|default:'' }}" min="0" step="0.01" required readonly>
+                                                   value="{{ revpar_goal|default:'' }}" min="0" step="0.01" required>
                                         </div>
                                         <div class="validation-feedback">Please enter a valid RevPAR goal.</div>
                                     </div>
@@ -338,6 +338,16 @@
                                     <button class="btn btn-sm btn-outline-info" onclick="duplicateGoal('{{ g.id }}')" title="Duplicate">
                                         <i class="fas fa-copy"></i>
                                     </button>
+                                    {% if g.can_unlock_for_user %}
+                                        <form method="POST" action="" class="d-inline" onsubmit="return confirm('Unlock this goal for editing?');">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="action" value="unlock">
+                                            <input type="hidden" name="goal_id" value="{{ g.id }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-warning" title="Unlock">
+                                                <i class="fas fa-lock-open"></i>
+                                            </button>
+                                        </form>
+                                    {% endif %}
                                     <form method="POST" action="" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this goal? This action cannot be undone.');">
                                         {% csrf_token %}
                                         <input type="hidden" name="action" value="delete">
@@ -1030,31 +1040,39 @@ document.addEventListener('DOMContentLoaded', function() {
     function autoCalculateRevPAR() {
         const occupancy = parseFloat(document.getElementById('occupancy_goal').value || 0);
         const adr = parseFloat(document.getElementById('adr_goal').value || 0);
-        
+        const revparEl = document.getElementById('revpar_goal');
         if (occupancy > 0 && adr > 0) {
             const revpar = (occupancy / 100) * adr;
-            document.getElementById('revpar_goal').value = revpar.toFixed(2);
-            
-            // Add visual feedback
-            const revparField = document.getElementById('revpar_goal');
-            revparField.style.background = 'linear-gradient(135deg, #ecfdf5, #f0fdf4)';
-            setTimeout(() => {
-                revparField.style.background = '';
-            }, 1000);
-
-            // Calculate total revenue if we have room data
-            const daysInPeriod = getPeriodDays();
-            const totalRevenue = revpar * hotelRoomCount * daysInPeriod;
-            
-            document.getElementById('total_revenue_budget').value = totalRevenue.toFixed(0);
-            
-            // Add visual feedback for revenue field
-            const revenueField = document.getElementById('total_revenue_budget');
-            revenueField.style.background = 'linear-gradient(135deg, #fef3c7, #fde68a)';
-            setTimeout(() => {
-                revenueField.style.background = '';
-            }, 1000);
+            revparEl.value = revpar.toFixed(2);
+            revparEl.style.background = 'linear-gradient(135deg, #ecfdf5, #f0fdf4)';
+            setTimeout(() => { revparEl.style.background = ''; }, 1000);
+            updateTotalRevenue(revpar);
         }
+    }
+
+    function autoCalculateADRFromRevPAR() {
+        const occupancy = parseFloat(document.getElementById('occupancy_goal').value || 0);
+        const revpar = parseFloat(document.getElementById('revpar_goal').value || 0);
+        const adrEl = document.getElementById('adr_goal');
+        if (occupancy > 0 && revpar >= 0) {
+            const adr = occupancy > 0 ? (revpar / (occupancy / 100)) : 0;
+            if (isFinite(adr)) {
+                adrEl.value = adr.toFixed(2);
+                adrEl.style.background = 'linear-gradient(135deg, #ecfdf5, #f0fdf4)';
+                setTimeout(() => { adrEl.style.background = ''; }, 1000);
+            }
+            updateTotalRevenue(revpar);
+        }
+    }
+
+    function updateTotalRevenue(revparVal) {
+        const revpar = parseFloat(revparVal != null ? revparVal : (document.getElementById('revpar_goal').value || 0));
+        const daysInPeriod = getPeriodDays();
+        const totalRevenue = (isFinite(revpar) ? revpar : 0) * hotelRoomCount * daysInPeriod;
+        const revenueField = document.getElementById('total_revenue_budget');
+        revenueField.value = totalRevenue.toFixed(0);
+        revenueField.style.background = 'linear-gradient(135deg, #fef3c7, #fde68a)';
+        setTimeout(() => { revenueField.style.background = ''; }, 1000);
     }
 
     function getPeriodDays() {
@@ -1280,8 +1298,9 @@ document.addEventListener('DOMContentLoaded', function() {
     periodType.addEventListener('change', updatePeriodDetail);
     
     // Auto-calculate RevPAR and Revenue on input
-    document.getElementById('occupancy_goal').addEventListener('input', autoCalculateRevPAR);
+    document.getElementById('occupancy_goal').addEventListener('input', () => { autoCalculateRevPAR(); autoCalculateADRFromRevPAR(); });
     document.getElementById('adr_goal').addEventListener('input', autoCalculateRevPAR);
+    document.getElementById('revpar_goal').addEventListener('input', autoCalculateADRFromRevPAR);
 
     // Real-time validation
     form.querySelectorAll('input[required], select[required]').forEach(input => {

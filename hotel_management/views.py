@@ -22,12 +22,33 @@ def budget_goals(request):
 
     fiscal_year = timezone.now().year
     if request.method == 'POST':
+        # Helper: permission to unlock
+        def user_can_unlock(user):
+            try:
+                profile = getattr(user, 'profile', None)
+                is_profile_admin = bool(getattr(profile, 'is_admin', False))
+                return bool(getattr(user, 'is_superuser', False) or getattr(user, 'is_staff', False) or is_profile_admin)
+            except Exception:
+                return False
+
         # Deletion path
         if request.POST.get('action') == 'delete' and request.POST.get('goal_id'):
             try:
                 goal = BudgetGoal.objects.get(id=request.POST.get('goal_id'), hotel=hotel)
                 goal.delete()
                 messages.success(request, 'Goal deleted successfully.')
+            except BudgetGoal.DoesNotExist:
+                messages.error(request, 'Goal not found.')
+        # Unlock path (admins/privileged only)
+        elif request.POST.get('action') == 'unlock' and request.POST.get('goal_id'):
+            try:
+                goal = BudgetGoal.objects.get(id=request.POST.get('goal_id'), hotel=hotel)
+                if user_can_unlock(request.user) or goal.created_by_id == request.user.id:
+                    goal.lock_targets = False
+                    goal.save(update_fields=['lock_targets'])
+                    messages.success(request, 'Goal unlocked successfully.')
+                else:
+                    messages.error(request, 'You do not have permission to unlock this goal.')
             except BudgetGoal.DoesNotExist:
                 messages.error(request, 'Goal not found.')
         else:
@@ -75,6 +96,20 @@ def budget_goals(request):
 
     goals_list = BudgetGoal.objects.filter(hotel=hotel).order_by('-fiscal_year', 'period_type', 'period_detail')
 
+    # Annotate per-goal unlock permission for current user
+    def user_can_unlock(user):
+        try:
+            profile = getattr(user, 'profile', None)
+            is_profile_admin = bool(getattr(profile, 'is_admin', False))
+            return bool(getattr(user, 'is_superuser', False) or getattr(user, 'is_staff', False) or is_profile_admin)
+        except Exception:
+            return False
+    for g in goals_list:
+        try:
+            g.can_unlock_for_user = bool(g.lock_targets and (user_can_unlock(request.user) or (g.created_by_id == getattr(request.user, 'id', None))))
+        except Exception:
+            g.can_unlock_for_user = False
+
     # Quick metrics for header cards
     from django.db.models import Avg, Sum, Count
     aggregates = goals_list.aggregate(
@@ -106,6 +141,7 @@ def budget_goals(request):
             'avg_occupancy': float(aggregates.get('avg_occupancy') or 0),
             'total_revenue': float(aggregates.get('total_revenue') or 0),
         },
+        'can_unlock': user_can_unlock(request.user),
     }
     return render(request, 'hotel_management/budget_goals.html', context)
 
@@ -464,6 +500,59 @@ def home(request):
                     
                     if budget_goal:
                         return budget_goal
+
+            # New: If the range spans multiple months within the same fiscal year, and no quarterly goal exists,
+            # aggregate monthly goals weighted by days in range to form a synthetic goal
+            if start_date.year == end_date.year and start_date.month != end_date.month:
+                # Build list of months covered and the overlapping day counts
+                from calendar import monthrange
+                def month_iter(y, m_start, m_end):
+                    for m in range(m_start, m_end + 1):
+                        yield y, m
+                total_days = (end_date - start_date).days + 1
+                if total_days > 0:
+                    month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                    weighted_occ_sum = 0.0
+                    weighted_adr_sum = 0.0
+                    covered_days = 0
+                    months_covered_labels = []
+                    for y, m in month_iter(start_date.year, start_date.month, end_date.month):
+                        first_day = date(y, m, 1)
+                        last_day = date(y, m, monthrange(y, m)[1])
+                        overlap_start = max(start_date, first_day)
+                        overlap_end = min(end_date, last_day)
+                        if overlap_start <= overlap_end:
+                            overlap_days = (overlap_end - overlap_start).days + 1
+                            period_detail = month_names[m - 1]
+                            goal = existing_goals.filter(period_type='monthly', period_detail=period_detail).first()
+                            months_covered_labels.append(period_detail)
+                            if goal and goal.occupancy_goal and goal.adr_goal:
+                                try:
+                                    weighted_occ_sum += float(goal.occupancy_goal) * overlap_days
+                                    weighted_adr_sum += float(goal.adr_goal) * overlap_days
+                                    covered_days += overlap_days
+                                except (TypeError, ValueError):
+                                    pass
+                    if covered_days > 0:
+                        agg_occ = weighted_occ_sum / covered_days
+                        agg_adr = weighted_adr_sum / covered_days
+                        agg_revpar = (agg_occ / 100.0) * agg_adr
+
+                        class AggregateGoal:
+                            def __init__(self, fiscal_year, period_detail, occ, adr, revpar):
+                                self.fiscal_year = fiscal_year
+                                self.period_type = 'monthly_aggregate'
+                                self.period_detail = period_detail
+                                self.occupancy_goal = occ
+                                self.adr_goal = adr
+                                self.revpar_goal = revpar
+                                self.is_aggregate = True
+                            def get_period_type_display(self):
+                                return 'Monthly Aggregate'
+
+                        label = f"{months_covered_labels[0]}–{months_covered_labels[-1]}"
+                        return AggregateGoal(fiscal_year, label, agg_occ, agg_adr, agg_revpar)
             
             # Priority 2: Look for quarterly goals
             if days_diff <= 93:  # Less than or equal to a quarter

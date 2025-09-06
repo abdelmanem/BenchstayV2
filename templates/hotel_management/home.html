@@ -47,6 +47,19 @@
                             <i class="fas fa-filter me-2"></i>Apply Filter
                         </button>
                     </div>
+                    <!-- Quick Filters -->
+                    <div class="col-12">
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="me-2 text-muted small"><i class="fas fa-bolt me-1"></i>Quick filters:</span>
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-range="today">Today</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-range="yesterday">Yesterday</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-range="currentQuarter">Current quarter</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-range="lastQuarter">Last quarter</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-range="thisMonth">This month</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-range="lastMonth">Last month</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-range-btn" data-range="ytd">YTD</button>
+                        </div>
+                    </div>
                 </form>
             </div>
         </div>
@@ -1129,6 +1142,95 @@ document.addEventListener('DOMContentLoaded', function() {
             // Let the form submit to refresh the page with new data
             // The Django view will handle the date filtering and return updated context
             return true;
+        });
+
+        // Quick filter helpers
+        function formatDateToYYYYMMDD(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function getRange(rangeKey) {
+            const today = new Date();
+            // Normalize to local date (ignore time)
+            today.setHours(0, 0, 0, 0);
+
+            let start = new Date(today);
+            let end = new Date(today);
+
+            switch (rangeKey) {
+                case 'today':
+                    // start, end already today
+                    break;
+                case 'yesterday':
+                    start.setDate(start.getDate() - 1);
+                    end.setDate(end.getDate() - 1);
+                    break;
+                case 'currentQuarter': {
+                    const q = Math.floor(today.getMonth() / 3); // 0..3
+                    const startMonth = q * 3; // 0,3,6,9
+                    start = new Date(today.getFullYear(), startMonth, 1);
+                    end = new Date(today.getFullYear(), startMonth + 3, 0);
+                    break;
+                }
+                case 'lastQuarter': {
+                    const q = Math.floor(today.getMonth() / 3); // 0..3 current quarter index
+                    const lastQ = q - 1;
+                    let year = today.getFullYear();
+                    let startMonth;
+                    if (lastQ >= 0) {
+                        startMonth = lastQ * 3;
+                    } else {
+                        year = year - 1;
+                        startMonth = 9; // Oct of previous year
+                    }
+                    start = new Date(year, startMonth, 1);
+                    end = new Date(year, startMonth + 3, 0);
+                    break;
+                }
+                case 'thisMonth': {
+                    start = new Date(today.getFullYear(), today.getMonth(), 1);
+                    end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                    break;
+                }
+                case 'lastMonth': {
+                    const year = today.getFullYear();
+                    const month = today.getMonth(); // 0-based
+                    start = new Date(year, month - 1, 1);
+                    end = new Date(year, month, 0);
+                    break;
+                }
+                case 'ytd': {
+                    start = new Date(today.getFullYear(), 0, 1);
+                    end = new Date(today);
+                    break;
+                }
+                default:
+                    break;
+            }
+
+            return { start: formatDateToYYYYMMDD(start), end: formatDateToYYYYMMDD(end) };
+        }
+
+        function applyQuickRange(rangeKey) {
+            const startInput = document.getElementById('start_date');
+            const endInput = document.getElementById('end_date');
+            if (!startInput || !endInput) return;
+            const { start, end } = getRange(rangeKey);
+            startInput.value = start;
+            endInput.value = end;
+            console.log('Quick range applied:', rangeKey, start, end);
+            dateFilterForm.requestSubmit();
+        }
+
+        // Attach listeners to quick-range buttons
+        document.querySelectorAll('.quick-range-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const key = btn.getAttribute('data-range');
+                applyQuickRange(key);
+            });
         });
     }
 
