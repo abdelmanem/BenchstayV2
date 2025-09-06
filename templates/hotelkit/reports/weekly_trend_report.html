@@ -1,0 +1,542 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Weekly Trend Report - Repairs Analytics{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    .chart-container {
+        position: relative;
+        height: 400px;
+        width: 100%;
+    }
+    .trend-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .trend-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
+    .trend-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .export-btn {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .export-btn:hover {
+        background: linear-gradient(135deg, #059669, #047857);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .export-btn-secondary {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .export-btn-secondary:hover {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    .trend-indicator {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .trend-up {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+    }
+    .trend-down {
+        background: rgba(239, 68, 68, 0.1);
+        color: #dc2626;
+    }
+    .trend-neutral {
+        background: rgba(107, 114, 128, 0.1);
+        color: #6b7280;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0 text-dark">Weekly Trend Report</h1>
+                    <p class="text-muted mb-0">Weekly performance trends and SLA compliance analysis</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="export-btn" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel me-2"></i>Export to Excel
+                    </button>
+                    <button class="export-btn-secondary" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf me-2"></i>Export to PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Date Filter -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form id="dateFilterForm" class="row g-3">
+                        {% csrf_token %}
+                        <div class="col-md-4">
+                            <label for="startDate" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="startDate" name="start_date" value="{{ start_date }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="endDate" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="endDate" name="end_date" value="{{ end_date }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter me-2"></i>Apply Filter
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="trend-card">
+                <div class="trend-label">Total Requests</div>
+                <div class="trend-value" id="totalRequests">-</div>
+                <div class="trend-indicator" id="totalRequestsTrend">-</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="trend-card">
+                <div class="trend-label">Avg Daily Created</div>
+                <div class="trend-value" id="avgDailyCreated">-</div>
+                <div class="trend-indicator" id="avgDailyCreatedTrend">-</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="trend-card">
+                <div class="trend-label">Avg Daily Closed</div>
+                <div class="trend-value" id="avgDailyClosed">-</div>
+                <div class="trend-indicator" id="avgDailyClosedTrend">-</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="trend-card">
+                <div class="trend-label">SLA Compliance</div>
+                <div class="trend-value" id="slaCompliance">-</div>
+                <div class="trend-indicator" id="slaComplianceTrend">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Charts -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Daily Created vs Closed Trends</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="trendsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLA Compliance Chart -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">SLA Compliance Trend</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="slaTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Request Type Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="typeDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Tables -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Daily Trends Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Created</th>
+                                    <th>Closed</th>
+                                    <th>Net</th>
+                                </tr>
+                            </thead>
+                            <tbody id="trendsTable">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Request Types</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Count</th>
+                                    <th>Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody id="typesTable">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let trendsChart, slaTrendChart, typeDistributionChart;
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadReportData();
+    
+    // Setup date filter form
+    document.getElementById('dateFilterForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        loadReportData();
+    });
+});
+
+function loadReportData() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    // If no dates selected, use last week as default
+    const today = new Date();
+    const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const finalStartDate = startDate || lastWeek.toISOString().split('T')[0];
+    const finalEndDate = endDate || today.toISOString().split('T')[0];
+    
+    console.log('Loading weekly data for date range:', finalStartDate, 'to', finalEndDate);
+    
+    // Load summary cards
+    loadSummaryCards(finalStartDate, finalEndDate);
+    
+    // Load charts
+    loadTrendsChart(finalStartDate, finalEndDate);
+    loadSLATrendChart(finalStartDate, finalEndDate);
+    loadTypeDistributionChart(finalStartDate, finalEndDate);
+    
+    // Load tables
+    loadTrendsTable(finalStartDate, finalEndDate);
+    loadTypesTable(finalStartDate, finalEndDate);
+}
+
+function loadSummaryCards(startDate, endDate) {
+    // Load trends data for summary
+    fetch(`/hotelkit/repairs/api/repairs/trend/?start_date=${startDate}&end_date=${endDate}`)
+        .then(response => response.json())
+        .then(data => {
+            const totalCreated = data.reduce((sum, item) => sum + item.created_count, 0);
+            const totalClosed = data.reduce((sum, item) => sum + item.closed_count, 0);
+            const avgDailyCreated = data.length > 0 ? (totalCreated / data.length).toFixed(1) : 0;
+            const avgDailyClosed = data.length > 0 ? (totalClosed / data.length).toFixed(1) : 0;
+            
+            document.getElementById('totalRequests').textContent = totalCreated;
+            document.getElementById('avgDailyCreated').textContent = avgDailyCreated;
+            document.getElementById('avgDailyClosed').textContent = avgDailyClosed;
+            
+            // Calculate trends (simplified - compare first half vs second half)
+            const midPoint = Math.floor(data.length / 2);
+            const firstHalf = data.slice(0, midPoint);
+            const secondHalf = data.slice(midPoint);
+            
+            const firstHalfAvg = firstHalf.length > 0 ? firstHalf.reduce((sum, item) => sum + item.created_count, 0) / firstHalf.length : 0;
+            const secondHalfAvg = secondHalf.length > 0 ? secondHalf.reduce((sum, item) => sum + item.created_count, 0) / secondHalf.length : 0;
+            
+            const trend = secondHalfAvg > firstHalfAvg ? 'up' : secondHalfAvg < firstHalfAvg ? 'down' : 'neutral';
+            const trendPercent = firstHalfAvg > 0 ? Math.abs(((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100).toFixed(1) : 0;
+            
+            updateTrendIndicator('totalRequestsTrend', trend, trendPercent);
+            updateTrendIndicator('avgDailyCreatedTrend', trend, trendPercent);
+        });
+    
+    // Load SLA compliance
+    fetch(`/hotelkit/repairs/api/repairs/sla_compliance/?start_date=${startDate}&end_date=${endDate}`)
+        .then(response => response.json())
+        .then(data => {
+            const sla24h = data.sla_breakdown.find(item => item.period === '24 hours');
+            const complianceRate = sla24h ? sla24h.compliance_rate : 0;
+            document.getElementById('slaCompliance').textContent = complianceRate + '%';
+            
+            // Simple trend calculation for SLA
+            updateTrendIndicator('slaComplianceTrend', complianceRate > 80 ? 'up' : complianceRate < 60 ? 'down' : 'neutral', complianceRate);
+        });
+}
+
+function loadTrendsChart(startDate, endDate) {
+    fetch(`/hotelkit/repairs/api/repairs/trend/?start_date=${startDate}&end_date=${endDate}`)
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('trendsChart').getContext('2d');
+            
+            if (trendsChart) {
+                trendsChart.destroy();
+            }
+            
+            trendsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(item => new Date(item.date).toLocaleDateString()),
+                    datasets: [{
+                        label: 'Created',
+                        data: data.map(item => item.created_count),
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: false
+                    }, {
+                        label: 'Closed',
+                        data: data.map(item => item.closed_count),
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        });
+}
+
+function loadSLATrendChart(startDate, endDate) {
+    fetch(`/hotelkit/repairs/api/repairs/sla_compliance/?start_date=${startDate}&end_date=${endDate}`)
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('slaTrendChart').getContext('2d');
+            
+            if (slaTrendChart) {
+                slaTrendChart.destroy();
+            }
+            
+            slaTrendChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.sla_breakdown.map(item => item.period),
+                    datasets: [{
+                        label: 'Compliance Rate (%)',
+                        data: data.sla_breakdown.map(item => item.compliance_rate),
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(59, 130, 246, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(102, 126, 234, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        });
+}
+
+function loadTypeDistributionChart(startDate, endDate) {
+    fetch(`/hotelkit/repairs/api/repairs/types/?start_date=${startDate}&end_date=${endDate}`)
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('typeDistributionChart').getContext('2d');
+            
+            if (typeDistributionChart) {
+                typeDistributionChart.destroy();
+            }
+            
+            typeDistributionChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.map(item => item.type),
+                    datasets: [{
+                        data: data.map(item => item.count),
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(118, 75, 162, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(239, 68, 68, 0.8)',
+                            'rgba(139, 92, 246, 0.8)',
+                            'rgba(236, 72, 153, 0.8)',
+                            'rgba(14, 165, 233, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        });
+}
+
+function loadTrendsTable(startDate, endDate) {
+    fetch(`/hotelkit/repairs/api/repairs/trend/?start_date=${startDate}&end_date=${endDate}`)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('trendsTable');
+            tbody.innerHTML = '';
+            
+            data.forEach(item => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = new Date(item.date).toLocaleDateString();
+                row.insertCell(1).textContent = item.created_count;
+                row.insertCell(2).textContent = item.closed_count;
+                row.insertCell(3).textContent = item.created_count - item.closed_count;
+            });
+        });
+}
+
+function loadTypesTable(startDate, endDate) {
+    fetch(`/hotelkit/repairs/api/repairs/types/?start_date=${startDate}&end_date=${endDate}`)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('typesTable');
+            tbody.innerHTML = '';
+            
+            data.forEach(item => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = item.type;
+                row.insertCell(1).textContent = item.count;
+                row.insertCell(2).textContent = item.percentage + '%';
+            });
+        });
+}
+
+function updateTrendIndicator(elementId, trend, value) {
+    const element = document.getElementById(elementId);
+    element.className = 'trend-indicator';
+    
+    if (trend === 'up') {
+        element.classList.add('trend-up');
+        element.innerHTML = `<i class="fas fa-arrow-up me-1"></i>+${value}%`;
+    } else if (trend === 'down') {
+        element.classList.add('trend-down');
+        element.innerHTML = `<i class="fas fa-arrow-down me-1"></i>-${value}%`;
+    } else {
+        element.classList.add('trend-neutral');
+        element.innerHTML = `<i class="fas fa-minus me-1"></i>${value}%`;
+    }
+}
+
+function exportToExcel() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    const url = `/hotelkit/reports/export/excel/?type=weekly&start_date=${startDate}&end_date=${endDate}`;
+    window.open(url, '_blank');
+}
+
+function exportToPDF() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    const url = `/hotelkit/reports/export/pdf/?type=weekly&start_date=${startDate}&end_date=${endDate}`;
+    window.open(url, '_blank');
+}
+</script>
+{% endblock %}

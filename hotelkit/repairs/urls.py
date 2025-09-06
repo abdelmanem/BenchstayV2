@@ -3,8 +3,14 @@ from rest_framework.routers import DefaultRouter
 from ..views import (
     RepairRequestViewSet, RepairImportView, RepairTemplateView,
     RepairsDashboardView, RepairsByTypeView, repairs_import_view,
-    RepairDetailView, RepairUpdateView, RepairDeleteView
+    RepairDetailView, RepairUpdateView, RepairDeleteView,
+    # Report Views
+    DailyFlashReportView, WeeklyTrendReportView, MonthlyRootCauseReportView,
+    # Export Views
+    ExportExcelView, ExportPDFView
 )
+
+app_name = 'repairs'
 
 # Create router for API endpoints
 router = DefaultRouter()
@@ -26,4 +32,13 @@ urlpatterns = [
     path('repair/<int:id>/edit/', RepairUpdateView.as_view(), name='repair_edit'),
     path('repair/<int:id>/delete/', RepairDeleteView.as_view(), name='repair_delete'),
     path('import/', repairs_import_view, name='repairs_import'),
+    
+    # Report Views
+    path('reports/daily-flash/', DailyFlashReportView.as_view(), name='daily_flash_report'),
+    path('reports/weekly-trend/', WeeklyTrendReportView.as_view(), name='weekly_trend_report'),
+    path('reports/monthly-root-cause/', MonthlyRootCauseReportView.as_view(), name='monthly_root_cause_report'),
+    
+    # Export Views
+    path('reports/export/excel/', ExportExcelView.as_view(), name='export_excel'),
+    path('reports/export/pdf/', ExportPDFView.as_view(), name='export_pdf'),
 ]

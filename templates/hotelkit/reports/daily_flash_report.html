@@ -1,0 +1,542 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Daily Flash Report - Repairs Analytics{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    .chart-container {
+        position: relative;
+        height: 400px;
+        width: 100%;
+    }
+    .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
+    .metric-label {
+        font-size: 0.875rem;
+        opacity: 0.9;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .export-btn {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .export-btn:hover {
+        background: linear-gradient(135deg, #059669, #047857);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .export-btn-secondary {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .export-btn-secondary:hover {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0 text-dark">Daily Flash Report</h1>
+                    <p class="text-muted mb-0">Real-time KPIs and performance metrics</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="export-btn" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel me-2"></i>Export to Excel
+                    </button>
+                    <button class="export-btn-secondary" onclick="exportToPDF()">
+                        <i class="fas fa-file-pdf me-2"></i>Export to PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Date Filter -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form id="dateFilterForm" class="row g-3">
+                        {% csrf_token %}
+                        <div class="col-md-4">
+                            <label for="startDate" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="startDate" name="start_date" value="{{ start_date }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="endDate" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="endDate" name="end_date" value="{{ end_date }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter me-2"></i>Apply Filter
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-label">Open Requests</div>
+                <div class="metric-value" id="openRequests">-</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-label">Closed Today</div>
+                <div class="metric-value" id="closedToday">-</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-label">Avg Response Time</div>
+                <div class="metric-value" id="avgResponseTime">-</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="metric-card">
+                <div class="metric-label">SLA Compliance</div>
+                <div class="metric-value" id="slaCompliance">-</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Top Rooms by Requests</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="topRoomsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Top Technicians</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="topTechniciansChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLA Compliance Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">SLA Compliance Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="slaChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Tables -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Top 5 Rooms</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Room</th>
+                                    <th>Requests</th>
+                                    <th>Avg Completion</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topRoomsTable">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Top 5 Technicians</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Technician</th>
+                                    <th>Requests</th>
+                                    <th>Completion Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topTechniciansTable">
+                                <!-- Data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let topRoomsChart, topTechniciansChart, slaChart;
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadReportData();
+    
+    // Setup date filter form
+    document.getElementById('dateFilterForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        loadReportData();
+    });
+});
+
+function loadReportData() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    // If no dates selected, use today as default
+    const today = new Date().toISOString().split('T')[0];
+    const finalStartDate = startDate || today;
+    const finalEndDate = endDate || today;
+    
+    console.log('Loading data for date range:', finalStartDate, 'to', finalEndDate);
+    
+    // Load KPIs
+    loadKPIs(finalStartDate, finalEndDate);
+    
+    // Load charts
+    loadTopRoomsChart(finalStartDate, finalEndDate);
+    loadTopTechniciansChart(finalStartDate, finalEndDate);
+    loadSLAChart(finalStartDate, finalEndDate);
+    
+    // Load tables
+    loadTopRoomsTable(finalStartDate, finalEndDate);
+    loadTopTechniciansTable(finalStartDate, finalEndDate);
+}
+
+function loadKPIs(startDate, endDate) {
+    console.log('Fetching KPIs for:', startDate, 'to', endDate);
+    fetch(`/hotelkit/repairs/api/repairs/kpis/?start_date=${startDate}&end_date=${endDate}`)
+        .then(response => {
+            console.log('KPIs response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('KPIs data:', data);
+            document.getElementById('openRequests').textContent = data.open_requests || 0;
+            document.getElementById('avgResponseTime').textContent = formatDuration(data.avg_response_time);
+            
+            // Show loading state if no data
+            if (data.open_requests === 0 && !data.avg_response_time) {
+                console.log('No data found for the selected date range');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading KPIs:', error);
+            document.getElementById('openRequests').textContent = 'Error';
+            document.getElementById('avgResponseTime').textContent = 'Error';
+        });
+    
+    // Load closed today
+    fetch(`/hotelkit/repairs/api/repairs/trend/?start_date=${startDate}&end_date=${endDate}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Trend data:', data);
+            const today = new Date().toISOString().split('T')[0];
+            const todayData = data.find(item => item.date === today);
+            document.getElementById('closedToday').textContent = todayData ? todayData.closed_count : 0;
+        })
+        .catch(error => {
+            console.error('Error loading trends:', error);
+            document.getElementById('closedToday').textContent = 'Error';
+        });
+    
+    // Load SLA compliance
+    fetch(`/hotelkit/repairs/api/repairs/sla_compliance/?start_date=${startDate}&end_date=${endDate}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('SLA data:', data);
+            const sla24h = data.sla_breakdown.find(item => item.period === '24 hours');
+            document.getElementById('slaCompliance').textContent = sla24h ? sla24h.compliance_rate + '%' : '0%';
+        })
+        .catch(error => {
+            console.error('Error loading SLA:', error);
+            document.getElementById('slaCompliance').textContent = 'Error';
+        });
+}
+
+function loadTopRoomsChart(startDate, endDate) {
+    fetch(`/hotelkit/repairs/api/repairs/top_rooms/?start_date=${startDate}&end_date=${endDate}&limit=5`)
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('topRoomsChart').getContext('2d');
+            
+            if (topRoomsChart) {
+                topRoomsChart.destroy();
+            }
+            
+            topRoomsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(item => item.location),
+                    datasets: [{
+                        label: 'Requests',
+                        data: data.map(item => item.count),
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        });
+}
+
+function loadTopTechniciansChart(startDate, endDate) {
+    fetch(`/hotelkit/repairs/api/repairs/technician_performance/?start_date=${startDate}&end_date=${endDate}`)
+        .then(response => response.json())
+        .then(data => {
+            const top5 = data.slice(0, 5);
+            const ctx = document.getElementById('topTechniciansChart').getContext('2d');
+            
+            if (topTechniciansChart) {
+                topTechniciansChart.destroy();
+            }
+            
+            topTechniciansChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: top5.map(item => item.technician),
+                    datasets: [{
+                        data: top5.map(item => item.total_requests),
+                        backgroundColor: [
+                            'rgba(102, 126, 234, 0.8)',
+                            'rgba(118, 75, 162, 0.8)',
+                            'rgba(16, 185, 129, 0.8)',
+                            'rgba(245, 158, 11, 0.8)',
+                            'rgba(239, 68, 68, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        });
+}
+
+function loadSLAChart(startDate, endDate) {
+    fetch(`/hotelkit/repairs/api/repairs/sla_compliance/?start_date=${startDate}&end_date=${endDate}`)
+        .then(response => response.json())
+        .then(data => {
+            const ctx = document.getElementById('slaChart').getContext('2d');
+            
+            if (slaChart) {
+                slaChart.destroy();
+            }
+            
+            slaChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.sla_breakdown.map(item => item.period),
+                    datasets: [{
+                        label: 'Compliance Rate (%)',
+                        data: data.sla_breakdown.map(item => item.compliance_rate),
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        });
+}
+
+function loadTopRoomsTable(startDate, endDate) {
+    fetch(`/hotelkit/repairs/api/repairs/top_rooms/?start_date=${startDate}&end_date=${endDate}&limit=5`)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('topRoomsTable');
+            tbody.innerHTML = '';
+            
+            data.forEach(item => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = item.location;
+                row.insertCell(1).textContent = item.count;
+                row.insertCell(2).textContent = formatDuration(item.avg_completion_time);
+            });
+        });
+}
+
+function loadTopTechniciansTable(startDate, endDate) {
+    fetch(`/hotelkit/repairs/api/repairs/technician_performance/?start_date=${startDate}&end_date=${endDate}`)
+        .then(response => response.json())
+        .then(data => {
+            const top5 = data.slice(0, 5);
+            const tbody = document.getElementById('topTechniciansTable');
+            tbody.innerHTML = '';
+            
+            top5.forEach(item => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = item.technician;
+                row.insertCell(1).textContent = item.total_requests;
+                row.insertCell(2).textContent = item.completion_rate + '%';
+            });
+        });
+}
+
+function formatDuration(duration) {
+    if (!duration) return 'N/A';
+    
+    // Handle string duration (e.g., "00:43:18.555938")
+    if (typeof duration === 'string') {
+        const parts = duration.split(':');
+        if (parts.length >= 3) {
+            const hours = parseInt(parts[0]);
+            const minutes = parseInt(parts[1]);
+            if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            } else {
+                return `${minutes}m`;
+            }
+        }
+        return duration;
+    }
+    
+    // Handle timedelta object (if it has total_seconds method)
+    if (duration.total_seconds) {
+        const totalSeconds = Math.floor(duration.total_seconds());
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        
+        if (hours > 0) {
+            return `${hours}h ${minutes}m`;
+        } else {
+            return `${minutes}m`;
+        }
+    }
+    
+    return 'N/A';
+}
+
+function exportToExcel() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    const url = `/hotelkit/reports/export/excel/?type=daily&start_date=${startDate}&end_date=${endDate}`;
+    window.open(url, '_blank');
+}
+
+function exportToPDF() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    const url = `/hotelkit/reports/export/pdf/?type=daily&start_date=${startDate}&end_date=${endDate}`;
+    window.open(url, '_blank');
+}
+</script>
+{% endblock %}

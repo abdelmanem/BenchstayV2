@@ -283,6 +283,49 @@
             transform: translateY(-50%) translateX(5px);
         }
 
+        /* Collapsible submenu styles */
+        .repairs-submenu, .reports-submenu {
+            margin-left: 1rem;
+            border-left: 2px solid rgba(37, 99, 235, 0.2);
+            padding-left: 0.5rem;
+            margin-top: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .repairs-submenu .nav-link, .reports-submenu .nav-link {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+            border-radius: 8px;
+        }
+
+        .repairs-submenu .nav-link i:first-child,
+        .reports-submenu .nav-link i:first-child {
+            width: 16px;
+            min-width: 16px;
+            font-size: 0.875rem;
+        }
+
+        .repairs-submenu .nav-link:hover,
+        .reports-submenu .nav-link:hover {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(8, 145, 178, 0.05));
+            transform: translateX(2px);
+        }
+
+        .sidebar.collapsed .repairs-submenu,
+        .sidebar.collapsed .reports-submenu {
+            display: none !important;
+        }
+
+        .nav-link .ms-auto {
+            margin-left: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-link[aria-expanded="true"] .ms-auto {
+            transform: rotate(180deg);
+        }
+
         /* Content Area */
         .content {
             margin-left: var(--sidebar-width);
@@ -742,17 +785,53 @@
                         </a>
                     </li>
         <li class="nav-item">
-            <a class="nav-link" href="{% url 'repairs_dashboard' %}" data-tooltip="Repairs Analytics">
+            <a class="nav-link" href="#" data-tooltip="Repairs Analytics" id="repairsMenuToggle">
                 <i class="fas fa-tools"></i>
                 <span class="nav-link-text">Repairs Analytics</span>
+                <i class="fas fa-chevron-down ms-auto" id="repairsChevron"></i>
             </a>
         </li>
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'repairs_by_type' %}" data-tooltip="Repairs by Type">
-                <i class="fas fa-list-alt"></i>
-                <span class="nav-link-text">Repairs by Type</span>
-            </a>
-        </li>
+        <div class="repairs-submenu" id="repairsSubmenu" style="display: none;">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'repairs:repairs_dashboard' %}" data-tooltip="Dashboard">
+                    <i class="fas fa-chart-line"></i>
+                    <span class="nav-link-text">Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'repairs:repairs_by_type' %}" data-tooltip="Repairs by Type">
+                    <i class="fas fa-list-alt"></i>
+                    <span class="nav-link-text">Repairs by Type</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-tooltip="Reports" id="reportsMenuToggle">
+                    <i class="fas fa-chart-bar"></i>
+                    <span class="nav-link-text">Reports</span>
+                    <i class="fas fa-chevron-down ms-auto" id="reportsChevron"></i>
+                </a>
+            </li>
+            <div class="reports-submenu" id="reportsSubmenu" style="display: none;">
+                <li class="nav-item">
+                        <a class="nav-link" href="{% url 'repairs:daily_flash_report' %}" data-tooltip="Daily Flash Report">
+                        <i class="fas fa-bolt"></i>
+                        <span class="nav-link-text">Daily Flash</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                        <a class="nav-link" href="{% url 'repairs:weekly_trend_report' %}" data-tooltip="Weekly Trend Report">
+                        <i class="fas fa-chart-line"></i>
+                        <span class="nav-link-text">Weekly Trends</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                        <a class="nav-link" href="{% url 'repairs:monthly_root_cause_report' %}" data-tooltip="Monthly Root Cause Report">
+                        <i class="fas fa-search"></i>
+                        <span class="nav-link-text">Root Cause</span>
+                    </a>
+                </li>
+            </div>
+        </div>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'accounts:help' %}" data-tooltip="Help">
                             <i class="fas fa-question-circle"></i>
@@ -982,7 +1061,80 @@
 
             // Initialize sidebar
             initializeSidebar();
+            
+            // Initialize collapsible menus
+            initializeCollapsibleMenus();
         });
+
+        // Collapsible menu functionality
+        function initializeCollapsibleMenus() {
+            // Repairs menu toggle
+            const repairsMenuToggle = document.getElementById('repairsMenuToggle');
+            const repairsSubmenu = document.getElementById('repairsSubmenu');
+            const repairsChevron = document.getElementById('repairsChevron');
+            
+            if (repairsMenuToggle && repairsSubmenu && repairsChevron) {
+                repairsMenuToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const isExpanded = repairsSubmenu.style.display !== 'none';
+                    
+                    if (isExpanded) {
+                        repairsSubmenu.style.display = 'none';
+                        repairsChevron.style.transform = 'rotate(0deg)';
+                        repairsMenuToggle.setAttribute('aria-expanded', 'false');
+                    } else {
+                        repairsSubmenu.style.display = 'block';
+                        repairsChevron.style.transform = 'rotate(180deg)';
+                        repairsMenuToggle.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            }
+            
+            // Reports menu toggle
+            const reportsMenuToggle = document.getElementById('reportsMenuToggle');
+            const reportsSubmenu = document.getElementById('reportsSubmenu');
+            const reportsChevron = document.getElementById('reportsChevron');
+            
+            if (reportsMenuToggle && reportsSubmenu && reportsChevron) {
+                reportsMenuToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const isExpanded = reportsSubmenu.style.display !== 'none';
+                    
+                    if (isExpanded) {
+                        reportsSubmenu.style.display = 'none';
+                        reportsChevron.style.transform = 'rotate(0deg)';
+                        reportsMenuToggle.setAttribute('aria-expanded', 'false');
+                    } else {
+                        reportsSubmenu.style.display = 'block';
+                        reportsChevron.style.transform = 'rotate(180deg)';
+                        reportsMenuToggle.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            }
+            
+            // Close submenus when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.repairs-submenu') && !e.target.closest('#repairsMenuToggle')) {
+                    if (repairsSubmenu) {
+                        repairsSubmenu.style.display = 'none';
+                        if (repairsChevron) repairsChevron.style.transform = 'rotate(0deg)';
+                        if (repairsMenuToggle) repairsMenuToggle.setAttribute('aria-expanded', 'false');
+                    }
+                }
+                
+                if (!e.target.closest('.reports-submenu') && !e.target.closest('#reportsMenuToggle')) {
+                    if (reportsSubmenu) {
+                        reportsSubmenu.style.display = 'none';
+                        if (reportsChevron) reportsChevron.style.transform = 'rotate(0deg)';
+                        if (reportsMenuToggle) reportsMenuToggle.setAttribute('aria-expanded', 'false');
+                    }
+                }
+            });
+        }
     </script>
     
     {% block extra_js %}{% endblock %}

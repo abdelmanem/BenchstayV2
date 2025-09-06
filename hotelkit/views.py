@@ -32,7 +32,15 @@ from .utils import (
     parse_excel_file, import_repair_requests_from_dataframe,
     create_excel_template, get_repair_kpis, get_repair_trends,
     get_repair_types, get_repair_heatmap, get_top_rooms,
-    get_technician_performance, get_sla_compliance
+    get_technician_performance, get_sla_compliance,
+    # Advanced reporting functions
+    get_sla_compliance_advanced, get_delay_by_priority, get_escalations,
+    get_technician_performance_advanced, get_reopened_requests,
+    get_workload_distribution, get_top_assets, get_repeat_requests,
+    get_bottlenecks, get_avg_evaluation_time, get_parking_reasons,
+    get_guest_facing_requests, get_internal_requests,
+    # Export functions
+    export_to_excel, export_to_pdf
 )
 
 
@@ -52,6 +60,7 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
     search_fields = ['id_field', 'location', 'type', 'creator', 'text']
     ordering_fields = ['creation_date', 'completion_time', 'response_time']
     ordering = ['-creation_date']
+    permission_classes = []  # Allow unauthenticated access for now
 
     @action(detail=False, methods=['get'])
     def kpis(self, request):
@@ -158,6 +167,198 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
         sla_data = get_sla_compliance(start_date, end_date)
         serializer = RepairRequestSLASerializer(sla_data, many=True)
         return Response(serializer.data)
+
+    # Advanced Reporting Endpoints
+    @action(detail=False, methods=['get'])
+    def sla_compliance(self, request):
+        """Get advanced SLA compliance data."""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        sla_data = get_sla_compliance_advanced(start_date, end_date)
+        return Response(sla_data)
+
+    @action(detail=False, methods=['get'])
+    def delay_by_priority(self, request):
+        """Get average response/completion time grouped by priority."""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        delay_data = get_delay_by_priority(start_date, end_date)
+        return Response(delay_data)
+
+    @action(detail=False, methods=['get'])
+    def escalations(self, request):
+        """Get count of requests with changed recipients."""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        escalation_data = get_escalations(start_date, end_date)
+        return Response(escalation_data)
+
+    @action(detail=False, methods=['get'])
+    def technician_performance(self, request):
+        """Get advanced technician performance data."""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        performance_data = get_technician_performance_advanced(start_date, end_date)
+        return Response(performance_data)
+
+    @action(detail=False, methods=['get'])
+    def reopened(self, request):
+        """Get requests closed then reopened."""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        reopened_data = get_reopened_requests(start_date, end_date)
+        return Response(reopened_data)
+
+    @action(detail=False, methods=['get'])
+    def workload_distribution(self, request):
+        """Get current open requests per technician."""
+        workload_data = get_workload_distribution()
+        return Response(workload_data)
+
+    @action(detail=False, methods=['get'])
+    def top_rooms(self, request):
+        """Get top rooms by repair request count."""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        limit = int(request.query_params.get('limit', 5))
+        
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        top_rooms = get_top_rooms(start_date, end_date, limit)
+        serializer = RepairRequestTopRoomsSerializer(top_rooms, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def top_assets(self, request):
+        """Get top assets by repair request count."""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        limit = int(request.query_params.get('limit', 5))
+        
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        top_assets = get_top_assets(start_date, end_date, limit)
+        return Response(top_assets)
+
+    @action(detail=False, methods=['get'])
+    def repeat_requests(self, request):
+        """Get repeat requests for same location/type."""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        repeat_data = get_repeat_requests(start_date, end_date)
+        return Response(repeat_data)
+
+    @action(detail=False, methods=['get'])
+    def bottlenecks(self, request):
+        """Get process bottlenecks analysis."""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        bottleneck_data = get_bottlenecks(start_date, end_date)
+        return Response(bottleneck_data)
+
+    @action(detail=False, methods=['get'])
+    def avg_evaluation_time(self, request):
+        """Get average evaluation time."""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        eval_data = get_avg_evaluation_time(start_date, end_date)
+        return Response(eval_data)
+
+    @action(detail=False, methods=['get'])
+    def parking_reasons(self, request):
+        """Get parking reasons analysis."""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        parking_data = get_parking_reasons(start_date, end_date)
+        return Response(parking_data)
+
+    @action(detail=False, methods=['get'])
+    def guest_facing(self, request):
+        """Get guest-facing requests analysis."""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        guest_data = get_guest_facing_requests(start_date, end_date)
+        return Response(guest_data)
+
+    @action(detail=False, methods=['get'])
+    def internal(self, request):
+        """Get internal requests analysis."""
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        
+        internal_data = get_internal_requests(start_date, end_date)
+        return Response(internal_data)
 
 
 class RepairImportView(APIView):
@@ -535,3 +736,214 @@ def repairs_import_view(request):
             messages.error(request, f'Import failed: {str(e)}')
     
     return redirect('repairs_dashboard')
+
+
+# Report Views
+class DailyFlashReportView(TemplateView):
+    """Daily Flash Report view."""
+    template_name = 'hotelkit/reports/daily_flash_report.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Get date filters
+        start_date_str = self.request.GET.get('start_date')
+        end_date_str = self.request.GET.get('end_date')
+        
+        start_date = None
+        end_date = None
+        
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+                
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        # Default to today if no dates provided
+        if not start_date and not end_date:
+            from datetime import date
+            today = date.today()
+            start_date = today
+            end_date = today
+        
+        context['start_date'] = start_date.strftime('%Y-%m-%d') if start_date else ''
+        context['end_date'] = end_date.strftime('%Y-%m-%d') if end_date else ''
+        
+        return context
+
+
+class WeeklyTrendReportView(TemplateView):
+    """Weekly Trend Report view."""
+    template_name = 'hotelkit/reports/weekly_trend_report.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Get date filters
+        start_date_str = self.request.GET.get('start_date')
+        end_date_str = self.request.GET.get('end_date')
+        
+        start_date = None
+        end_date = None
+        
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+                
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        # Default to last week if no dates provided
+        if not start_date and not end_date:
+            from datetime import date, timedelta
+            today = date.today()
+            start_date = today - timedelta(days=7)
+            end_date = today
+        
+        context['start_date'] = start_date.strftime('%Y-%m-%d') if start_date else ''
+        context['end_date'] = end_date.strftime('%Y-%m-%d') if end_date else ''
+        
+        return context
+
+
+class MonthlyRootCauseReportView(TemplateView):
+    """Monthly Root Cause Report view."""
+    template_name = 'hotelkit/reports/monthly_root_cause_report.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Get date filters
+        start_date_str = self.request.GET.get('start_date')
+        end_date_str = self.request.GET.get('end_date')
+        
+        start_date = None
+        end_date = None
+        
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+                
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        # Default to last month if no dates provided
+        if not start_date and not end_date:
+            from datetime import date
+            import calendar
+            today = date.today()
+            
+            if today.month == 1:
+                start_date = date(today.year - 1, 12, 1)
+                end_date = date(today.year - 1, 12, 31)
+            else:
+                start_date = date(today.year, today.month - 1, 1)
+                last_day = calendar.monthrange(today.year, today.month - 1)[1]
+                end_date = date(today.year, today.month - 1, last_day)
+        
+        context['start_date'] = start_date.strftime('%Y-%m-%d') if start_date else ''
+        context['end_date'] = end_date.strftime('%Y-%m-%d') if end_date else ''
+        
+        return context
+
+
+# Export Views
+class ExportExcelView(APIView):
+    """Export reports to Excel."""
+    
+    def get(self, request):
+        report_type = request.GET.get('type')
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        
+        if not report_type:
+            return Response({'error': 'Report type is required'}, status=400)
+        
+        # Parse dates
+        start_date_obj = None
+        end_date_obj = None
+        
+        if start_date:
+            try:
+                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+                
+        if end_date:
+            try:
+                end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        try:
+            # Generate Excel file
+            excel_file = export_to_excel(report_type, start_date_obj, end_date_obj)
+            
+            # Create HTTP response
+            response = HttpResponse(
+                excel_file,
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            response['Content-Disposition'] = f'attachment; filename="{report_type}_report_{start_date or "all"}_{end_date or "all"}.xlsx"'
+            
+            return response
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+class ExportPDFView(APIView):
+    """Export reports to PDF."""
+    
+    def get(self, request):
+        report_type = request.GET.get('type')
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        
+        if not report_type:
+            return Response({'error': 'Report type is required'}, status=400)
+        
+        # Parse dates
+        start_date_obj = None
+        end_date_obj = None
+        
+        if start_date:
+            try:
+                start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+                
+        if end_date:
+            try:
+                end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+            except ValueError:
+                pass
+        
+        try:
+            # Generate PDF file
+            pdf_file = export_to_pdf(report_type, start_date_obj, end_date_obj)
+            
+            # Create HTTP response
+            response = HttpResponse(pdf_file, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{report_type}_report_{start_date or "all"}_{end_date or "all"}.pdf"'
+            
+            return response
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
