@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import RepairRequest
+from .guest_requests.models import GuestRequest
 
 
 @admin.register(RepairRequest)
@@ -56,3 +57,41 @@ class RepairRequestAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related()
+
+
+@admin.register(GuestRequest)
+class GuestRequestAdmin(admin.ModelAdmin):
+    list_display = [
+        'request_id', 'creator', 'recipients', 'location', 'type',
+        'priority', 'state', 'creation_date', 'time_accepted', 'time_done'
+    ]
+    list_filter = [
+        'state', 'priority', 'type', 'creation_date', 'time_done', 'uploaded_at'
+    ]
+    search_fields = [
+        'request_id', 'creator', 'recipients', 'location', 'type', 'priority', 'state'
+    ]
+    readonly_fields = [
+        'response_time', 'completion_time', 'total_duration', 'uploaded_at'
+    ]
+    ordering = ['-creation_date']
+
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('request_id', 'creator', 'recipients', 'location', 'type')
+        }),
+        ('Status & Priority', {
+            'fields': ('priority', 'state')
+        }),
+        ('Timestamps', {
+            'fields': ('creation_date', 'time_accepted', 'time_done')
+        }),
+        ('Calculated Durations', {
+            'fields': ('response_time', 'completion_time', 'total_duration'),
+            'classes': ('collapse',)
+        }),
+        ('System Information', {
+            'fields': ('uploaded_at',),
+            'classes': ('collapse',)
+        })
+    )
