@@ -6,6 +6,7 @@ from django.db.models import Avg, Count
 from django.utils import timezone
 from django.conf import settings
 
+import json
 import pandas as pd
 
 from ..utils import parse_excel_file
@@ -135,6 +136,35 @@ class DashboardView(View):
     def get(self, request):
         qs = GuestRequest.objects.all()
 
+        # Optional date filters
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+
+        # Default to last month if no dates provided
+        if not start_date_str and not end_date_str:
+            today = timezone.now().date()
+            first_of_current = today.replace(day=1)
+            last_month_end = first_of_current - timezone.timedelta(days=1)
+            last_month_start = last_month_end.replace(day=1)
+            start_date_str = last_month_start.isoformat()
+            end_date_str = last_month_end.isoformat()
+        start_date = None
+        end_date = None
+        if start_date_str:
+            try:
+                start_date = pd.to_datetime(start_date_str, errors='coerce').date()
+            except Exception:
+                start_date = None
+        if end_date_str:
+            try:
+                end_date = pd.to_datetime(end_date_str, errors='coerce').date()
+            except Exception:
+                end_date = None
+        if start_date:
+            qs = qs.filter(creation_date__date__gte=start_date)
+        if end_date:
+            qs = qs.filter(creation_date__date__lte=end_date)
+
         total_requests = qs.count()
         open_requests = qs.filter(state__in=['Open', 'In Progress', 'Accepted']).count()
 
@@ -157,14 +187,36 @@ class DashboardView(View):
               .annotate(count=Count('id'))
               .order_by('day')
         )
+        # Serialize trends to JSON-friendly data
+        created_trend_json = [
+            {
+                'day': (item['day'].isoformat() if item['day'] else None),
+                'count': int(item['count'] or 0),
+            }
+            for item in created_trend
+        ]
+        completed_trend_json = [
+            {
+                'day': (item['day'].isoformat() if item['day'] else None),
+                'count': int(item['count'] or 0),
+            }
+            for item in completed_trend
+        ]
 
         # Pie by recipients (department)
-        by_recipients = (
-            qs.exclude(recipients__isnull=True).exclude(recipients='')
-              .values('recipients')
-              .annotate(count=Count('id'))
-              .order_by('-count')
-        )
+        # Build department counts by splitting comma-separated recipients
+        recipient_counts = {}
+        for rec in qs.exclude(recipients__isnull=True).exclude(recipients='').values_list('recipients', flat=True):
+            parts = [p.strip() for p in str(rec).split(',') if p and p.strip()]
+            if not parts:
+                continue
+            # Use first recipient as department key
+            key = parts[0]
+            recipient_counts[key] = recipient_counts.get(key, 0) + 1
+        # Convert to sorted list
+        by_recipients_json = [
+            {'recipients': k, 'count': v} for k, v in sorted(recipient_counts.items(), key=lambda x: x[1], reverse=True)
+        ]
 
         # Bar by priority
         by_priority = (
@@ -173,6 +225,22 @@ class DashboardView(View):
               .annotate(count=Count('id'))
               .order_by('-count')
         )
+        by_priority_json = [
+            {'priority': item['priority'] or 'Unknown', 'count': int(item['count'] or 0)}
+            for item in by_priority
+        ]
+
+        # By type distribution
+        by_type = (
+            qs.exclude(type__isnull=True).exclude(type='')
+              .values('type')
+              .annotate(count=Count('id'))
+              .order_by('-count')
+        )
+        by_type_json = [
+            {'type': item['type'] or 'Unknown', 'count': int(item['count'] or 0)}
+            for item in by_type
+        ]
 
         latest = qs.order_by('-creation_date')[:10]
 
@@ -182,11 +250,14 @@ class DashboardView(View):
             'avg_response': format_duration_td(avg_response),
             'avg_completion': format_duration_td(avg_completion),
             'avg_execution': format_duration_td(avg_execution),
-            'created_trend': list(created_trend),
-            'completed_trend': list(completed_trend),
-            'by_recipients': list(by_recipients),
-            'by_priority': list(by_priority),
+            'created_trend_json': json.dumps(created_trend_json),
+            'completed_trend_json': json.dumps(completed_trend_json),
+            'by_recipients_json': json.dumps(by_recipients_json),
+            'by_priority_json': json.dumps(by_priority_json),
+            'by_type_json': json.dumps(by_type_json),
             'latest': latest,
+            'start_date': start_date_str or '',
+            'end_date': end_date_str or '',
         }
 
         return render(request, self.template_name, context)

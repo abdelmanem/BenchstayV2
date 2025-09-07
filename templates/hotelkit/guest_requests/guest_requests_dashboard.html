@@ -1,14 +1,26 @@
 {% extends 'dashboard_base.html' %}
 {% load static %}
 
-{% block title %}Guest Requests Dashboard{% endblock %}
+{% block title %}Guest Requests Analytics Dashboard{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .chart-container {
+        position: relative;
+        height: 400px;
+        width: 100%;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
+<!-- Dashboard Header -->
 <div class="dashboard-header">
     <div class="hotel-info d-flex align-items-center">
         <div class="flex-grow-1">
-            <h1 class="mb-2">Guest Requests Dashboard</h1>
-            <p class="mb-0 opacity-90">Monitor and analyze guest requests</p>
+            <h1 class="mb-2">Guest Requests Analytics Dashboard</h1>
+            <p class="mb-0 opacity-90">Monitor and analyze guest request performance</p>
         </div>
         <div class="d-flex gap-2">
             <a href="{% url 'guest_requests:upload' %}" class="btn btn-success">
@@ -19,90 +31,195 @@
 </div>
 
 <div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="metric-card">
-                <div class="metric-label">Total Requests</div>
-                <div class="metric-value">{{ total_requests }}</div>
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter me-2"></i>Apply Filters
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="metric-card">
-                <div class="metric-label">Open Requests</div>
-                <div class="metric-value">{{ open_requests }}</div>
+        <!-- KPI Cards -->
+        <div class="row mb-4">
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="metric-card">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <i class="fas fa-list text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                        <div>
+                            <div class="metric-label">Total Requests</div>
+                            <div class="metric-value">{{ total_requests }}</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="col-lg-2 col-md-6 mb-3">
-            <div class="metric-card">
-                <div class="metric-label">Avg Response</div>
-                <div class="metric-value">{{ avg_response }}</div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-6 mb-3">
-            <div class="metric-card">
-                <div class="metric-label">Avg Completion</div>
-                <div class="metric-value">{{ avg_completion }}</div>
-            </div>
-        </div>
-        <div class="col-lg-2 col-md-6 mb-3">
-            <div class="metric-card">
-                <div class="metric-label">Avg Execution</div>
-                <div class="metric-value">{{ avg_execution }}</div>
-            </div>
-        </div>
-    </div>
 
-    <div class="row mb-4">
-        <div class="col-lg-6 mb-4">
-            <div class="card">
-                <div class="card-header"><h5 class="card-title mb-0">Created vs Completed</h5></div>
-                <div class="card-body"><canvas id="trendChart"></canvas></div>
+            <div class="col-lg-3 col-md-6 mb-3">
+                <div class="metric-card">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <i class="fas fa-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
+                        </div>
+                        <div>
+                            <div class="metric-label">Open Requests</div>
+                            <div class="metric-value">{{ open_requests }}</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="col-lg-3 mb-4">
-            <div class="card">
-                <div class="card-header"><h5 class="card-title mb-0">By Department</h5></div>
-                <div class="card-body"><canvas id="deptChart"></canvas></div>
-            </div>
-        </div>
-        <div class="col-lg-3 mb-4">
-            <div class="card">
-                <div class="card-header"><h5 class="card-title mb-0">By Priority</h5></div>
-                <div class="card-body"><canvas id="priorityChart"></canvas></div>
-            </div>
-        </div>
-    </div>
 
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header"><h5 class="card-title mb-0">Latest 10 Guest Requests</h5></div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table performance-table mb-0">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Location</th>
-                                    <th>Priority</th>
-                                    <th>State</th>
-                                    <th>Response Time</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for r in latest %}
-                                <tr>
-                                    <td>{{ r.request_id }}</td>
-                                    <td>{{ r.location|default:'-' }}</td>
-                                    <td>{{ r.priority|default:'-' }}</td>
-                                    <td>{{ r.state|default:'-' }}</td>
-                                    <td>{% if r.response_time %}{{ r.response_time }}{% else %}-{% endif %}</td>
-                                </tr>
-                                {% empty %}
-                                <tr><td colspan="5" class="text-center py-4">No data</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+            <div class="col-lg-2 col-md-6 mb-3">
+                <div class="metric-card">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <i class="fas fa-clock text-primary" style="font-size: 2rem;"></i>
+                        </div>
+                        <div>
+                            <div class="metric-label">Avg Response</div>
+                            <div class="metric-value">{{ avg_response }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-2 col-md-6 mb-3">
+                <div class="metric-card">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <i class="fas fa-check-circle text-success" style="font-size: 2rem;"></i>
+                        </div>
+                        <div>
+                            <div class="metric-label">Avg Completion</div>
+                            <div class="metric-value">{{ avg_completion }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-2 col-md-6 mb-3">
+                <div class="metric-card">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0 me-3">
+                            <i class="fas fa-bolt text-warning" style="font-size: 2rem;"></i>
+                        </div>
+                        <div>
+                            <div class="metric-label">Avg Execution</div>
+                            <div class="metric-value">{{ avg_execution }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 1 -->
+        <div class="row mb-4">
+            <!-- Trend Chart -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Request Trends</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Department Chart -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Requests by Department</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="deptChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row 2 -->
+        <div class="row mb-4">
+            <!-- Priority Chart -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Requests by Priority</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="priorityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Types Chart -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Request Types Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="typesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Row -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header"><h5 class="card-title mb-0">Latest 10 Guest Requests</h5></div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table performance-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Location</th>
+                                        <th>Type</th>
+                                        <th>Priority</th>
+                                        <th>State</th>
+                                        <th>Response Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for r in latest %}
+                                    <tr>
+                                        <td class="fw-medium">{{ r.request_id }}</td>
+                                        <td>{{ r.location|default:'-' }}</td>
+                                        <td>{{ r.type|default:'-' }}</td>
+                                        <td>{{ r.priority|default:'-' }}</td>
+                                        <td>{{ r.state|default:'-' }}</td>
+                                        <td>{% if r.response_time %}{{ r.response_time }}{% else %}-{% endif %}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="5" class="text-center py-4">No data</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -112,43 +229,92 @@
 
 {% block extra_js %}
 <script>
-const createdTrend = JSON.parse('{{ created_trend|safe|escapejs }}');
-const completedTrend = JSON.parse('{{ completed_trend|safe|escapejs }}');
-const byRecipients = JSON.parse('{{ by_recipients|safe|escapejs }}');
-const byPriority = JSON.parse('{{ by_priority|safe|escapejs }}');
+// Chart.js configurations
+const createdTrend = JSON.parse('{{ created_trend_json|escapejs }}');
+const completedTrend = JSON.parse('{{ completed_trend_json|escapejs }}');
+const byRecipients = JSON.parse('{{ by_recipients_json|escapejs }}');
+const byPriority = JSON.parse('{{ by_priority_json|escapejs }}');
+const byType = JSON.parse('{{ by_type_json|escapejs }}');
 
-new Chart(document.getElementById('trendChart').getContext('2d'), {
+// Trend Chart
+const trendCtx = document.getElementById('trendChart').getContext('2d');
+new Chart(trendCtx, {
     type: 'line',
     data: {
-        labels: createdTrend.map(i => i.day),
-        datasets: [
-            { label: 'Created', data: createdTrend.map(i => i.count), borderColor: 'rgb(59,130,246)', backgroundColor: 'rgba(59,130,246,0.1)', tension: 0.1 },
-            { label: 'Completed', data: completedTrend.map(i => i.count), borderColor: 'rgb(16,185,129)', backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.1 },
-        ]
+        labels: createdTrend.map(item => item.day),
+        datasets: [{
+            label: 'Created',
+            data: createdTrend.map(item => item.count),
+            borderColor: 'rgb(59, 130, 246)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.1
+        }, {
+            label: 'Completed',
+            data: completedTrend.map(item => item.count),
+            borderColor: 'rgb(16, 185, 129)',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.1
+        }]
     },
-    options: { responsive: true, maintainAspectRatio: false }
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true } }
+    }
 });
 
-new Chart(document.getElementById('deptChart').getContext('2d'), {
-    type: 'pie',
+// Department Pie Chart
+const deptCtx = document.getElementById('deptChart').getContext('2d');
+new Chart(deptCtx, {
+    type: 'doughnut',
     data: {
-        labels: byRecipients.map(i => i.recipients),
-        datasets: [{ data: byRecipients.map(i => i.count), backgroundColor: ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#84CC16','#F97316','#EC4899','#6B7280'] }]
+        labels: byRecipients.map(item => item.recipients),
+        datasets: [{
+            data: byRecipients.map(item => item.count),
+            backgroundColor: [
+                '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+                '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6B7280'
+            ]
+        }]
     },
-    options: { responsive: true, maintainAspectRatio: false }
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
 });
 
-new Chart(document.getElementById('priorityChart').getContext('2d'), {
+// Priority Chart
+const priorityCtx = document.getElementById('priorityChart').getContext('2d');
+new Chart(priorityCtx, {
     type: 'bar',
     data: {
-        labels: byPriority.map(i => i.priority || 'Unknown'),
-        datasets: [{ label: 'Requests', data: byPriority.map(i => i.count), backgroundColor: 'rgba(59,130,246,0.8)' }]
+        labels: byPriority.map(item => item.priority || 'Unknown'),
+        datasets: [{
+            label: 'Request Count',
+            data: byPriority.map(item => item.count),
+            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+            borderColor: 'rgb(59, 130, 246)',
+            borderWidth: 1
+        }]
     },
-    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }}}
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+});
+
+// Types Chart
+const typesCtx = document.getElementById('typesChart').getContext('2d');
+new Chart(typesCtx, {
+    type: 'doughnut',
+    data: {
+        labels: byType.map(item => item.type),
+        datasets: [{
+            data: byType.map(item => item.count),
+            backgroundColor: [
+                '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
+                '#06B6D4', '#84CC16', '#F97316', '#EC4899', '#6B7280'
+            ]
+        }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
 });
 </script>
 {% endblock %}
-
 {% endblock %}
 
 

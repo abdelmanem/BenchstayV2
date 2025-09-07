@@ -1,0 +1,27 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}Upload Guest Requests{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="hotel-info d-flex align-items-center">
+        <div class="flex-grow-1">
+            <h1 class="mb-2">Upload Guest Requests</h1>
+            <p class="mb-0 opacity-90">Import Excel export files</p>
+        </div>
+    </div>
+  </div>
+
+<div class="container py-4">
+  <form method="post" enctype="multipart/form-data" class="card p-4">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">Excel File (.xlsx or .xls)</label>
+      <input type="file" name="file" accept=".xlsx,.xls" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Upload</button>
+  </form>
+</div>
+{% endblock %}
+
+
