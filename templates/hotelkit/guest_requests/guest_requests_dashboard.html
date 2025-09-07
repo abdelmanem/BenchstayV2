@@ -51,6 +51,14 @@
                 </form>
             </div>
         </div>
+        <!-- Info Banner -->
+        <div class="alert alert-warning d-flex align-items-center mb-3" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <div>
+                This dashboard reflects guest requests within the selected date range. Upload new Excel exports to refresh data.
+            </div>
+        </div>
+
         <!-- KPI Cards -->
         <div class="row mb-4">
             <div class="col-lg-3 col-md-6 mb-3">
@@ -60,7 +68,9 @@
                             <i class="fas fa-list text-primary" style="font-size: 2rem;"></i>
                         </div>
                         <div>
-                            <div class="metric-label">Total Requests</div>
+                            <div class="metric-label">Total Requests
+                                <i class="fas fa-info-circle ms-2 text-muted" data-bs-toggle="tooltip" title="Count of all guest requests created in the selected date range."></i>
+                            </div>
                             <div class="metric-value">{{ total_requests }}</div>
                         </div>
                     </div>
@@ -74,7 +84,9 @@
                             <i class="fas fa-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
                         </div>
                         <div>
-                            <div class="metric-label">Open Requests</div>
+                            <div class="metric-label">Open Requests
+                                <i class="fas fa-info-circle ms-2 text-muted" data-bs-toggle="tooltip" title="Requests in non-closed states (e.g., Open, In Progress, Accepted)."></i>
+                            </div>
                             <div class="metric-value">{{ open_requests }}</div>
                         </div>
                     </div>
@@ -88,7 +100,9 @@
                             <i class="fas fa-clock text-primary" style="font-size: 2rem;"></i>
                         </div>
                         <div>
-                            <div class="metric-label">Avg Response</div>
+                            <div class="metric-label">Avg Response
+                                <i class="fas fa-info-circle ms-2 text-muted" data-bs-toggle="tooltip" title="Average of (Time Accepted − Creation Date) for requests with both timestamps."></i>
+                            </div>
                             <div class="metric-value">{{ avg_response }}</div>
                         </div>
                     </div>
@@ -102,7 +116,9 @@
                             <i class="fas fa-check-circle text-success" style="font-size: 2rem;"></i>
                         </div>
                         <div>
-                            <div class="metric-label">Avg Completion</div>
+                            <div class="metric-label">Avg Completion
+                                <i class="fas fa-info-circle ms-2 text-muted" data-bs-toggle="tooltip" title="Average of (Time Done − Creation Date) for completed requests."></i>
+                            </div>
                             <div class="metric-value">{{ avg_completion }}</div>
                         </div>
                     </div>
@@ -116,7 +132,9 @@
                             <i class="fas fa-bolt text-warning" style="font-size: 2rem;"></i>
                         </div>
                         <div>
-                            <div class="metric-label">Avg Execution</div>
+                            <div class="metric-label">Avg Execution
+                                <i class="fas fa-info-circle ms-2 text-muted" data-bs-toggle="tooltip" title="Average of (Time Done − Time Accepted) for requests with both timestamps."></i>
+                            </div>
                             <div class="metric-value">{{ avg_execution }}</div>
                         </div>
                     </div>

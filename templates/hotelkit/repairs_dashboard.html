@@ -57,6 +57,12 @@
 </div>
 
 <div class="container-fluid">
+        <div class="alert alert-warning d-flex align-items-center mb-3" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <div>
+                Repairs analytics are based on uploaded repair data. Use the Import Data button to refresh the dataset.
+            </div>
+        </div>
         <!-- KPI Cards -->
         <div class="row mb-4">
             <div class="col-lg-3 col-md-6 mb-3">
@@ -66,7 +72,9 @@
                             <i class="fas fa-clock text-primary" style="font-size: 2rem;"></i>
                         </div>
                         <div>
-                            <div class="metric-label">Avg Response Time</div>
+                            <div class="metric-label">Avg Response Time
+                                <i class="fas fa-info-circle ms-2 text-muted" data-bs-toggle="tooltip" title="Average of (Time Accepted − Creation Date) for repairs."></i>
+                            </div>
                             <div class="metric-value">
                                 {% if kpis.avg_response_time %}
                                     {{ kpis.avg_response_time|hours_from_seconds }}h
@@ -86,7 +94,9 @@
                             <i class="fas fa-check-circle text-success" style="font-size: 2rem;"></i>
                         </div>
                         <div>
-                            <div class="metric-label">Avg Completion Time</div>
+                            <div class="metric-label">Avg Completion Time
+                                <i class="fas fa-info-circle ms-2 text-muted" data-bs-toggle="tooltip" title="Average of (Time Done − Creation Date) for completed repairs."></i>
+                            </div>
                             <div class="metric-value">
                                 {% if kpis.avg_completion_time %}
                                     {{ kpis.avg_completion_time|hours_from_seconds }}h
@@ -106,7 +116,9 @@
                             <i class="fas fa-bolt text-warning" style="font-size: 2rem;"></i>
                         </div>
                         <div>
-                            <div class="metric-label">Avg Execution Time</div>
+                            <div class="metric-label">Avg Execution Time
+                                <i class="fas fa-info-circle ms-2 text-muted" data-bs-toggle="tooltip" title="Average of (Time Done − Time In Progress) for repairs with both timestamps."></i>
+                            </div>
                             <div class="metric-value">
                                 {% if kpis.avg_execution_time %}
                                     {{ kpis.avg_execution_time|hours_from_seconds }}h
@@ -126,7 +138,9 @@
                             <i class="fas fa-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
                         </div>
                         <div>
-                            <div class="metric-label">Open Requests</div>
+                            <div class="metric-label">Open Requests
+                                <i class="fas fa-info-circle ms-2 text-muted" data-bs-toggle="tooltip" title="Repairs not in closed states (Closed/Done/Completed/Resolved)."></i>
+                            </div>
                             <div class="metric-value">{{ kpis.open_requests }}</div>
                         </div>
                     </div>
