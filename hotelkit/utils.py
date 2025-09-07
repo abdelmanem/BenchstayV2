@@ -193,11 +193,15 @@ def get_repair_kpis(start_date=None, end_date=None):
     else:
         avg_completion_time = None
     
-    # Calculate average execution time
-    execution_times = queryset.exclude(execution_time__isnull=True).values_list('execution_time', flat=True)
-    if execution_times:
-        total_execution_time = sum(execution_times, timezone.timedelta())
-        avg_execution_time = total_execution_time / len(execution_times)
+    # Calculate average execution time as (time_done - time_accepted)
+    diffs = []
+    for td, ta in queryset.filter(time_done__isnull=False, time_accepted__isnull=False).values_list('time_done', 'time_accepted'):
+        try:
+            diffs.append(td - ta)
+        except Exception:
+            continue
+    if diffs:
+        avg_execution_time = sum(diffs, timezone.timedelta()) / len(diffs)
     else:
         avg_execution_time = None
     
