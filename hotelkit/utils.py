@@ -9,8 +9,27 @@ def parse_excel_file(file_path):
     Parse Excel file and return DataFrame with proper column mapping.
     """
     try:
-        # Read Excel file
-        df = pd.read_excel(file_path)
+        # Support both file paths and file-like uploads
+        filename = getattr(file_path, 'name', str(file_path))
+        lower_name = filename.lower()
+
+        # Ensure file-like objects start at the beginning
+        if hasattr(file_path, 'seek'):
+            try:
+                file_path.seek(0)
+            except Exception:
+                pass
+
+        # Choose engine explicitly to avoid optional dependency ambiguity
+        if lower_name.endswith('.xlsx'):
+            engine = 'openpyxl'
+        elif lower_name.endswith('.xls'):
+            engine = 'xlrd'
+        else:
+            raise Exception('Unsupported file type. Please upload .xlsx or .xls files.')
+
+        # Read Excel file with explicit engine
+        df = pd.read_excel(file_path, engine=engine)
         
         # Map column names to model fields
         column_mapping = {
@@ -56,6 +75,12 @@ def parse_excel_file(file_path):
         
         return df
         
+    except ImportError as e:
+        # Provide clearer guidance when engine backends are missing
+        missing = 'openpyxl' if 'openpyxl' in str(e).lower() else ('xlrd' if 'xlrd' in str(e).lower() else None)
+        if missing:
+            raise Exception(f"Error parsing Excel file: Missing optional dependency '{missing}'. Install it in the running environment.")
+        raise Exception(f"Error parsing Excel file: {str(e)}")
     except Exception as e:
         raise Exception(f"Error parsing Excel file: {str(e)}")
 
