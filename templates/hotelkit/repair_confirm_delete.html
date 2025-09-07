@@ -12,10 +12,10 @@
             <p class="mb-0 opacity-90">Confirm deletion of repair request</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{% url 'repair_detail' repair.id %}" class="btn btn-light">
+            <a href="{% url 'repairs:repair_detail' repair.id %}" class="btn btn-light">
                 <i class="fas fa-eye me-2"></i>View Details
             </a>
-            <a href="{% url 'repairs_by_type' %}" class="btn btn-outline-secondary">
+            <a href="{% url 'repairs:repairs_by_type' %}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left me-2"></i>Back to List
             </a>
         </div>
@@ -92,7 +92,7 @@
                             <button type="submit" class="btn btn-danger">
                                 <i class="fas fa-trash me-2"></i>Yes, Delete Repair Request
                             </button>
-                            <a href="{% url 'repair_detail' repair.id %}" class="btn btn-outline-secondary">
+                            <a href="{% url 'repairs:repair_detail' repair.id %}" class="btn btn-outline-secondary">
                                 <i class="fas fa-times me-2"></i>Cancel
                             </a>
                         </div>

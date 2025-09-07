@@ -666,7 +666,7 @@ class RepairUpdateView(LoginRequiredMixin, UpdateView):
     context_object_name = 'repair'
     
     def get_success_url(self):
-        return reverse_lazy('repairs_by_type')
+        return reverse_lazy('repairs:repairs_by_type')
     
     def form_valid(self, form):
         messages.success(self.request, f'Repair request #{self.object.id} updated successfully.')
@@ -685,7 +685,7 @@ class RepairDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     template_name = 'hotelkit/repair_confirm_delete.html'
     pk_url_kwarg = 'id'
     context_object_name = 'repair'
-    success_url = reverse_lazy('repairs_by_type')
+    success_url = reverse_lazy('repairs:repairs_by_type')
     
     def test_func(self):
         """Only admin or superuser can delete repair requests."""
@@ -708,7 +708,7 @@ def repairs_import_view(request):
     if request.method == 'POST':
         if 'file' not in request.FILES:
             messages.error(request, 'No file uploaded')
-            return redirect('repairs_dashboard')
+            return redirect('repairs:repairs_dashboard')
         
         file = request.FILES['file']
         
@@ -718,7 +718,7 @@ def repairs_import_view(request):
                 df = parse_excel_file(file)
             else:
                 messages.error(request, 'Only Excel files (.xlsx, .xls) are supported')
-                return redirect('repairs_dashboard')
+                return redirect('repairs:repairs_dashboard')
             
             # Import the data
             result = import_repair_requests_from_dataframe(df)
@@ -735,7 +735,7 @@ def repairs_import_view(request):
         except Exception as e:
             messages.error(request, f'Import failed: {str(e)}')
     
-    return redirect('repairs_dashboard')
+    return redirect('repairs:repairs_dashboard')
 
 
 # Report Views

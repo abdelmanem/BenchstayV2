@@ -276,7 +276,7 @@
 </div>
 
 <!-- Import Form (Hidden) -->
-<form id="importForm" method="post" action="{% url 'repairs_import' %}" enctype="multipart/form-data" style="display: none;">
+<form id="importForm" method="post" action="{% url 'repairs:repairs_import' %}" enctype="multipart/form-data" style="display: none;">
     {% csrf_token %}
     <input type="file" name="file" id="hiddenFileInput" accept=".xlsx,.xls">
 </form>
