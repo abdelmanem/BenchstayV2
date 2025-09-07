@@ -1,0 +1,154 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Guest Requests Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="hotel-info d-flex align-items-center">
+        <div class="flex-grow-1">
+            <h1 class="mb-2">Guest Requests Dashboard</h1>
+            <p class="mb-0 opacity-90">Monitor and analyze guest requests</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'guest_requests:upload' %}" class="btn btn-success">
+                <i class="fas fa-upload me-2"></i>Upload Data
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-label">Total Requests</div>
+                <div class="metric-value">{{ total_requests }}</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-label">Open Requests</div>
+                <div class="metric-value">{{ open_requests }}</div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-label">Avg Response</div>
+                <div class="metric-value">{{ avg_response }}</div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-label">Avg Completion</div>
+                <div class="metric-value">{{ avg_completion }}</div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-label">Avg Execution</div>
+                <div class="metric-value">{{ avg_execution }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-lg-6 mb-4">
+            <div class="card">
+                <div class="card-header"><h5 class="card-title mb-0">Created vs Completed</h5></div>
+                <div class="card-body"><canvas id="trendChart"></canvas></div>
+            </div>
+        </div>
+        <div class="col-lg-3 mb-4">
+            <div class="card">
+                <div class="card-header"><h5 class="card-title mb-0">By Department</h5></div>
+                <div class="card-body"><canvas id="deptChart"></canvas></div>
+            </div>
+        </div>
+        <div class="col-lg-3 mb-4">
+            <div class="card">
+                <div class="card-header"><h5 class="card-title mb-0">By Priority</h5></div>
+                <div class="card-body"><canvas id="priorityChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header"><h5 class="card-title mb-0">Latest 10 Guest Requests</h5></div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table performance-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Location</th>
+                                    <th>Priority</th>
+                                    <th>State</th>
+                                    <th>Response Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for r in latest %}
+                                <tr>
+                                    <td>{{ r.request_id }}</td>
+                                    <td>{{ r.location|default:'-' }}</td>
+                                    <td>{{ r.priority|default:'-' }}</td>
+                                    <td>{{ r.state|default:'-' }}</td>
+                                    <td>{% if r.response_time %}{{ r.response_time }}{% else %}-{% endif %}</td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="5" class="text-center py-4">No data</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+const createdTrend = JSON.parse('{{ created_trend|safe|escapejs }}');
+const completedTrend = JSON.parse('{{ completed_trend|safe|escapejs }}');
+const byRecipients = JSON.parse('{{ by_recipients|safe|escapejs }}');
+const byPriority = JSON.parse('{{ by_priority|safe|escapejs }}');
+
+new Chart(document.getElementById('trendChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: createdTrend.map(i => i.day),
+        datasets: [
+            { label: 'Created', data: createdTrend.map(i => i.count), borderColor: 'rgb(59,130,246)', backgroundColor: 'rgba(59,130,246,0.1)', tension: 0.1 },
+            { label: 'Completed', data: completedTrend.map(i => i.count), borderColor: 'rgb(16,185,129)', backgroundColor: 'rgba(16,185,129,0.1)', tension: 0.1 },
+        ]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+
+new Chart(document.getElementById('deptChart').getContext('2d'), {
+    type: 'pie',
+    data: {
+        labels: byRecipients.map(i => i.recipients),
+        datasets: [{ data: byRecipients.map(i => i.count), backgroundColor: ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#84CC16','#F97316','#EC4899','#6B7280'] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false }
+});
+
+new Chart(document.getElementById('priorityChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: byPriority.map(i => i.priority || 'Unknown'),
+        datasets: [{ label: 'Requests', data: byPriority.map(i => i.count), backgroundColor: 'rgba(59,130,246,0.8)' }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }}}
+});
+</script>
+{% endblock %}
+
+{% endblock %}
+
+

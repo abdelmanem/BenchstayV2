@@ -284,7 +284,7 @@
         }
 
         /* Collapsible submenu styles */
-        .repairs-submenu, .reports-submenu {
+        .repairs-submenu, .reports-submenu, .guest-requests-submenu {
             margin-left: 1rem;
             border-left: 2px solid rgba(37, 99, 235, 0.2);
             padding-left: 0.5rem;
@@ -292,7 +292,7 @@
             margin-bottom: 0.5rem;
         }
 
-        .repairs-submenu .nav-link, .reports-submenu .nav-link {
+        .repairs-submenu .nav-link, .reports-submenu .nav-link, .guest-requests-submenu .nav-link {
             padding: 0.5rem 1rem;
             font-size: 0.875rem;
             margin-bottom: 0.25rem;
@@ -300,20 +300,23 @@
         }
 
         .repairs-submenu .nav-link i:first-child,
-        .reports-submenu .nav-link i:first-child {
+        .reports-submenu .nav-link i:first-child,
+        .guest-requests-submenu .nav-link i:first-child {
             width: 16px;
             min-width: 16px;
             font-size: 0.875rem;
         }
 
         .repairs-submenu .nav-link:hover,
-        .reports-submenu .nav-link:hover {
+        .reports-submenu .nav-link:hover,
+        .guest-requests-submenu .nav-link:hover {
             background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(8, 145, 178, 0.05));
             transform: translateX(2px);
         }
 
         .sidebar.collapsed .repairs-submenu,
-        .sidebar.collapsed .reports-submenu {
+        .sidebar.collapsed .reports-submenu,
+        .sidebar.collapsed .guest-requests-submenu {
             display: none !important;
         }
 
@@ -832,6 +835,27 @@
                 </li>
             </div>
         </div>
+        <li class="nav-item">
+            <a class="nav-link" href="#" data-tooltip="Guest Requests" id="guestRequestsMenuToggle">
+                <i class="fas fa-concierge-bell"></i>
+                <span class="nav-link-text">Guest Requests</span>
+                <i class="fas fa-chevron-down ms-auto" id="guestRequestsChevron"></i>
+            </a>
+        </li>
+        <div class="guest-requests-submenu" id="guestRequestsSubmenu" style="display: none;">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'guest_requests:dashboard' %}" data-tooltip="Guest Requests Dashboard">
+                    <i class="fas fa-chart-line"></i>
+                    <span class="nav-link-text">Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'guest_requests:upload' %}" data-tooltip="Upload Data">
+                    <i class="fas fa-upload"></i>
+                    <span class="nav-link-text">Upload Data</span>
+                </a>
+            </li>
+        </div>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'accounts:help' %}" data-tooltip="Help">
                             <i class="fas fa-question-circle"></i>
@@ -1116,6 +1140,27 @@
                 });
             }
             
+            // Guest Requests menu toggle
+            const guestMenuToggle = document.getElementById('guestRequestsMenuToggle');
+            const guestSubmenu = document.getElementById('guestRequestsSubmenu');
+            const guestChevron = document.getElementById('guestRequestsChevron');
+            if (guestMenuToggle && guestSubmenu && guestChevron) {
+                guestMenuToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const isExpanded = guestSubmenu.style.display !== 'none';
+                    if (isExpanded) {
+                        guestSubmenu.style.display = 'none';
+                        guestChevron.style.transform = 'rotate(0deg)';
+                        guestMenuToggle.setAttribute('aria-expanded', 'false');
+                    } else {
+                        guestSubmenu.style.display = 'block';
+                        guestChevron.style.transform = 'rotate(180deg)';
+                        guestMenuToggle.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            }
+            
             // Close submenus when clicking outside
             document.addEventListener('click', function(e) {
                 if (!e.target.closest('.repairs-submenu') && !e.target.closest('#repairsMenuToggle')) {
@@ -1131,6 +1176,13 @@
                         reportsSubmenu.style.display = 'none';
                         if (reportsChevron) reportsChevron.style.transform = 'rotate(0deg)';
                         if (reportsMenuToggle) reportsMenuToggle.setAttribute('aria-expanded', 'false');
+                    }
+                }
+                if (!e.target.closest('.guest-requests-submenu') && !e.target.closest('#guestRequestsMenuToggle')) {
+                    if (guestSubmenu) {
+                        guestSubmenu.style.display = 'none';
+                        if (guestChevron) guestChevron.style.transform = 'rotate(0deg)';
+                        if (guestMenuToggle) guestMenuToggle.setAttribute('aria-expanded', 'false');
                     }
                 }
             });

@@ -239,3 +239,9 @@ class RepairRequest(models.Model):
         if not self.time_done or not self.creation_date:
             return False
         return self.completion_time <= timedelta(hours=48)
+
+# Register submodule models so Django detects them for migrations
+try:
+    from .guest_requests.models import GuestRequest  # noqa: F401
+except Exception:
+    pass
