@@ -1,0 +1,91 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Guest Requests • Top Frequent Requests{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Start Date</label>
+        <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">End Date</label>
+        <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <div class="btn-group" role="group" aria-label="Quick Filters">
+          <a class="btn btn-outline-secondary" href="?">All</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_this_month_start }}">This Month</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last7_start }}&end_date={{ qf_today }}">Last 7d</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last30_start }}&end_date={{ qf_today }}">Last 30d</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last_month_start }}&end_date={{ qf_last_month_end }}">Last Month</a>
+        </div>
+        <button type="submit" class="btn btn-primary ms-2"><i class="fas fa-filter me-1"></i>Apply</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header"><h5 class="mb-0">Top 10 Most Frequent</h5></div>
+  <div class="card-body">
+    <canvas id="topChart" height="120"></canvas>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h5 class="mb-0">Details</h5></div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th>Request Type</th>
+            <th>Total</th>
+            <th>Avg Completion</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>{{ r.type }}</td>
+            <td>{{ r.count }}</td>
+            <td>{% if r.avg_completion %}{{ r.avg_completion }}{% else %}-{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="text-center py-4">No data</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const chartData = JSON.parse('{{ chart_json|escapejs }}');
+const ctx = document.getElementById('topChart').getContext('2d');
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: chartData.map(i => i.label),
+    datasets: [{
+      label: 'Requests',
+      data: chartData.map(i => i.count),
+      backgroundColor: 'rgba(59, 130, 246, 0.8)'
+    }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+});
+</script>
+{% endblock %}
+
+

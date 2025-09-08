@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.contrib import messages
 from django.views import View
+from django.db import models
 from django.db.models import Avg, Count
 from django.utils import timezone
 from django.conf import settings
@@ -274,6 +275,13 @@ class ByDepartmentReportView(TemplateView):
         # Date filters
         start_date_str = self.request.GET.get('start_date')
         end_date_str = self.request.GET.get('end_date')
+        if not start_date_str and not end_date_str:
+            today = timezone.now().date()
+            first_of_current = today.replace(day=1)
+            last_month_end = first_of_current - timezone.timedelta(days=1)
+            last_month_start = last_month_end.replace(day=1)
+            start_date_str = last_month_start.isoformat()
+            end_date_str = last_month_end.isoformat()
         start_date = pd.to_datetime(start_date_str, errors='coerce').date() if start_date_str else None
         end_date = pd.to_datetime(end_date_str, errors='coerce').date() if end_date_str else None
         if start_date:
@@ -324,6 +332,13 @@ class ByPriorityReportView(TemplateView):
         # Date filters
         start_date_str = self.request.GET.get('start_date')
         end_date_str = self.request.GET.get('end_date')
+        if not start_date_str and not end_date_str:
+            today = timezone.now().date()
+            first_of_current = today.replace(day=1)
+            last_month_end = first_of_current - timezone.timedelta(days=1)
+            last_month_start = last_month_end.replace(day=1)
+            start_date_str = last_month_start.isoformat()
+            end_date_str = last_month_end.isoformat()
         start_date = pd.to_datetime(start_date_str, errors='coerce').date() if start_date_str else None
         end_date = pd.to_datetime(end_date_str, errors='coerce').date() if end_date_str else None
         if start_date:
@@ -377,6 +392,13 @@ class DelayedReportView(TemplateView):
         # Date filters
         start_date_str = self.request.GET.get('start_date')
         end_date_str = self.request.GET.get('end_date')
+        if not start_date_str and not end_date_str:
+            today = timezone.now().date()
+            first_of_current = today.replace(day=1)
+            last_month_end = first_of_current - timezone.timedelta(days=1)
+            last_month_start = last_month_end.replace(day=1)
+            start_date_str = last_month_start.isoformat()
+            end_date_str = last_month_end.isoformat()
         start_date = pd.to_datetime(start_date_str, errors='coerce').date() if start_date_str else None
         end_date = pd.to_datetime(end_date_str, errors='coerce').date() if end_date_str else None
         if start_date:
@@ -416,6 +438,13 @@ class MonthlySummaryReportView(TemplateView):
         # Date filters
         start_date_str = self.request.GET.get('start_date')
         end_date_str = self.request.GET.get('end_date')
+        if not start_date_str and not end_date_str:
+            today = timezone.now().date()
+            first_of_current = today.replace(day=1)
+            last_month_end = first_of_current - timezone.timedelta(days=1)
+            last_month_start = last_month_end.replace(day=1)
+            start_date_str = last_month_start.isoformat()
+            end_date_str = last_month_end.isoformat()
         start_date = pd.to_datetime(start_date_str, errors='coerce').date() if start_date_str else None
         end_date = pd.to_datetime(end_date_str, errors='coerce').date() if end_date_str else None
         if start_date:
@@ -449,6 +478,298 @@ class MonthlySummaryReportView(TemplateView):
         context['start_date'] = start_date_str or ''
         context['end_date'] = end_date_str or ''
         # Quick filter helpers
+        today = timezone.now().date()
+        first_of_current = today.replace(day=1)
+        last7 = (today - timezone.timedelta(days=6))
+        last30 = (today - timezone.timedelta(days=29))
+        last_month_end = first_of_current - timezone.timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        context.update({
+            'qf_today': today.isoformat(),
+            'qf_this_month_start': first_of_current.isoformat(),
+            'qf_last7_start': last7.isoformat(),
+            'qf_last30_start': last30.isoformat(),
+            'qf_last_month_start': last_month_start.isoformat(),
+            'qf_last_month_end': last_month_end.isoformat(),
+        })
+        return context
+
+
+class SLAComplianceReportView(TemplateView):
+    template_name = 'hotelkit/guest_requests/reports/sla_compliance.html'
+
+    RESPONSE_SLA = timezone.timedelta(minutes=10)
+    EXECUTION_SLA = timezone.timedelta(hours=1)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = GuestRequest.objects.all()
+        # Date filters with last-month default
+        start_date_str = self.request.GET.get('start_date')
+        end_date_str = self.request.GET.get('end_date')
+        if not start_date_str and not end_date_str:
+            today = timezone.now().date()
+            first_of_current = today.replace(day=1)
+            last_month_end = first_of_current - timezone.timedelta(days=1)
+            last_month_start = last_month_end.replace(day=1)
+            start_date_str = last_month_start.isoformat()
+            end_date_str = last_month_end.isoformat()
+        start_date = pd.to_datetime(start_date_str, errors='coerce').date() if start_date_str else None
+        end_date = pd.to_datetime(end_date_str, errors='coerce').date() if end_date_str else None
+        if start_date:
+            qs = qs.filter(creation_date__date__gte=start_date)
+        if end_date:
+            qs = qs.filter(creation_date__date__lte=end_date)
+
+        total = qs.count() or 1
+        # Response SLA
+        resp_ok = qs.filter(response_time__isnull=False, response_time__lte=self.RESPONSE_SLA).count()
+        # Execution SLA (time_done - time_accepted)
+        exec_ok = 0
+        viol_rows = []
+        for gr in qs.exclude(time_done__isnull=True).exclude(time_accepted__isnull=True).only('request_id','location','priority','response_time','time_done','time_accepted'):
+            exec_time = None
+            try:
+                exec_time = gr.time_done - gr.time_accepted
+            except Exception:
+                exec_time = None
+            if exec_time is not None and exec_time <= self.EXECUTION_SLA:
+                exec_ok += 1
+            # collect violations
+            if (gr.response_time is None or gr.response_time > self.RESPONSE_SLA) or (exec_time is None or exec_time > self.EXECUTION_SLA):
+                viol_rows.append({
+                    'request_id': gr.request_id,
+                    'location': gr.location,
+                    'priority': gr.priority,
+                    'response_time': gr.response_time,
+                    'execution_time': exec_time,
+                })
+
+        context.update({
+            'response_sla_pct': round((resp_ok / total) * 100, 2),
+            'execution_sla_pct': round((exec_ok / total) * 100, 2),
+            'violations': viol_rows,
+            'response_sla_minutes': int(self.RESPONSE_SLA.total_seconds() // 60),
+            'execution_sla_minutes': int(self.EXECUTION_SLA.total_seconds() // 60),
+            'start_date': start_date_str or '',
+            'end_date': end_date_str or '',
+        })
+        # Quick filters
+        today = timezone.now().date()
+        first_of_current = today.replace(day=1)
+        last7 = (today - timezone.timedelta(days=6))
+        last30 = (today - timezone.timedelta(days=29))
+        last_month_end = first_of_current - timezone.timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        context.update({
+            'qf_today': today.isoformat(),
+            'qf_this_month_start': first_of_current.isoformat(),
+            'qf_last7_start': last7.isoformat(),
+            'qf_last30_start': last30.isoformat(),
+            'qf_last_month_start': last_month_start.isoformat(),
+            'qf_last_month_end': last_month_end.isoformat(),
+        })
+        return context
+
+
+class RequestsHeatmapReportView(TemplateView):
+    template_name = 'hotelkit/guest_requests/reports/heatmap.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = GuestRequest.objects.all()
+        # Date filters with last-month default
+        start_date_str = self.request.GET.get('start_date')
+        end_date_str = self.request.GET.get('end_date')
+        if not start_date_str and not end_date_str:
+            today = timezone.now().date()
+            first_of_current = today.replace(day=1)
+            last_month_end = first_of_current - timezone.timedelta(days=1)
+            last_month_start = last_month_end.replace(day=1)
+            start_date_str = last_month_start.isoformat()
+            end_date_str = last_month_end.isoformat()
+        start_date = pd.to_datetime(start_date_str, errors='coerce').date() if start_date_str else None
+        end_date = pd.to_datetime(end_date_str, errors='coerce').date() if end_date_str else None
+        if start_date:
+            qs = qs.filter(creation_date__date__gte=start_date)
+        if end_date:
+            qs = qs.filter(creation_date__date__lte=end_date)
+
+        # Build hour x weekday matrix
+        matrix = [[0 for _ in range(7)] for _ in range(24)]
+        for dt in qs.values_list('creation_date', flat=True):
+            if not dt:
+                continue
+            local = dt
+            try:
+                # convert to local if aware
+                if timezone.is_aware(local):
+                    local = timezone.localtime(local)
+            except Exception:
+                pass
+            hour = local.hour
+            weekday = local.weekday()  # 0=Mon
+            matrix[hour][weekday] += 1
+
+        context.update({
+            'matrix_json': json.dumps(matrix),
+            'start_date': start_date_str or '',
+            'end_date': end_date_str or '',
+            'hours': list(range(24)),
+            'days': list(range(7)),
+        })
+        # Quick filters
+        today = timezone.now().date()
+        first_of_current = today.replace(day=1)
+        last7 = (today - timezone.timedelta(days=6))
+        last30 = (today - timezone.timedelta(days=29))
+        last_month_end = first_of_current - timezone.timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        context.update({
+            'qf_today': today.isoformat(),
+            'qf_this_month_start': first_of_current.isoformat(),
+            'qf_last7_start': last7.isoformat(),
+            'qf_last30_start': last30.isoformat(),
+            'qf_last_month_start': last_month_start.isoformat(),
+            'qf_last_month_end': last_month_end.isoformat(),
+        })
+        return context
+
+
+class TopFrequentReportView(TemplateView):
+    template_name = 'hotelkit/guest_requests/reports/top_frequent.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = GuestRequest.objects.all()
+        # Date filters with last-month default
+        start_date_str = self.request.GET.get('start_date')
+        end_date_str = self.request.GET.get('end_date')
+        if not start_date_str and not end_date_str:
+            today = timezone.now().date()
+            first_of_current = today.replace(day=1)
+            last_month_end = first_of_current - timezone.timedelta(days=1)
+            last_month_start = last_month_end.replace(day=1)
+            start_date_str = last_month_start.isoformat()
+            end_date_str = last_month_end.isoformat()
+        start_date = pd.to_datetime(start_date_str, errors='coerce').date() if start_date_str else None
+        end_date = pd.to_datetime(end_date_str, errors='coerce').date() if end_date_str else None
+        if start_date:
+            qs = qs.filter(creation_date__date__gte=start_date)
+        if end_date:
+            qs = qs.filter(creation_date__date__lte=end_date)
+
+        # Prefer type, fallback to location
+        grouped = (
+            qs.annotate(kind=models.Case(
+                models.When(type__isnull=False, then='type'),
+                default='location', output_field=models.CharField(),
+            ))
+        )
+        # Simpler: use type or location in Python
+        agg = {}
+        for gr in qs.only('type','location','completion_time'):
+            key = gr.type or gr.location or 'Unknown'
+            entry = agg.setdefault(key, {'count':0, 'completions':[]})
+            entry['count'] += 1
+            if gr.completion_time:
+                entry['completions'].append(gr.completion_time)
+        rows = []
+        for key, val in agg.items():
+            avg_comp = None
+            if val['completions']:
+                avg_comp = sum(val['completions'], timezone.timedelta()) / len(val['completions'])
+            rows.append({'type': key, 'count': val['count'], 'avg_completion': avg_comp})
+        rows.sort(key=lambda x: x['count'], reverse=True)
+        top10 = rows[:10]
+        context.update({
+            'rows': top10,
+            'chart_json': json.dumps([{'label': r['type'], 'count': r['count']} for r in top10]),
+            'start_date': start_date_str or '',
+            'end_date': end_date_str or '',
+        })
+        # Quick filters
+        today = timezone.now().date()
+        first_of_current = today.replace(day=1)
+        last7 = (today - timezone.timedelta(days=6))
+        last30 = (today - timezone.timedelta(days=29))
+        last_month_end = first_of_current - timezone.timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        context.update({
+            'qf_today': today.isoformat(),
+            'qf_this_month_start': first_of_current.isoformat(),
+            'qf_last7_start': last7.isoformat(),
+            'qf_last30_start': last30.isoformat(),
+            'qf_last_month_start': last_month_start.isoformat(),
+            'qf_last_month_end': last_month_end.isoformat(),
+        })
+        return context
+
+
+class DepartmentPerformanceReportView(TemplateView):
+    template_name = 'hotelkit/guest_requests/reports/department_performance.html'
+
+    RESPONSE_SLA = timezone.timedelta(minutes=10)
+    EXECUTION_SLA = timezone.timedelta(hours=1)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = GuestRequest.objects.all()
+        # Date filters with last-month default
+        start_date_str = self.request.GET.get('start_date')
+        end_date_str = self.request.GET.get('end_date')
+        if not start_date_str and not end_date_str:
+            today = timezone.now().date()
+            first_of_current = today.replace(day=1)
+            last_month_end = first_of_current - timezone.timedelta(days=1)
+            last_month_start = last_month_end.replace(day=1)
+            start_date_str = last_month_start.isoformat()
+            end_date_str = last_month_end.isoformat()
+        start_date = pd.to_datetime(start_date_str, errors='coerce').date() if start_date_str else None
+        end_date = pd.to_datetime(end_date_str, errors='coerce').date() if end_date_str else None
+        if start_date:
+            qs = qs.filter(creation_date__date__gte=start_date)
+        if end_date:
+            qs = qs.filter(creation_date__date__lte=end_date)
+
+        # Aggregate per department (recipients)
+        departments = {}
+        for gr in qs.only('recipients','response_time','time_done','time_accepted'):
+            dept = (gr.recipients or 'Unknown').split(',')[0].strip() if gr.recipients else 'Unknown'
+            item = departments.setdefault(dept, {
+                'total': 0, 'responses': [], 'execs': [], 'sla_hits': 0
+            })
+            item['total'] += 1
+            if gr.response_time:
+                item['responses'].append(gr.response_time)
+            exec_time = None
+            if gr.time_done and gr.time_accepted:
+                exec_time = gr.time_done - gr.time_accepted
+                item['execs'].append(exec_time)
+            # SLA compliance: both response and execution must meet thresholds when present
+            resp_ok = (gr.response_time is not None and gr.response_time <= self.RESPONSE_SLA)
+            exec_ok = (exec_time is not None and exec_time <= self.EXECUTION_SLA)
+            if resp_ok and exec_ok:
+                item['sla_hits'] += 1
+
+        rows = []
+        for dept, val in departments.items():
+            avg_resp = sum(val['responses'], timezone.timedelta()) / len(val['responses']) if val['responses'] else None
+            avg_exec = sum(val['execs'], timezone.timedelta()) / len(val['execs']) if val['execs'] else None
+            sla_pct = round((val['sla_hits'] / val['total']) * 100, 2) if val['total'] else 0
+            rows.append({'dept': dept, 'total': val['total'], 'avg_response': avg_resp, 'avg_execution': avg_exec, 'sla_pct': sla_pct})
+        rows.sort(key=lambda x: x['total'], reverse=True)
+
+        context.update({
+            'rows': rows,
+            'chart_json': json.dumps([
+                {'label': r['dept'], 'total': r['total'], 'sla_pct': r['sla_pct']}
+                for r in rows
+            ]),
+            'start_date': start_date_str or '',
+            'end_date': end_date_str or '',
+        })
+        # Quick filters
         today = timezone.now().date()
         first_of_current = today.replace(day=1)
         last7 = (today - timezone.timedelta(days=6))

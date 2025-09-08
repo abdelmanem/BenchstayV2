@@ -879,6 +879,30 @@
                     <span class="nav-link-text">Monthly Summary</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'guest_requests:sla_compliance' %}" data-tooltip="SLA Compliance">
+                    <i class="fas fa-shield-check"></i>
+                    <span class="nav-link-text">SLA Compliance</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'guest_requests:heatmap' %}" data-tooltip="Requests Heatmap">
+                    <i class="fas fa-th"></i>
+                    <span class="nav-link-text">Requests Heatmap</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'guest_requests:top_frequent' %}" data-tooltip="Top Frequent">
+                    <i class="fas fa-ranking-star"></i>
+                    <span class="nav-link-text">Top Frequent</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'guest_requests:department_performance' %}" data-tooltip="Department Performance">
+                    <i class="fas fa-people-group"></i>
+                    <span class="nav-link-text">Department Performance</span>
+                </a>
+            </li>
         </div>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'accounts:help' %}" data-tooltip="Help">

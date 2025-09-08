@@ -1,0 +1,88 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Guest Requests • SLA Compliance{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Start Date</label>
+        <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">End Date</label>
+        <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <div class="btn-group" role="group" aria-label="Quick Filters">
+          <a class="btn btn-outline-secondary" href="?">All</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_this_month_start }}">This Month</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last7_start }}&end_date={{ qf_today }}">Last 7d</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last30_start }}&end_date={{ qf_today }}">Last 30d</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last_month_start }}&end_date={{ qf_last_month_end }}">Last Month</a>
+        </div>
+        <button type="submit" class="btn btn-primary ms-2"><i class="fas fa-filter me-1"></i>Apply</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card text-center">
+      <div class="card-header">Response SLA (<= {{ response_sla_minutes }} min)</div>
+      <div class="card-body">
+        <div class="progress" role="progressbar" aria-label="Response SLA" aria-valuenow="{{ response_sla_pct }}" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar bg-success" style="width: {{ response_sla_pct }}%">{{ response_sla_pct }}%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card text-center">
+      <div class="card-header">Execution SLA (<= {{ execution_sla_minutes }} min)</div>
+      <div class="card-body">
+        <div class="progress" role="progressbar" aria-label="Execution SLA" aria-valuenow="{{ execution_sla_pct }}" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar bg-info" style="width: {{ execution_sla_pct }}%">{{ execution_sla_pct }}%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+<div class="card">
+  <div class="card-header"><h5 class="mb-0">SLA Violations</h5></div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Location</th>
+            <th>Priority</th>
+            <th>Response Time</th>
+            <th>Execution Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in violations %}
+          <tr>
+            <td>{{ r.request_id }}</td>
+            <td>{{ r.location|default:'-' }}</td>
+            <td>{{ r.priority|default:'-' }}</td>
+            <td>{% if r.response_time %}{{ r.response_time }}{% else %}-{% endif %}</td>
+            <td>{% if r.execution_time %}{{ r.execution_time }}{% else %}-{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center py-4">No violations</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+

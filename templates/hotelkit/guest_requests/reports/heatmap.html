@@ -1,0 +1,98 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Guest Requests • Requests Heatmap{% endblock %}
+
+{% block extra_css %}
+<style>
+.heatmap-table td { text-align: center; vertical-align: middle; }
+.heatmap-cell { width: 36px; height: 28px; display: inline-block; border-radius: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Start Date</label>
+        <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">End Date</label>
+        <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <div class="btn-group" role="group" aria-label="Quick Filters">
+          <a class="btn btn-outline-secondary" href="?">All</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_this_month_start }}">This Month</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last7_start }}&end_date={{ qf_today }}">Last 7d</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last30_start }}&end_date={{ qf_today }}">Last 30d</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last_month_start }}&end_date={{ qf_last_month_end }}">Last Month</a>
+        </div>
+        <button type="submit" class="btn btn-primary ms-2"><i class="fas fa-filter me-1"></i>Apply</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h5 class="mb-0">Requests Heatmap (Hour x Weekday)</h5></div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-bordered heatmap-table mb-0">
+        <thead>
+          <tr>
+            <th>Hour</th>
+            <th>Mon</th>
+            <th>Tue</th>
+            <th>Wed</th>
+            <th>Thu</th>
+            <th>Fri</th>
+            <th>Sat</th>
+            <th>Sun</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for hour in hours %}
+          <tr>
+            <td><strong>{{ hour }}</strong></td>
+            {% for day in days %}
+            <td>
+              <span class="heatmap-cell" id="cell-{{ hour }}-{{ day }}"></span>
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const matrix = JSON.parse('{{ matrix_json|escapejs }}');
+function colorFor(value, max){
+  if(max === 0) return '#f1f5f9';
+  const ratio = value / max;
+  const start = [239, 246, 255]; // light
+  const end = [37, 99, 235]; // blue
+  const r = Math.round(start[0] + (end[0]-start[0])*ratio);
+  const g = Math.round(start[1] + (end[1]-start[1])*ratio);
+  const b = Math.round(start[2] + (end[2]-start[2])*ratio);
+  return `rgb(${r},${g},${b})`;
+}
+const maxVal = Math.max(...matrix.flat());
+for(let h=0; h<24; h++){
+  for(let d=0; d<7; d++){
+    const v = matrix[h][d] || 0;
+    const el = document.getElementById(`cell-${h}-${d}`);
+    if(el){ el.style.backgroundColor = colorFor(v, maxVal); el.title = v; }
+  }
+}
+</script>
+{% endblock %}
+
+
