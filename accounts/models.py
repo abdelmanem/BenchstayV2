@@ -12,6 +12,8 @@ class UserProfile(models.Model):
         permissions = [
             ('view_reporting', 'Can view reporting pages'),
             ('view_hotelkit', 'Can view hotelkit pages'),
+            ('view_hotel_management', 'Can view hotel management pages'),
+            ('manage_users', 'Can manage users and roles'),
         ]
     
     def __str__(self):

@@ -1,8 +1,9 @@
 from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, Permission
 from django.conf import settings
 from .models import UserProfile
 import django
@@ -76,9 +77,9 @@ def help_page(request):
     return render(request, 'accounts/help.html', context)
 
 def home(request):
-    """Home page view that redirects to login if not authenticated"""
+    """Home page view that redirects to a blank landing after login"""
     if request.user.is_authenticated:
-        return redirect('hotel_management:home')
+        return redirect('accounts:landing')
     return redirect('accounts:login')
 
 def login_view(request):
@@ -93,13 +94,16 @@ def login_view(request):
         
         if user is not None:
             login(request, user)
-            return redirect('hotel_management:home')
+            return redirect('accounts:landing')
         else:
             messages.error(request, 'Invalid username or password')
     
     return render(request, 'accounts/login.html', {'title': 'Login - Benchstay'})
 
 @login_required
+def landing(request):
+    """Blank landing page after login (can be customized later)."""
+    return render(request, 'accounts/landing.html', {'title': 'Welcome'})
 def logout_view(request):
     """Handle user logout"""
     logout(request)
@@ -134,6 +138,7 @@ def profile(request):
 
 
 @login_required
+@permission_required('accounts.manage_users', raise_exception=True)
 def admin_settings(request):
     """Admin dashboard with user management, system settings, and system information"""
     # Check if user is admin
@@ -150,6 +155,38 @@ def admin_settings(request):
         messages.error(request, 'An error occurred. Please contact the administrator.')
         return redirect('hotel_management:home')
     
+    # Ensure default RBAC groups exist with permissions
+    try:
+        # Define roles and their permissions
+        roles = {
+            'Admin': [
+                'manage_users',
+                'view_reporting',
+                'view_hotelkit',
+                'view_hotel_management',
+            ],
+            'Manager': [
+                'view_reporting',
+                'view_hotelkit',
+                'view_hotel_management',
+            ],
+            'Reporter': [
+                'view_reporting',
+            ],
+            'Technician': [
+                'view_hotelkit',
+            ],
+        }
+        for role_name, codenames in roles.items():
+            group, _ = Group.objects.get_or_create(name=role_name)
+            perms = Permission.objects.filter(
+                codename__in=codenames,
+                content_type__app_label='accounts'
+            )
+            group.permissions.set(perms)
+    except Exception:
+        pass
+
     # Get all users for user management section
     users = User.objects.all()
     
@@ -196,15 +233,26 @@ def admin_settings(request):
                 user = User.objects.get(id=user_id)
                 profile, created = UserProfile.objects.get_or_create(user=user)
                 
-                if action == 'make_admin':
-                    profile.is_admin = True
-                    profile.save()
-                    messages.success(request, f'{user.username} is now an admin')
+                if action == 'make_admin':  # Backward-compat: map to Admin role
+                    try:
+                        admin_group, _ = Group.objects.get_or_create(name='Admin')
+                        user.groups.add(admin_group)
+                        profile.is_admin = True
+                        profile.save()
+                    except Exception:
+                        pass
+                    messages.success(request, f'{user.username} granted Admin role')
                 
-                elif action == 'remove_admin':
+                elif action == 'remove_admin':  # Backward-compat
+                    try:
+                        admin_group = Group.objects.filter(name='Admin').first()
+                        if admin_group:
+                            user.groups.remove(admin_group)
+                    except Exception:
+                        pass
                     profile.is_admin = False
                     profile.save()
-                    messages.success(request, f'{user.username} is no longer an admin')
+                    messages.success(request, f'{user.username} removed from Admin role')
                 
                 elif action == 'delete_user':
                     user.delete()
@@ -277,11 +325,37 @@ def admin_settings(request):
                     phone_number=phone_number,
                     is_admin=is_admin
                 )
+                # Assign default role
+                default_group = Group.objects.filter(name='Reporter').first()
+                if default_group:
+                    user.groups.add(default_group)
                 
                 messages.success(request, f'User {username} has been created successfully')
             except Exception as e:
                 messages.error(request, f'Error creating user: {str(e)}')
         
+        # Assign or revoke roles via groups
+        elif action == 'assign_role':
+            try:
+                user_id = request.POST.get('user_id')
+                role_name = request.POST.get('role_name')
+                user = User.objects.get(id=user_id)
+                group = Group.objects.get(name=role_name)
+                user.groups.add(group)
+                messages.success(request, f'Role {role_name} assigned to {user.username}')
+            except Exception as e:
+                messages.error(request, f'Error assigning role: {str(e)}')
+        elif action == 'remove_role':
+            try:
+                user_id = request.POST.get('user_id')
+                role_name = request.POST.get('role_name')
+                user = User.objects.get(id=user_id)
+                group = Group.objects.get(name=role_name)
+                user.groups.remove(group)
+                messages.success(request, f'Role {role_name} removed from {user.username}')
+            except Exception as e:
+                messages.error(request, f'Error removing role: {str(e)}')
+
         # Handle system settings update
         elif action == 'update_system_settings':
             try:

@@ -709,7 +709,7 @@
                             <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
                                 <i class="fas fa-user me-2"></i>Profile
                             </a></li>
-                            {% if user.profile.is_admin %}
+                            {% if perms.accounts.manage_users %}
                             <li><a class="dropdown-item" href="{% url 'accounts:admin_settings' %}">
                                 <i class="fas fa-cog me-2"></i>Admin Settings
                             </a></li>
@@ -916,7 +916,7 @@
                             <span class="nav-link-text">Help & Info</span>
                         </a>
                     </li>
-                    {% if user.profile.is_admin %}
+                    {% if perms.accounts.manage_users %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'accounts:admin_settings' %}" data-tooltip="Users Portal">
                             <i class="fas fa-users"></i>

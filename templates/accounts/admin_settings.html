@@ -137,6 +137,82 @@
                                                 </button>
                                                 <ul class="dropdown-menu">
                                                     <li>
+                                                        <div class="px-3 py-2 text-muted">Roles</div>
+                                                    </li>
+                                                    <li>
+                                                        <form method="post" action="{% url 'accounts:admin_settings' %}?tab=users">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="user_id" value="{{ user_item.id }}">
+                                                            <input type="hidden" name="action" value="assign_role">
+                                                            <input type="hidden" name="role_name" value="Admin">
+                                                            <button type="submit" class="dropdown-item">Assign Admin</button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form method="post" action="{% url 'accounts:admin_settings' %}?tab=users">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="user_id" value="{{ user_item.id }}">
+                                                            <input type="hidden" name="action" value="assign_role">
+                                                            <input type="hidden" name="role_name" value="Manager">
+                                                            <button type="submit" class="dropdown-item">Assign Manager</button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form method="post" action="{% url 'accounts:admin_settings' %}?tab=users">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="user_id" value="{{ user_item.id }}">
+                                                            <input type="hidden" name="action" value="assign_role">
+                                                            <input type="hidden" name="role_name" value="Reporter">
+                                                            <button type="submit" class="dropdown-item">Assign Reporter</button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form method="post" action="{% url 'accounts:admin_settings' %}?tab=users">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="user_id" value="{{ user_item.id }}">
+                                                            <input type="hidden" name="action" value="assign_role">
+                                                            <input type="hidden" name="role_name" value="Technician">
+                                                            <button type="submit" class="dropdown-item">Assign Technician</button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form method="post" action="{% url 'accounts:admin_settings' %}?tab=users">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="user_id" value="{{ user_item.id }}">
+                                                            <input type="hidden" name="action" value="remove_role">
+                                                            <input type="hidden" name="role_name" value="Admin">
+                                                            <button type="submit" class="dropdown-item">Remove Admin</button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form method="post" action="{% url 'accounts:admin_settings' %}?tab=users">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="user_id" value="{{ user_item.id }}">
+                                                            <input type="hidden" name="action" value="remove_role">
+                                                            <input type="hidden" name="role_name" value="Manager">
+                                                            <button type="submit" class="dropdown-item">Remove Manager</button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form method="post" action="{% url 'accounts:admin_settings' %}?tab=users">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="user_id" value="{{ user_item.id }}">
+                                                            <input type="hidden" name="action" value="remove_role">
+                                                            <input type="hidden" name="role_name" value="Reporter">
+                                                            <button type="submit" class="dropdown-item">Remove Reporter</button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form method="post" action="{% url 'accounts:admin_settings' %}?tab=users">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="user_id" value="{{ user_item.id }}">
+                                                            <input type="hidden" name="action" value="remove_role">
+                                                            <input type="hidden" name="role_name" value="Technician">
+                                                            <button type="submit" class="dropdown-item">Remove Technician</button>
+                                                        </form>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
                                                         <form method="post" action="{% url 'accounts:admin_settings' %}?tab=users">
                                                             {% csrf_token %}
                                                             <input type="hidden" name="user_id" value="{{ user_item.id }}">
