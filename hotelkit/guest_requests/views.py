@@ -11,6 +11,8 @@ import pandas as pd
 
 from ..utils import parse_excel_file
 from .models import GuestRequest
+from django.views.generic import TemplateView
+from django.db.models.functions import TruncMonth
 
 
 def format_duration_td(td):
@@ -261,5 +263,206 @@ class DashboardView(View):
         }
 
         return render(request, self.template_name, context)
+
+
+class ByDepartmentReportView(TemplateView):
+    template_name = 'hotelkit/guest_requests/reports/by_department.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = GuestRequest.objects.all()
+        # Date filters
+        start_date_str = self.request.GET.get('start_date')
+        end_date_str = self.request.GET.get('end_date')
+        start_date = pd.to_datetime(start_date_str, errors='coerce').date() if start_date_str else None
+        end_date = pd.to_datetime(end_date_str, errors='coerce').date() if end_date_str else None
+        if start_date:
+            qs = qs.filter(creation_date__date__gte=start_date)
+        if end_date:
+            qs = qs.filter(creation_date__date__lte=end_date)
+        data = (
+            qs.values('recipients')
+              .annotate(total=Count('id'))
+              .order_by('-total')
+        )
+        # open/closed counts
+        rows = []
+        for item in data:
+            rec = item['recipients'] or 'Unknown'
+            total = int(item['total'] or 0)
+            open_count = qs.filter(recipients=item['recipients'], state__in=['Open','In Progress','Accepted']).count()
+            closed_count = total - open_count
+            rows.append({'recipients': rec, 'total': total, 'open': open_count, 'closed': closed_count})
+        context['table_rows'] = rows
+        context['chart_json'] = json.dumps([{'label': r['recipients'], 'count': r['total']} for r in rows])
+        context['start_date'] = start_date_str or ''
+        context['end_date'] = end_date_str or ''
+        # Quick filter helpers
+        today = timezone.now().date()
+        first_of_current = today.replace(day=1)
+        last7 = (today - timezone.timedelta(days=6))
+        last30 = (today - timezone.timedelta(days=29))
+        last_month_end = first_of_current - timezone.timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        context.update({
+            'qf_today': today.isoformat(),
+            'qf_this_month_start': first_of_current.isoformat(),
+            'qf_last7_start': last7.isoformat(),
+            'qf_last30_start': last30.isoformat(),
+            'qf_last_month_start': last_month_start.isoformat(),
+            'qf_last_month_end': last_month_end.isoformat(),
+        })
+        return context
+
+
+class ByPriorityReportView(TemplateView):
+    template_name = 'hotelkit/guest_requests/reports/by_priority.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = GuestRequest.objects.all()
+        # Date filters
+        start_date_str = self.request.GET.get('start_date')
+        end_date_str = self.request.GET.get('end_date')
+        start_date = pd.to_datetime(start_date_str, errors='coerce').date() if start_date_str else None
+        end_date = pd.to_datetime(end_date_str, errors='coerce').date() if end_date_str else None
+        if start_date:
+            qs = qs.filter(creation_date__date__gte=start_date)
+        if end_date:
+            qs = qs.filter(creation_date__date__lte=end_date)
+        # aggregates
+        priorities = (
+            qs.values('priority')
+              .annotate(total=Count('id'), avg_response=Avg('response_time'), avg_completion=Avg('completion_time'))
+              .order_by('-total')
+        )
+        rows = []
+        for p in priorities:
+            rows.append({
+                'priority': p['priority'] or 'Unknown',
+                'total': int(p['total'] or 0),
+                'avg_response': p['avg_response'],
+                'avg_completion': p['avg_completion'],
+            })
+        context['table_rows'] = rows
+        context['chart_json'] = json.dumps([{'label': r['priority'], 'count': r['total']} for r in rows])
+        context['start_date'] = start_date_str or ''
+        context['end_date'] = end_date_str or ''
+        # Quick filter helpers
+        today = timezone.now().date()
+        first_of_current = today.replace(day=1)
+        last7 = (today - timezone.timedelta(days=6))
+        last30 = (today - timezone.timedelta(days=29))
+        last_month_end = first_of_current - timezone.timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        context.update({
+            'qf_today': today.isoformat(),
+            'qf_this_month_start': first_of_current.isoformat(),
+            'qf_last7_start': last7.isoformat(),
+            'qf_last30_start': last30.isoformat(),
+            'qf_last_month_start': last_month_start.isoformat(),
+            'qf_last_month_end': last_month_end.isoformat(),
+        })
+        return context
+
+
+class DelayedReportView(TemplateView):
+    template_name = 'hotelkit/guest_requests/reports/delayed.html'
+
+    DELAY_THRESHOLD = timezone.timedelta(hours=2)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = GuestRequest.objects.all()
+        # Date filters
+        start_date_str = self.request.GET.get('start_date')
+        end_date_str = self.request.GET.get('end_date')
+        start_date = pd.to_datetime(start_date_str, errors='coerce').date() if start_date_str else None
+        end_date = pd.to_datetime(end_date_str, errors='coerce').date() if end_date_str else None
+        if start_date:
+            qs = qs.filter(creation_date__date__gte=start_date)
+        if end_date:
+            qs = qs.filter(creation_date__date__lte=end_date)
+        delayed = qs.filter(completion_time__gt=self.DELAY_THRESHOLD)
+        context['threshold_hours'] = int(self.DELAY_THRESHOLD.total_seconds() // 3600)
+        context['count'] = delayed.count()
+        context['rows'] = delayed.values('request_id','location','priority','state','completion_time')
+        context['start_date'] = start_date_str or ''
+        context['end_date'] = end_date_str or ''
+        # Quick filter helpers
+        today = timezone.now().date()
+        first_of_current = today.replace(day=1)
+        last7 = (today - timezone.timedelta(days=6))
+        last30 = (today - timezone.timedelta(days=29))
+        last_month_end = first_of_current - timezone.timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        context.update({
+            'qf_today': today.isoformat(),
+            'qf_this_month_start': first_of_current.isoformat(),
+            'qf_last7_start': last7.isoformat(),
+            'qf_last30_start': last30.isoformat(),
+            'qf_last_month_start': last_month_start.isoformat(),
+            'qf_last_month_end': last_month_end.isoformat(),
+        })
+        return context
+
+
+class MonthlySummaryReportView(TemplateView):
+    template_name = 'hotelkit/guest_requests/reports/monthly_summary.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = GuestRequest.objects.all()
+        # Date filters
+        start_date_str = self.request.GET.get('start_date')
+        end_date_str = self.request.GET.get('end_date')
+        start_date = pd.to_datetime(start_date_str, errors='coerce').date() if start_date_str else None
+        end_date = pd.to_datetime(end_date_str, errors='coerce').date() if end_date_str else None
+        if start_date:
+            qs = qs.filter(creation_date__date__gte=start_date)
+        if end_date:
+            qs = qs.filter(creation_date__date__lte=end_date)
+        monthly = (
+            qs.annotate(month=TruncMonth('creation_date'))
+              .values('month')
+              .annotate(
+                  total=Count('id'),
+                  avg_response=Avg('response_time'),
+                  avg_execution=Avg('total_duration'),
+                  avg_completion=Avg('completion_time'),
+              )
+              .order_by('month')
+        )
+        rows = []
+        for m in monthly:
+            rows.append({
+                'month': m['month'].strftime('%Y-%m') if m['month'] else '',
+                'total': int(m['total'] or 0),
+                'avg_response': m['avg_response'],
+                'avg_execution': m['avg_execution'],
+                'avg_completion': m['avg_completion'],
+            })
+        context['table_rows'] = rows
+        context['chart_json'] = json.dumps([
+            {'month': r['month'], 'total': r['total']} for r in rows
+        ])
+        context['start_date'] = start_date_str or ''
+        context['end_date'] = end_date_str or ''
+        # Quick filter helpers
+        today = timezone.now().date()
+        first_of_current = today.replace(day=1)
+        last7 = (today - timezone.timedelta(days=6))
+        last30 = (today - timezone.timedelta(days=29))
+        last_month_end = first_of_current - timezone.timedelta(days=1)
+        last_month_start = last_month_end.replace(day=1)
+        context.update({
+            'qf_today': today.isoformat(),
+            'qf_this_month_start': first_of_current.isoformat(),
+            'qf_last7_start': last7.isoformat(),
+            'qf_last30_start': last30.isoformat(),
+            'qf_last_month_start': last_month_start.isoformat(),
+            'qf_last_month_end': last_month_end.isoformat(),
+        })
+        return context
 
 

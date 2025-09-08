@@ -1,0 +1,71 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Guest Requests • Delayed Requests{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Start Date</label>
+        <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">End Date</label>
+        <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <div class="btn-group" role="group" aria-label="Quick Filters">
+          <a class="btn btn-outline-secondary" href="?">All</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_this_month_start }}">This Month</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last7_start }}&end_date={{ qf_today }}">Last 7d</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last30_start }}&end_date={{ qf_today }}">Last 30d</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last_month_start }}&end_date={{ qf_last_month_end }}">Last Month</a>
+        </div>
+        <button type="submit" class="btn btn-primary ms-2"><i class="fas fa-filter me-1"></i>Apply</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Delayed Requests</h5>
+    <span class="badge bg-danger">Threshold: {{ threshold_hours }}h</span>
+  </div>
+  <div class="card-body">
+    <div class="d-flex align-items-center gap-3 mb-3">
+      <i class="fas fa-clock text-danger"></i>
+      <div><strong>{{ count }}</strong> request(s) exceeded the threshold.</div>
+    </div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Location</th>
+            <th>Priority</th>
+            <th>State</th>
+            <th>Completion Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>{{ r.request_id }}</td>
+            <td>{{ r.location|default:'-' }}</td>
+            <td>{{ r.priority|default:'-' }}</td>
+            <td>{{ r.state|default:'-' }}</td>
+            <td>{{ r.completion_time }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center py-4">No delayed requests</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+

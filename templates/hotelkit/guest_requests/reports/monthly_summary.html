@@ -1,0 +1,96 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Guest Requests • Monthly Summary{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Start Date</label>
+        <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">End Date</label>
+        <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <div class="btn-group" role="group" aria-label="Quick Filters">
+          <a class="btn btn-outline-secondary" href="?">All</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_this_month_start }}">This Month</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last7_start }}&end_date={{ qf_today }}">Last 7d</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last30_start }}&end_date={{ qf_today }}">Last 30d</a>
+          <a class="btn btn-outline-secondary" href="?start_date={{ qf_last_month_start }}&end_date={{ qf_last_month_end }}">Last Month</a>
+        </div>
+        <button type="submit" class="btn btn-primary ms-2"><i class="fas fa-filter me-1"></i>Apply</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="card mb-4">
+  <div class="card-header"><h5 class="mb-0">Monthly Requests Trend</h5></div>
+  <div class="card-body">
+    <canvas id="monthlyChart" height="120"></canvas>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h5 class="mb-0">Monthly Summary</h5></div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>Total Requests</th>
+            <th>Avg Response</th>
+            <th>Avg Execution</th>
+            <th>Avg Completion</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in table_rows %}
+          <tr>
+            <td>{{ r.month }}</td>
+            <td>{{ r.total }}</td>
+            <td>{% if r.avg_response %}{{ r.avg_response }}{% else %}-{% endif %}</td>
+            <td>{% if r.avg_execution %}{{ r.avg_execution }}{% else %}-{% endif %}</td>
+            <td>{% if r.avg_completion %}{{ r.avg_completion }}{% else %}-{% endif %}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center py-4">No data</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const chartData = JSON.parse('{{ chart_json|escapejs }}');
+const ctx = document.getElementById('monthlyChart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: chartData.map(i => i.month),
+    datasets: [{
+      label: 'Total Requests',
+      data: chartData.map(i => i.total),
+      borderColor: 'rgb(59, 130, 246)',
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      tension: 0.1
+    }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+});
+</script>
+{% endblock %}
+
+

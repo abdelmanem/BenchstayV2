@@ -855,6 +855,30 @@
                     <span class="nav-link-text">Upload Data</span>
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'guest_requests:by_department' %}" data-tooltip="By Department">
+                    <i class="fas fa-users"></i>
+                    <span class="nav-link-text">By Department</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'guest_requests:by_priority' %}" data-tooltip="By Priority">
+                    <i class="fas fa-signal"></i>
+                    <span class="nav-link-text">By Priority</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'guest_requests:delayed' %}" data-tooltip="Delayed Requests">
+                    <i class="fas fa-hourglass-half"></i>
+                    <span class="nav-link-text">Delayed Requests</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'guest_requests:monthly_summary' %}" data-tooltip="Monthly Summary">
+                    <i class="fas fa-calendar"></i>
+                    <span class="nav-link-text">Monthly Summary</span>
+                </a>
+            </li>
         </div>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'accounts:help' %}" data-tooltip="Help">
