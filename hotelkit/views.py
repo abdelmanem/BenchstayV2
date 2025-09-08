@@ -5,13 +5,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView, ListView, DetailView, UpdateView, DeleteView
 from django.core.paginator import Paginator
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin, PermissionRequiredMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Q
@@ -60,7 +61,7 @@ class RepairRequestViewSet(viewsets.ModelViewSet):
     search_fields = ['id_field', 'location', 'type', 'creator', 'text']
     ordering_fields = ['creation_date', 'completion_time', 'response_time']
     ordering = ['-creation_date']
-    permission_classes = []  # Allow unauthenticated access for now
+    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=['get'])
     def kpis(self, request):
@@ -433,9 +434,11 @@ class RepairTemplateView(APIView):
             )
 
 
-class RepairsDashboardView(TemplateView):
+class RepairsDashboardView(PermissionRequiredMixin, TemplateView):
     """Dashboard view for repairs analytics."""
     template_name = 'hotelkit/repairs_dashboard.html'
+    permission_required = 'accounts.view_hotelkit'
+    raise_exception = True
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -515,12 +518,14 @@ class RepairsDashboardView(TemplateView):
         return context
 
 
-class RepairsByTypeView(ListView):
+class RepairsByTypeView(PermissionRequiredMixin, ListView):
     """View to display all repairs organized by type."""
     model = RepairRequest
     template_name = 'hotelkit/repairs_by_type.html'
     context_object_name = 'repairs_by_type'
     paginate_by = 50
+    permission_required = 'accounts.view_hotelkit'
+    raise_exception = True
     
     def get_queryset(self):
         """Get repairs filtered by date and status."""
@@ -649,21 +654,25 @@ class RepairsByTypeView(ListView):
         return context
 
 
-class RepairDetailView(LoginRequiredMixin, DetailView):
+class RepairDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     """View for displaying repair request details."""
     model = RepairRequest
     template_name = 'hotelkit/repair_detail.html'
     context_object_name = 'repair'
     pk_url_kwarg = 'id'
+    permission_required = 'accounts.view_hotelkit'
+    raise_exception = True
 
 
-class RepairUpdateView(LoginRequiredMixin, UpdateView):
+class RepairUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     """View for editing repair requests."""
     model = RepairRequest
     template_name = 'hotelkit/repair_edit.html'
     fields = ['state', 'priority', 'recipients', 'text', 'comments']
     pk_url_kwarg = 'id'
     context_object_name = 'repair'
+    permission_required = 'accounts.view_hotelkit'
+    raise_exception = True
     
     def get_success_url(self):
         return reverse_lazy('repairs:repairs_by_type')
@@ -679,13 +688,15 @@ class RepairUpdateView(LoginRequiredMixin, UpdateView):
         return context
 
 
-class RepairDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+class RepairDeleteView(LoginRequiredMixin, PermissionRequiredMixin, UserPassesTestMixin, DeleteView):
     """View for deleting repair requests (admin/superuser only)."""
     model = RepairRequest
     template_name = 'hotelkit/repair_confirm_delete.html'
     pk_url_kwarg = 'id'
     context_object_name = 'repair'
     success_url = reverse_lazy('repairs:repairs_by_type')
+    permission_required = 'accounts.view_hotelkit'
+    raise_exception = True
     
     def test_func(self):
         """Only admin or superuser can delete repair requests."""
@@ -739,9 +750,11 @@ def repairs_import_view(request):
 
 
 # Report Views
-class DailyFlashReportView(TemplateView):
+class DailyFlashReportView(PermissionRequiredMixin, TemplateView):
     """Daily Flash Report view."""
     template_name = 'hotelkit/reports/daily_flash_report.html'
+    permission_required = 'accounts.view_hotelkit'
+    raise_exception = True
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -778,9 +791,11 @@ class DailyFlashReportView(TemplateView):
         return context
 
 
-class WeeklyTrendReportView(TemplateView):
+class WeeklyTrendReportView(PermissionRequiredMixin, TemplateView):
     """Weekly Trend Report view."""
     template_name = 'hotelkit/reports/weekly_trend_report.html'
+    permission_required = 'accounts.view_hotelkit'
+    raise_exception = True
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -817,9 +832,11 @@ class WeeklyTrendReportView(TemplateView):
         return context
 
 
-class MonthlyRootCauseReportView(TemplateView):
+class MonthlyRootCauseReportView(PermissionRequiredMixin, TemplateView):
     """Monthly Root Cause Report view."""
     template_name = 'hotelkit/reports/monthly_root_cause_report.html'
+    permission_required = 'accounts.view_hotelkit'
+    raise_exception = True
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -8,6 +8,12 @@ class UserProfile(models.Model):
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     is_admin = models.BooleanField(default=False)
     
+    class Meta:
+        permissions = [
+            ('view_reporting', 'Can view reporting pages'),
+            ('view_hotelkit', 'Can view hotelkit pages'),
+        ]
+    
     def __str__(self):
         return f"{self.user.username}'s Profile"
 
