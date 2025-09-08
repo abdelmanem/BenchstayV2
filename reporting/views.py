@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Avg, Sum, F, ExpressionWrapper, DecimalField, Count, Q
@@ -32,6 +32,7 @@ from reportlab.lib.enums import TA_LEFT
 
 
 @login_required
+@permission_required('accounts.view_reporting', raise_exception=True)
 def report_dashboard(request):
     """Main dashboard for reporting"""
     # Get saved reports and report configurations
@@ -46,6 +47,7 @@ def report_dashboard(request):
     return render(request, 'reporting/dashboard.html', context)
 
 @login_required
+@permission_required('accounts.view_reporting', raise_exception=True)
 def revenue_reports(request):
     """View for generating and viewing revenue reports"""
     hotel = Hotel.objects.first()
@@ -97,6 +99,7 @@ def revenue_reports(request):
     return render(request, 'reporting/revenue_reports.html', context)
 
 @login_required
+@permission_required('accounts.view_reporting', raise_exception=True)
 def occupancy_reports(request):
     """View for generating and viewing occupancy reports"""
     hotel = Hotel.objects.first()
@@ -151,6 +154,7 @@ def occupancy_reports(request):
     return render(request, 'reporting/occupancy_reports.html', context)
 
 @login_required
+@permission_required('accounts.view_reporting', raise_exception=True)
 def competitor_analysis(request):
     """View for generating and viewing competitor analysis reports"""
     hotel = Hotel.objects.first()
@@ -231,6 +235,7 @@ def competitor_analysis(request):
     return render(request, 'reporting/competitor_analysis.html', context)
 
 @login_required
+@permission_required('accounts.view_reporting', raise_exception=True)
 def competitor_advanced_analytics(request):
     """View for generating and viewing advanced competitor analytics reports"""
     hotel = Hotel.objects.first()

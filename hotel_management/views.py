@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Avg, Sum, Q
@@ -13,6 +13,7 @@ import json
 
 
 @login_required
+@permission_required('accounts.view_hotel_management', raise_exception=True)
 def budget_goals(request):
     """Simple view to render Budget & KPI Goals template (placeholder backend)."""
     hotel = Hotel.objects.first()
@@ -147,6 +148,7 @@ def budget_goals(request):
 
 
 @login_required
+@permission_required('accounts.view_hotel_management', raise_exception=True)
 def budget_goals_tracker(request):
     hotel = Hotel.objects.first()
     if not hotel:
@@ -163,6 +165,7 @@ def budget_goals_tracker(request):
 
 
 @login_required
+@permission_required('accounts.view_hotel_management', raise_exception=True)
 def ajax_metrics(request):
     """AJAX endpoint for fetching updated dashboard metrics"""
     hotel = Hotel.objects.first()
@@ -188,6 +191,7 @@ def ajax_metrics(request):
     return JsonResponse(summary)
 
 @login_required
+@permission_required('accounts.view_hotel_management', raise_exception=True)
 def performance_indicators_api(request):
     """API endpoint for performance indicators"""
     hotel = Hotel.objects.first()
@@ -243,6 +247,7 @@ def performance_indicators_api(request):
     })
 
 @login_required
+@permission_required('accounts.view_hotel_management', raise_exception=True)
 def home(request):
     """Home page view"""
     # Get the user's hotel
@@ -640,6 +645,7 @@ def calculate_market_indices(date_str):
         # Don't raise the exception, just log it
         # This ensures data entry still works even if index calculation fails
 @login_required
+@permission_required('accounts.view_hotel_management', raise_exception=True)
 def data_entry(request):
     """View for data entry and management of hotel and competitor data"""
     hotel = Hotel.objects.first()
@@ -871,6 +877,7 @@ def data_entry(request):
     return render(request, 'hotel_management/data_entry.html', context)
 
 @login_required
+@permission_required('accounts.view_hotel_management', raise_exception=True)
 def hotel_data_api(request, pk):
     """API endpoint for retrieving hotel data"""
     try:
@@ -885,6 +892,7 @@ def hotel_data_api(request, pk):
         return JsonResponse({'error': str(e)}, status=400)
 
 @login_required
+@permission_required('accounts.view_hotel_management', raise_exception=True)
 def competitor_data_api(request, pk):
     """API endpoint for retrieving competitor data"""
     try:
@@ -899,6 +907,7 @@ def competitor_data_api(request, pk):
         return JsonResponse({'error': str(e)}, status=400)
 
 @login_required
+@permission_required('accounts.view_hotel_management', raise_exception=True)
 def daily_data(request):
     """View for managing daily hotel data"""
     hotel = Hotel.objects.first()
@@ -958,6 +967,7 @@ def daily_data(request):
 
 
 @login_required
+@permission_required('accounts.view_hotel_management', raise_exception=True)
 def hotel_competitor_management(request):
     """View for managing hotel and competitor information with audit logging"""
     hotel = Hotel.objects.first()
