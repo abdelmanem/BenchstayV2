@@ -51,6 +51,10 @@ def format_duration_td(td):
     return ' '.join(parts)
 
 
+def _is_superuser(user):
+    return user.is_authenticated and user.is_superuser
+
+
 class UploadView(View):
     template_name = 'hotelkit/guest_requests/upload.html'
 
@@ -916,11 +920,13 @@ class GuestRequestEditView(View):
     def get_object(self, pk):
         return GuestRequest.objects.get(pk=pk)
 
+    @method_decorator(user_passes_test(_is_superuser))
     def get(self, request, pk):
         gr = self.get_object(pk)
         form = GuestRequestForm(instance=gr)
         return render(request, self.template_name, {'form': form, 'guest_request': gr})
 
+    @method_decorator(user_passes_test(_is_superuser))
     def post(self, request, pk):
         gr = self.get_object(pk)
         form = GuestRequestForm(request.POST, instance=gr)
@@ -931,11 +937,11 @@ class GuestRequestEditView(View):
         return render(request, self.template_name, {'form': form, 'guest_request': gr})
 
 
-def _is_staff_or_superuser(user):
-    return user.is_authenticated and (user.is_staff or user.is_superuser)
+def _is_superuser(user):
+    return user.is_authenticated and user.is_superuser
 
 
-@method_decorator(user_passes_test(_is_staff_or_superuser), name='dispatch')
+@method_decorator(user_passes_test(_is_superuser), name='dispatch')
 class GuestRequestDeleteView(View):
     def post(self, request, pk):
         try:
