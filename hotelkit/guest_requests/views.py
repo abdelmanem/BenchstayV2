@@ -787,3 +787,74 @@ class DepartmentPerformanceReportView(TemplateView):
         return context
 
 
+class GuestRequestsByTypeView(TemplateView):
+    template_name = 'hotelkit/guest_requests/guest_requests_by_type.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = GuestRequest.objects.all()
+
+        # Filters
+        start_date_str = self.request.GET.get('start_date')
+        end_date_str = self.request.GET.get('end_date')
+        status = self.request.GET.get('status') or ''
+        request_type = self.request.GET.get('type') or ''
+
+        if not start_date_str and not end_date_str:
+            today = timezone.now().date()
+            first_of_current = today.replace(day=1)
+            last_month_end = first_of_current - timezone.timedelta(days=1)
+            last_month_start = last_month_end.replace(day=1)
+            start_date_str = last_month_start.isoformat()
+            end_date_str = last_month_end.isoformat()
+
+        start_date = pd.to_datetime(start_date_str, errors='coerce').date() if start_date_str else None
+        end_date = pd.to_datetime(end_date_str, errors='coerce').date() if end_date_str else None
+        if start_date:
+            qs = qs.filter(creation_date__date__gte=start_date)
+        if end_date:
+            qs = qs.filter(creation_date__date__lte=end_date)
+        if status:
+            qs = qs.filter(state=status)
+        if request_type:
+            qs = qs.filter(type=request_type)
+
+        # Available types for filter
+        available_types = list(
+            qs.exclude(type__isnull=True).exclude(type='').values_list('type', flat=True).distinct().order_by('type')
+        )
+
+        # Group by type
+        grouped = {}
+        for gr in qs.order_by('-creation_date'):
+            key = gr.type or 'Unknown'
+            bucket = grouped.setdefault(key, {'items': [], 'response': [], 'completion': []})
+            bucket['items'].append(gr)
+            if gr.response_time:
+                bucket['response'].append(gr.response_time)
+            if gr.completion_time:
+                bucket['completion'].append(gr.completion_time)
+
+        # Build a convenient structure for template
+        by_type = {}
+        for key, data in grouped.items():
+            avg_response = sum(data['response'], timezone.timedelta()) / len(data['response']) if data['response'] else None
+            avg_completion = sum(data['completion'], timezone.timedelta()) / len(data['completion']) if data['completion'] else None
+            # attach aggregate to first item for display like repairs page
+            items = data['items']
+            if items:
+                items[0].avg_response_time = avg_response
+                items[0].avg_completion_time = avg_completion
+            by_type[key] = items
+
+        context.update({
+            'guest_requests_by_type': by_type,
+            'available_types': available_types,
+            'start_date': start_date_str or '',
+            'end_date': end_date_str or '',
+            'status': status,
+            'request_type': request_type,
+        })
+        return context
+
+

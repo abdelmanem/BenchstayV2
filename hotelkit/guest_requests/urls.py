@@ -5,6 +5,7 @@ from .views import (
     DelayedReportView, MonthlySummaryReportView,
     SLAComplianceReportView, RequestsHeatmapReportView,
     TopFrequentReportView, DepartmentPerformanceReportView,
+    GuestRequestsByTypeView,
 )
 
 app_name = 'guest_requests'
@@ -20,6 +21,7 @@ urlpatterns = [
     path('guest-requests/reports/heatmap/', RequestsHeatmapReportView.as_view(), name='heatmap'),
     path('guest-requests/reports/top-frequent/', TopFrequentReportView.as_view(), name='top_frequent'),
     path('guest-requests/reports/department-performance/', DepartmentPerformanceReportView.as_view(), name='department_performance'),
+    path('guest-requests/by-type/', GuestRequestsByTypeView.as_view(), name='by_type'),
 ]
 
 

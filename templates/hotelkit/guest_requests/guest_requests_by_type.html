@@ -1,0 +1,155 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Guest Requests by Type{% endblock %}
+
+{% block extra_css %}
+<style>
+    .type-section { margin-bottom: 2rem; }
+    .type-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
+    .stats-row { display: flex; gap: 1rem; margin-top: 0.5rem; flex-wrap: wrap; }
+    .stat-item { background-color: rgba(255, 255, 255, 0.2); padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.875rem; }
+    .requests-table { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .table th { background-color: #f8fafc; border-bottom: 2px solid #e5e7eb; font-weight: 600; color: #374151; }
+    .table td { vertical-align: middle; border-bottom: 1px solid #f3f4f6; }
+    .location-cell { font-weight: 500; color: #1f2937; }
+    .description-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .status-badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; }
+    .status-open { background-color: #fef3c7; color: #92400e; }
+    .status-in-progress { background-color: #dbeafe; color: #1e40af; }
+    .status-done { background-color: #d1fae5; color: #065f46; }
+    .status-evaluation { background-color: #f3e8ff; color: #7c3aed; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="hotel-info d-flex align-items-center">
+        <div class="flex-grow-1">
+            <h1 class="mb-2">Guest Requests by Type</h1>
+            <p class="mb-0 opacity-90">All guest requests organized by type in table format</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'guest_requests:dashboard' %}" class="btn btn-light">
+                <i class="fas fa-chart-bar me-2"></i>Analytics Dashboard
+            </a>
+        </div>
+    </div>
+  </div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3">
+      <div class="col-md-2">
+        <label class="form-label">Start Date</label>
+        <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">End Date</label>
+        <input type="date" name="end_date" value="{{ end_date }}" class="form-control">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-control">
+          <option value="">All Statuses</option>
+          <option value="Open" {% if status == 'Open' %}selected{% endif %}>Open</option>
+          <option value="In Progress" {% if status == 'In Progress' %}selected{% endif %}>In Progress</option>
+          <option value="Done" {% if status == 'Done' %}selected{% endif %}>Done</option>
+          <option value="In Evaluation" {% if status == 'In Evaluation' %}selected{% endif %}>In Evaluation</option>
+          <option value="Closed" {% if status == 'Closed' %}selected{% endif %}>Closed</option>
+          <option value="Completed" {% if status == 'Completed' %}selected{% endif %}>Completed</option>
+          <option value="Resolved" {% if status == 'Resolved' %}selected{% endif %}>Resolved</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Request Type</label>
+        <select name="type" class="form-control">
+          <option value="">All Types</option>
+          {% for type_option in available_types %}
+          <option value="{{ type_option }}" {% if request_type == type_option %}selected{% endif %}>{{ type_option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary me-2">
+          <i class="fas fa-filter me-2"></i>Apply Filters
+        </button>
+        <a href="{% url 'guest_requests:by_type' %}" class="btn btn-outline-secondary">
+          <i class="fas fa-times me-2"></i>Clear
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="container-fluid">
+  {% if guest_requests_by_type %}
+    {% for type_name, requests in guest_requests_by_type.items %}
+    <div class="type-section">
+      <div class="type-header">
+        <h3 class="mb-0">{{ type_name }}</h3>
+        <div class="stats-row">
+          <div class="stat-item"><i class="fas fa-list me-1"></i>Total: {{ requests|length }} requests</div>
+          <div class="stat-item"><i class="fas fa-clock me-1"></i>Avg Response:
+            {% if requests.0.avg_response_time %}{{ requests.0.avg_response_time }}{% else %}N/A{% endif %}
+          </div>
+          <div class="stat-item"><i class="fas fa-check-circle me-1"></i>Avg Completion:
+            {% if requests.0.avg_completion_time %}{{ requests.0.avg_completion_time }}{% else %}N/A{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="requests-table">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th style="width: 80px;">ID</th>
+                <th style="width: 140px;">Date</th>
+                <th style="width: 100px;">Status</th>
+                <th style="width: 100px;">Priority</th>
+                <th style="width: 160px;">Location</th>
+                <th>Description</th>
+                <th style="width: 140px;">Creator</th>
+                <th style="width: 160px;">Recipients</th>
+                <th style="width: 140px;">Response Time</th>
+                <th style="width: 140px;">Completion Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for gr in requests %}
+              <tr>
+                <td><span class="fw-bold text-primary">{{ gr.request_id }}</span></td>
+                <td>
+                  <div class="small">
+                    {{ gr.creation_date|date:"M d, Y" }}<br>
+                    <span class="text-muted">{{ gr.creation_date|date:"H:i" }}</span>
+                  </div>
+                </td>
+                <td><span class="status-badge status-{{ gr.state|lower|slugify }}">{{ gr.state|default:'-' }}</span></td>
+                <td>{{ gr.priority|default:'-' }}</td>
+                <td class="location-cell">{{ gr.location|default:'-' }}</td>
+                <td><div class="description-cell" title="{{ gr.text }}">{% if gr.text %}{{ gr.text|truncatewords:12 }}{% else %}<span class="text-muted">No description</span>{% endif %}</div></td>
+                <td>{{ gr.creator }}</td>
+                <td>{% if gr.recipients %}{{ gr.recipients }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td>
+                <td>{% if gr.response_time %}{{ gr.response_time }}{% else %}<span class="text-muted">N/A</span>{% endif %}</td>
+                <td>{% if gr.completion_time %}{{ gr.completion_time }}{% else %}<span class="text-muted">N/A</span>{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="text-center py-5">
+      <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+      <h4 class="text-muted">No guest requests found</h4>
+      <p class="text-muted">Try adjusting your filters or upload data.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+
