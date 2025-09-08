@@ -6,6 +6,7 @@ from .views import (
     SLAComplianceReportView, RequestsHeatmapReportView,
     TopFrequentReportView, DepartmentPerformanceReportView,
     GuestRequestsByTypeView, GuestRequestDetailView, GuestRequestEditView, GuestRequestDeleteView,
+    GuestRequestsExportExcelView, GuestRequestsExportPDFView,
 )
 
 app_name = 'guest_requests'
@@ -22,6 +23,8 @@ urlpatterns = [
     path('guest-requests/reports/top-frequent/', TopFrequentReportView.as_view(), name='top_frequent'),
     path('guest-requests/reports/department-performance/', DepartmentPerformanceReportView.as_view(), name='department_performance'),
     path('guest-requests/by-type/', GuestRequestsByTypeView.as_view(), name='by_type'),
+    path('guest-requests/export/excel/', GuestRequestsExportExcelView.as_view(), name='export_excel'),
+    path('guest-requests/export/pdf/', GuestRequestsExportPDFView.as_view(), name='export_pdf'),
     path('guest-requests/<int:pk>/', GuestRequestDetailView.as_view(), name='guest_request_detail'),
     path('guest-requests/<int:pk>/edit/', GuestRequestEditView.as_view(), name='guest_request_edit'),
     path('guest-requests/<int:pk>/delete/', GuestRequestDeleteView.as_view(), name='guest_request_delete'),

@@ -77,6 +77,12 @@
         <a href="{% url 'guest_requests:by_type' %}" class="btn btn-outline-secondary">
           <i class="fas fa-times me-2"></i>Clear
         </a>
+        <a href="{% url 'guest_requests:export_excel' %}?start_date={{ start_date }}&end_date={{ end_date }}&status={{ status }}&type={{ request_type }}" class="btn btn-outline-primary ms-2">
+          <i class="fas fa-file-excel me-2"></i>Export Excel
+        </a>
+        <a href="{% url 'guest_requests:export_pdf' %}?start_date={{ start_date }}&end_date={{ end_date }}&status={{ status }}&type={{ request_type }}" class="btn btn-outline-secondary">
+          <i class="fas fa-file-pdf me-2"></i>Export PDF
+        </a>
       </div>
     </form>
   </div>

@@ -8,11 +8,25 @@ from django.utils import timezone
 from django.conf import settings
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import user_passes_test
+from django.http import HttpResponse
 
 import json
 import pandas as pd
 
 from ..utils import parse_excel_file
+import io
+try:
+    import openpyxl
+    from openpyxl.styles import Font
+except Exception:
+    openpyxl = None
+try:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib import colors
+except Exception:
+    pass
 from .models import GuestRequest, GuestRequestForm
 from django.views.generic import TemplateView
 from django.db.models.functions import TruncMonth
@@ -932,4 +946,98 @@ class GuestRequestDeleteView(View):
         except GuestRequest.DoesNotExist:
             messages.error(request, "Guest request not found.")
         return redirect(reverse('guest_requests:by_type'))
+
+
+def _filter_guest_requests(request):
+    qs = GuestRequest.objects.all()
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    status = request.GET.get('status') or ''
+    request_type = request.GET.get('type') or ''
+    start_date = pd.to_datetime(start_date_str, errors='coerce').date() if start_date_str else None
+    end_date = pd.to_datetime(end_date_str, errors='coerce').date() if end_date_str else None
+    if start_date:
+        qs = qs.filter(creation_date__date__gte=start_date)
+    if end_date:
+        qs = qs.filter(creation_date__date__lte=end_date)
+    if status:
+        qs = qs.filter(state=status)
+    if request_type:
+        qs = qs.filter(type=request_type)
+    return qs
+
+
+class GuestRequestsExportExcelView(View):
+    def get(self, request):
+        qs = _filter_guest_requests(request).order_by('creation_date')
+        fields = [
+            'request_id','creator','recipients','location','location_path','type','type_path','ticket',
+            'priority','state','creation_date','time_accepted','time_in_progress','time_done','time_in_evaluation',
+            'response_time','total_duration','completion_time','latest_state_change_user','latest_state_change_time',
+            'link','submitted_result','comments','assets','uploaded_at'
+        ]
+        wb = openpyxl.Workbook() if openpyxl else None
+        if wb is None:
+            return HttpResponse('openpyxl not installed', status=500)
+        ws = wb.active
+        ws.title = 'Guest Requests'
+        for col, header in enumerate(fields, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = Font(bold=True)
+        row_idx = 2
+        for gr in qs.iterator():
+            values = [getattr(gr, f) for f in fields]
+            for col, val in enumerate(values, 1):
+                if hasattr(val, 'isoformat'):
+                    val = val.isoformat(sep=' ')
+                elif hasattr(val, 'total_seconds'):
+                    val = str(val)
+                ws.cell(row=row_idx, column=col, value=val)
+            row_idx += 1
+        out = io.BytesIO()
+        wb.save(out)
+        out.seek(0)
+        resp = HttpResponse(out.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        resp['Content-Disposition'] = 'attachment; filename="guest_requests.xlsx"'
+        return resp
+
+
+class GuestRequestsExportPDFView(View):
+    def get(self, request):
+        qs = _filter_guest_requests(request).order_by('creation_date')
+        headers = ['ID','Creator','Recipients','Location','Type','Priority','State','Created','Done']
+        rows = []
+        for gr in qs[:1000]:
+            rows.append([
+                gr.request_id,
+                gr.creator,
+                gr.recipients,
+                gr.location or '-',
+                gr.type or '-',
+                gr.priority or '-',
+                gr.state or '-',
+                gr.creation_date.strftime('%Y-%m-%d %H:%M') if gr.creation_date else '-',
+                gr.time_done.strftime('%Y-%m-%d %H:%M') if gr.time_done else '-',
+            ])
+        buf = io.BytesIO()
+        try:
+            doc = SimpleDocTemplate(buf, pagesize=A4)
+            styles = getSampleStyleSheet()
+            story = [Paragraph('Guest Requests Export', styles['Title']), Spacer(1, 12)]
+            table = Table([headers] + rows)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), colors.grey),
+                ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+                ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+                ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+                ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+            ]))
+            story.append(table)
+            doc.build(story)
+            buf.seek(0)
+            resp = HttpResponse(buf.read(), content_type='application/pdf')
+            resp['Content-Disposition'] = 'attachment; filename="guest_requests.pdf"'
+            return resp
+        except Exception:
+            return HttpResponse('reportlab not installed', status=500)
 

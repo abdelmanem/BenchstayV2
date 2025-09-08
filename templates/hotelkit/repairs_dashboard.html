@@ -17,7 +17,7 @@
 
 {% block content %}
 <!-- Dashboard Header -->
-<div class="dashboard-header">
+<div class="dashboard-header" id="repairsDashboardHeader">
     <div class="hotel-info d-flex align-items-center">
         <div class="flex-grow-1">
             <h1 class="mb-2">Repairs Analytics Dashboard</h1>
@@ -31,6 +31,9 @@
                 <i class="fas fa-upload me-2"></i>Import Data
             </button>
             <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;" onchange="uploadFile()">
+            <button id="exportRepairsDashboardPdfBtn" type="button" class="btn btn-dark">
+                <i class="fas fa-download me-2"></i>Export Dashboard PDF
+            </button>
         </div>
     </div>
 </div>
@@ -296,6 +299,8 @@
 </form>
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 // Chart.js configurations
 let trendData = JSON.parse('{{ trends|escapejs }}');
@@ -306,7 +311,7 @@ const heatmapData = JSON.parse('{{ heatmap|escapejs }}');
 const slaData = JSON.parse('{{ sla_data|escapejs }}');
 
 // Trend Chart
-const trendCtx = document.getElementById('trendChart').getContext('2d');
+const trendCtx = document.getElementById('trendChart').getContext('2d', { willReadFrequently: true });
 new Chart(trendCtx, {
     type: 'line',
     data: {
@@ -337,7 +342,7 @@ new Chart(trendCtx, {
 });
 
 // Types Chart
-const typesCtx = document.getElementById('typesChart').getContext('2d');
+const typesCtx = document.getElementById('typesChart').getContext('2d', { willReadFrequently: true });
 new Chart(typesCtx, {
     type: 'doughnut',
     data: {
@@ -362,7 +367,7 @@ new Chart(typesCtx, {
 });
 
 // Heatmap Chart
-const heatmapCtx = document.getElementById('heatmapChart').getContext('2d');
+const heatmapCtx = document.getElementById('heatmapChart').getContext('2d', { willReadFrequently: true });
 new Chart(heatmapCtx, {
     type: 'bar',
     data: {
@@ -387,7 +392,7 @@ new Chart(heatmapCtx, {
 });
 
 // SLA Chart
-const slaCtx = document.getElementById('slaChart').getContext('2d');
+const slaCtx = document.getElementById('slaChart').getContext('2d', { willReadFrequently: true });
 new Chart(slaCtx, {
     type: 'bar',
     data: {
@@ -430,6 +435,75 @@ function uploadFile() {
         document.getElementById('importForm').submit();
     }
 }
+
+// Repairs Dashboard PDF export
+document.getElementById('exportRepairsDashboardPdfBtn')?.addEventListener('click', async function () {
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF || !window.html2canvas) {
+        alert('PDF export libraries not loaded');
+        return;
+    }
+    const pdf = new jsPDF('p', 'pt', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    async function addElementAsImage(selector, addNewPageIfNeeded = true, margin = 20) {
+        const el = typeof selector === 'string' ? document.querySelector(selector) : selector;
+        if (!el) return;
+        const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = pageWidth - margin * 2;
+        const imgHeight = canvas.height * (imgWidth / canvas.width);
+        let y = margin;
+        if (imgHeight <= pageHeight - margin * 2) {
+            pdf.addImage(imgData, 'PNG', margin, y, imgWidth, imgHeight, undefined, 'FAST');
+            if (addNewPageIfNeeded) pdf.addPage();
+        } else {
+            let remainingHeight = imgHeight;
+            let sY = 0;
+            const sliceHeight = canvas.height * ((pageHeight - margin * 2) / imgHeight);
+            while (remainingHeight > 0) {
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = canvas.width;
+                sliceCanvas.height = Math.min(sliceHeight, canvas.height - sY);
+                const ctx = sliceCanvas.getContext('2d');
+                ctx.drawImage(canvas, 0, sY, canvas.width, sliceCanvas.height, 0, 0, sliceCanvas.width, sliceCanvas.height);
+                const sliceImg = sliceCanvas.toDataURL('image/png');
+                const sliceRenderedHeight = (sliceCanvas.height / canvas.width) * imgWidth;
+                pdf.addImage(sliceImg, 'PNG', margin, margin, imgWidth, sliceRenderedHeight, undefined, 'FAST');
+                remainingHeight -= sliceRenderedHeight;
+                sY += sliceCanvas.height;
+                if (remainingHeight > 0) pdf.addPage();
+            }
+            if (addNewPageIfNeeded) pdf.addPage();
+        }
+    }
+
+    try {
+        await addElementAsImage('#repairsDashboardHeader');
+        if (pdf.getNumberOfPages() > 1) pdf.deletePage(pdf.getNumberOfPages());
+        await addElementAsImage('#trendChart');
+        if (pdf.getNumberOfPages() > 1) pdf.deletePage(pdf.getNumberOfPages());
+        await addElementAsImage('#typesChart');
+        if (pdf.getNumberOfPages() > 1) pdf.deletePage(pdf.getNumberOfPages());
+        await addElementAsImage('#heatmapChart');
+        if (pdf.getNumberOfPages() > 1) pdf.deletePage(pdf.getNumberOfPages());
+        await addElementAsImage('#slaChart');
+        if (pdf.getNumberOfPages() > 1) pdf.deletePage(pdf.getNumberOfPages());
+        // Capture Top Rooms and Technicians tables
+        const cards = Array.from(document.querySelectorAll('.card .card-header .card-title')).filter(h => /Top Rooms|Technician Performance/i.test(h.innerText)).map(h => h.closest('.card'));
+        for (const c of cards) {
+            await addElementAsImage(c);
+            if (pdf.getNumberOfPages() > 1) pdf.deletePage(pdf.getNumberOfPages());
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Failed to generate PDF.');
+        return;
+    }
+
+    pdf.save('repairs_dashboard.pdf');
+});
 </script>
 {% endblock %}
 {% endblock %}

@@ -16,7 +16,7 @@
 
 {% block content %}
 <!-- Dashboard Header -->
-<div class="dashboard-header">
+<div class="dashboard-header" id="dashboardHeader">
     <div class="hotel-info d-flex align-items-center">
         <div class="flex-grow-1">
             <h1 class="mb-2">Guest Requests Analytics Dashboard</h1>
@@ -26,6 +26,15 @@
             <a href="{% url 'guest_requests:upload' %}" class="btn btn-success">
                 <i class="fas fa-upload me-2"></i>Upload Data
             </a>
+            <a href="{% url 'guest_requests:export_excel' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-outline-primary">
+                <i class="fas fa-file-excel me-2"></i>Export Excel
+            </a>
+            <a href="{% url 'guest_requests:export_pdf' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-outline-secondary">
+                <i class="fas fa-file-pdf me-2"></i>Export PDF
+            </a>
+            <button id="exportDashboardPdfBtn" type="button" class="btn btn-dark">
+                <i class="fas fa-download me-2"></i>Export Dashboard PDF
+            </button>
         </div>
     </div>
 </div>
@@ -207,7 +216,7 @@
         <!-- Table Row -->
         <div class="row mb-4">
             <div class="col-12">
-                <div class="card">
+                <div class="card" id="latestCard">
                     <div class="card-header"><h5 class="card-title mb-0">Latest 10 Guest Requests</h5></div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -246,6 +255,8 @@
 </div>
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script>
 // Chart.js configurations
 let createdTrend = JSON.parse('{{ created_trend_json|escapejs }}');
@@ -260,7 +271,7 @@ const byPriority = JSON.parse('{{ by_priority_json|escapejs }}');
 const byType = JSON.parse('{{ by_type_json|escapejs }}');
 
 // Trend Chart
-const trendCtx = document.getElementById('trendChart').getContext('2d');
+const trendCtx = document.getElementById('trendChart').getContext('2d', { willReadFrequently: true });
 new Chart(trendCtx, {
     type: 'line',
     data: {
@@ -287,7 +298,7 @@ new Chart(trendCtx, {
 });
 
 // Department Pie Chart
-const deptCtx = document.getElementById('deptChart').getContext('2d');
+const deptCtx = document.getElementById('deptChart').getContext('2d', { willReadFrequently: true });
 new Chart(deptCtx, {
     type: 'doughnut',
     data: {
@@ -304,7 +315,7 @@ new Chart(deptCtx, {
 });
 
 // Priority Chart
-const priorityCtx = document.getElementById('priorityChart').getContext('2d');
+const priorityCtx = document.getElementById('priorityChart').getContext('2d', { willReadFrequently: true });
 new Chart(priorityCtx, {
     type: 'bar',
     data: {
@@ -321,7 +332,7 @@ new Chart(priorityCtx, {
 });
 
 // Types Chart
-const typesCtx = document.getElementById('typesChart').getContext('2d');
+const typesCtx = document.getElementById('typesChart').getContext('2d', { willReadFrequently: true });
 new Chart(typesCtx, {
     type: 'doughnut',
     data: {
@@ -335,6 +346,74 @@ new Chart(typesCtx, {
         }]
     },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+});
+
+// Dashboard PDF export (client-side capture)
+document.getElementById('exportDashboardPdfBtn')?.addEventListener('click', async function () {
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF || !window.html2canvas) {
+        alert('PDF export libraries not loaded');
+        return;
+    }
+    const pdf = new jsPDF('p', 'pt', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    async function addElementAsImage(selector, addNewPageIfNeeded = true, margin = 20) {
+        const el = typeof selector === 'string' ? document.querySelector(selector) : selector;
+        if (!el) return;
+        const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = pageWidth - margin * 2;
+        const imgHeight = canvas.height * (imgWidth / canvas.width);
+        let y = margin;
+        if (imgHeight <= pageHeight - margin * 2) {
+            pdf.addImage(imgData, 'PNG', margin, y, imgWidth, imgHeight, undefined, 'FAST');
+            if (addNewPageIfNeeded) pdf.addPage();
+        } else {
+            let remainingHeight = imgHeight;
+            let sY = 0;
+            const sliceHeight = canvas.height * ((pageHeight - margin * 2) / imgHeight);
+            while (remainingHeight > 0) {
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = canvas.width;
+                sliceCanvas.height = Math.min(sliceHeight, canvas.height - sY);
+                const ctx = sliceCanvas.getContext('2d');
+                ctx.drawImage(canvas, 0, sY, canvas.width, sliceCanvas.height, 0, 0, sliceCanvas.width, sliceCanvas.height);
+                const sliceImg = sliceCanvas.toDataURL('image/png');
+                const sliceRenderedHeight = (sliceCanvas.height / canvas.width) * imgWidth;
+                pdf.addImage(sliceImg, 'PNG', margin, margin, imgWidth, sliceRenderedHeight, undefined, 'FAST');
+                remainingHeight -= sliceRenderedHeight;
+                sY += sliceCanvas.height;
+                if (remainingHeight > 0) pdf.addPage();
+            }
+            if (addNewPageIfNeeded) pdf.addPage();
+        }
+    }
+
+    try {
+        await addElementAsImage('#dashboardHeader');
+        if (pdf.getNumberOfPages() > 1) pdf.deletePage(pdf.getNumberOfPages());
+        await addElementAsImage('#trendChart');
+        if (pdf.getNumberOfPages() > 1) pdf.deletePage(pdf.getNumberOfPages());
+        await addElementAsImage('#deptChart');
+        if (pdf.getNumberOfPages() > 1) pdf.deletePage(pdf.getNumberOfPages());
+        await addElementAsImage('#priorityChart');
+        if (pdf.getNumberOfPages() > 1) pdf.deletePage(pdf.getNumberOfPages());
+        await addElementAsImage('#typesChart');
+        if (pdf.getNumberOfPages() > 1) pdf.deletePage(pdf.getNumberOfPages());
+        const latestCard = document.getElementById('latestCard');
+        if (latestCard) {
+            await addElementAsImage(latestCard);
+            if (pdf.getNumberOfPages() > 1) pdf.deletePage(pdf.getNumberOfPages());
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Failed to generate PDF.');
+        return;
+    }
+
+    pdf.save('guest_requests_dashboard.pdf');
 });
 </script>
 {% endblock %}
