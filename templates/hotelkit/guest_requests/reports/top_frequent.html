@@ -1,5 +1,6 @@
 {% extends 'dashboard_base.html' %}
 {% load static %}
+{% load duration_filters %}
 
 {% block title %}Guest Requests • Top Frequent Requests{% endblock %}
 
@@ -57,7 +58,7 @@
           <tr>
             <td>{{ r.type }}</td>
             <td>{{ r.count }}</td>
-            <td>{% if r.avg_completion %}{{ r.avg_completion }}{% else %}-{% endif %}</td>
+            <td>{% if r.avg_completion %}{{ r.avg_completion|format_duration }}{% else %}-{% endif %}</td>
           </tr>
           {% empty %}
           <tr><td colspan="3" class="text-center py-4">No data</td></tr>

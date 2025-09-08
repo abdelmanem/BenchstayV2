@@ -1,5 +1,6 @@
 {% extends 'dashboard_base.html' %}
 {% load static %}
+{% load duration_filters %}
 
 {% block title %}Guest Requests • Department Performance{% endblock %}
 
@@ -59,8 +60,8 @@
           <tr>
             <td>{{ r.dept }}</td>
             <td>{{ r.total }}</td>
-            <td>{% if r.avg_response %}{{ r.avg_response }}{% else %}-{% endif %}</td>
-            <td>{% if r.avg_execution %}{{ r.avg_execution }}{% else %}-{% endif %}</td>
+            <td>{% if r.avg_response %}{{ r.avg_response|format_duration }}{% else %}-{% endif %}</td>
+            <td>{% if r.avg_execution %}{{ r.avg_execution|format_duration }}{% else %}-{% endif %}</td>
             <td>{{ r.sla_pct }}%</td>
           </tr>
           {% empty %}
