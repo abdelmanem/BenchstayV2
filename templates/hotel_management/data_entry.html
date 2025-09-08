@@ -5,6 +5,7 @@
 {% block title %}Daily Data - {{ hotel.name }} - Benchstay{% endblock %}
 
 {% block content %}
+{% if perms.accounts.view_hotel_management %}
 <div class="container mt-4">
     <!-- Hidden element to store currency symbol for JavaScript -->
     <span id="currency-symbol" data-symbol="{{ system_settings.effective_currency_symbol }}" style="display: none;"></span>
@@ -433,3 +434,12 @@ document.getElementById('competitor').addEventListener('change', function() {
 });
 </script>
 {% endblock %}
+{% else %}
+<div class="container py-5">
+    <div class="alert alert-warning">
+        You do not have permission to view this page.
+    </div>
+    <p class="text-muted">Please contact an administrator to request access.</p>
+    <a href="/" class="btn btn-secondary">Back</a>
+    </div>
+{% endif %}
