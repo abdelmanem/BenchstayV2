@@ -129,7 +129,7 @@
                 <td><span class="status-badge status-{{ gr.state|lower|slugify }}">{{ gr.state|default:'-' }}</span></td>
                 <td>{{ gr.priority|default:'-' }}</td>
                 <td class="location-cell">{{ gr.location|default:'-' }}</td>
-                <td><div class="description-cell" title="{{ gr.text }}">{% if gr.text %}{{ gr.text|truncatewords:12 }}{% else %}<span class="text-muted">No description</span>{% endif %}</div></td>
+                <td><div class="description-cell" title="{{ gr.type }}">{% if gr.type %}{{ gr.type|truncatewords:12 }}{% else %}<span class="text-muted">No description</span>{% endif %}</div></td>
                 <td>{{ gr.creator }}</td>
                 <td>{% if gr.recipients %}{{ gr.recipients }}{% else %}<span class="text-muted">Unassigned</span>{% endif %}</td>
                 <td>{% if gr.response_time %}{{ gr.response_time }}{% else %}<span class="text-muted">N/A</span>{% endif %}</td>
