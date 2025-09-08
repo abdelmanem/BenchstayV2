@@ -58,23 +58,35 @@ class UploadView(View):
         # Column mapping (handle both raw export headers and hotelkit.utils renames)
         COLS = {
             'ID': 'request_id',
-            'id_field': 'request_id',  # when parse_excel_file already renamed
+            'id_field': 'request_id',
             'Creator': 'creator',
             'Recipients': 'recipients',
             'Location': 'location',
+            'Location path': 'location_path',
             'Type': 'type',
+            'Type path': 'type_path',
+            'Assets': 'assets',
+            'Ticket': 'ticket',
             'Creation date': 'creation_date',
             'Priority': 'priority',
             'State': 'state',
+            'Latest state change user': 'latest_state_change_user',
+            'Latest state change time': 'latest_state_change_time',
             'Time accepted': 'time_accepted',
+            'Time in progress': 'time_in_progress',
             'Time done': 'time_done',
+            'Time "in evaluation"': 'time_in_evaluation',
+            'Text': 'text',
+            'Link': 'link',
+            'Submitted result': 'submitted_result',
+            'Comments': 'comments',
         }
 
         # Normalize columns
         df = df.rename(columns={k: v for k, v in COLS.items() if k in df.columns})
 
         # Ensure datetime parsing
-        for col in ['creation_date', 'time_accepted', 'time_done']:
+        for col in ['creation_date', 'latest_state_change_time', 'time_accepted', 'time_in_progress', 'time_done', 'time_in_evaluation']:
             if col in df.columns:
                 df[col] = pd.to_datetime(df[col], errors='coerce')
 
@@ -121,12 +133,24 @@ class UploadView(View):
                 creator=str(row.get('creator') or row.get('Creator') or ''),
                 recipients=str(row.get('recipients') or row.get('Recipients') or ''),
                 location=row.get('location') or row.get('Location') or None,
+                location_path=row.get('location_path') or row.get('Location path') or None,
                 type=row.get('type') or row.get('Type') or None,
+                type_path=row.get('type_path') or row.get('Type path') or None,
+                assets=row.get('assets') or row.get('Assets') or None,
+                ticket=row.get('ticket') or row.get('Ticket') or None,
                 creation_date=normalize_dt(row.get('creation_date') or row.get('Creation date')),
                 priority=row.get('priority') or row.get('Priority') or None,
                 state=row.get('state') or row.get('State') or None,
+                latest_state_change_user=row.get('latest_state_change_user') or row.get('Latest state change user') or None,
+                latest_state_change_time=normalize_dt(row.get('latest_state_change_time') or row.get('Latest state change time')),
                 time_accepted=normalize_dt(row.get('time_accepted') or row.get('Time accepted')),
+                time_in_progress=normalize_dt(row.get('time_in_progress') or row.get('Time in progress')),
                 time_done=normalize_dt(row.get('time_done') or row.get('Time done')),
+                time_in_evaluation=normalize_dt(row.get('time_in_evaluation') or row.get('Time "in evaluation"')),
+                text=row.get('text') or row.get('Text') or None,
+                link=row.get('link') or row.get('Link') or None,
+                submitted_result=row.get('submitted_result') or row.get('Submitted result') or None,
+                comments=row.get('comments') or row.get('Comments') or None,
             )
             gr.save()
             imported += 1
