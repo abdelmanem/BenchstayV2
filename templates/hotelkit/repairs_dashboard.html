@@ -298,7 +298,9 @@
 {% block extra_js %}
 <script>
 // Chart.js configurations
-const trendData = JSON.parse('{{ trends|escapejs }}');
+let trendData = JSON.parse('{{ trends|escapejs }}');
+// Ensure chronological order by date
+trendData = trendData.sort((a,b) => new Date(a.date) - new Date(b.date));
 const typesData = JSON.parse('{{ types|escapejs }}');
 const heatmapData = JSON.parse('{{ heatmap|escapejs }}');
 const slaData = JSON.parse('{{ sla_data|escapejs }}');

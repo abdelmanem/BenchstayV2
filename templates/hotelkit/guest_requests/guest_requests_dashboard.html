@@ -248,8 +248,13 @@
 {% block extra_js %}
 <script>
 // Chart.js configurations
-const createdTrend = JSON.parse('{{ created_trend_json|escapejs }}');
-const completedTrend = JSON.parse('{{ completed_trend_json|escapejs }}');
+let createdTrend = JSON.parse('{{ created_trend_json|escapejs }}');
+let completedTrend = JSON.parse('{{ completed_trend_json|escapejs }}');
+
+// Ensure chronological order by day
+const parseDay = (d) => (d ? new Date(d) : new Date(0));
+createdTrend = createdTrend.sort((a,b) => parseDay(a.day) - parseDay(b.day));
+completedTrend = completedTrend.sort((a,b) => parseDay(a.day) - parseDay(b.day));
 const byRecipients = JSON.parse('{{ by_recipients_json|escapejs }}');
 const byPriority = JSON.parse('{{ by_priority_json|escapejs }}');
 const byType = JSON.parse('{{ by_type_json|escapejs }}');

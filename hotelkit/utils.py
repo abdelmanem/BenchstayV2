@@ -264,7 +264,9 @@ def get_repair_trends(start_date=None, end_date=None):
                 'closed_count': item['closed_count']
             }
     
-    return list(trend_data.values())
+    # Return chronologically sorted list by date
+    sorted_items = sorted(trend_data.values(), key=lambda x: x['date'])
+    return sorted_items
 
 
 def get_repair_types(start_date=None, end_date=None):

@@ -65,6 +65,7 @@
           <div class="info-row"><span class="info-label">Priority:</span><span class="info-value">{{ guest_request.priority|default:'-' }}</span></div>
           <div class="info-row"><span class="info-label">Creator:</span><span class="info-value">{{ guest_request.creator|default:'-' }}</span></div>
           <div class="info-row"><span class="info-label">Assigned To:</span><span class="info-value">{{ guest_request.recipients|default:'Unassigned' }}</span></div>
+          <div class="info-row"><span class="info-label">State:</span><span class="info-value">{{ guest_request.state|default:'-' }}</span></div>
           <div class="info-row"><span class="info-label">Response Time:</span><span class="info-value">{% if guest_request.response_time %}{{ guest_request.response_time }}{% else %}<span class="text-muted">N/A</span>{% endif %}</span></div>
           <div class="info-row"><span class="info-label">Completion Time:</span><span class="info-value">{% if guest_request.completion_time %}{{ guest_request.completion_time }}{% else %}<span class="text-muted">N/A</span>{% endif %}</span></div>
         </div>
@@ -72,10 +73,21 @@
     </div>
     <div class="col-lg-4">
       <div class="card mb-4">
-        <div class="card-header"><h5 class="card-title mb-0">Timestamps</h5></div>
+        <div class="card-header"><h5 class="card-title mb-0">Timing Information</h5></div>
         <div class="card-body">
+          <div class="info-row"><span class="info-label">Response Time:</span><span class="info-value">{% if guest_request.response_time %}{{ guest_request.response_time }}{% else %}<span class="text-muted">N/A</span>{% endif %}</span></div>
+          <div class="info-row"><span class="info-label">Execution Time:</span><span class="info-value">{% if guest_request.total_duration %}{{ guest_request.total_duration }}{% else %}<span class="text-muted">N/A</span>{% endif %}</span></div>
+          <div class="info-row"><span class="info-label">Completion Time:</span><span class="info-value">{% if guest_request.completion_time %}{{ guest_request.completion_time }}{% else %}<span class="text-muted">N/A</span>{% endif %}</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h5 class="card-title mb-0">Additional Information</h5></div>
+        <div class="card-body">
+          <div class="info-row"><span class="info-label">Request ID:</span><span class="info-value">{{ guest_request.request_id }}</span></div>
           <div class="info-row"><span class="info-label">Time Accepted:</span><span class="info-value">{% if guest_request.time_accepted %}{{ guest_request.time_accepted|date:"F d, Y H:i" }}{% else %}<span class="text-muted">N/A</span>{% endif %}</span></div>
           <div class="info-row"><span class="info-label">Time Done:</span><span class="info-value">{% if guest_request.time_done %}{{ guest_request.time_done|date:"F d, Y H:i" }}{% else %}<span class="text-muted">N/A</span>{% endif %}</span></div>
+          <div class="info-row"><span class="info-label">Uploaded At:</span><span class="info-value">{{ guest_request.uploaded_at|date:"F d, Y H:i" }}</span></div>
         </div>
       </div>
     </div>
