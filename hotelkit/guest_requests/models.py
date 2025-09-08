@@ -1,4 +1,5 @@
 from django.db import models
+from django import forms
 
 
 class GuestRequest(models.Model):
@@ -44,4 +45,22 @@ class GuestRequest(models.Model):
 
         super().save(*args, **kwargs)
 
+
+
+class GuestRequestForm(forms.ModelForm):
+    class Meta:
+        model = GuestRequest
+        fields = [
+            'state',
+            'priority',
+            'recipients',
+            'location',
+            'type',
+            'time_accepted',
+            'time_done',
+        ]
+        widgets = {
+            'time_accepted': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'time_done': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
 

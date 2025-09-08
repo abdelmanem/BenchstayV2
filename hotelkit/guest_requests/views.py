@@ -6,12 +6,14 @@ from django.db import models
 from django.db.models import Avg, Count
 from django.utils import timezone
 from django.conf import settings
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import user_passes_test
 
 import json
 import pandas as pd
 
 from ..utils import parse_excel_file
-from .models import GuestRequest
+from .models import GuestRequest, GuestRequestForm
 from django.views.generic import TemplateView
 from django.db.models.functions import TruncMonth
 
@@ -857,4 +859,53 @@ class GuestRequestsByTypeView(TemplateView):
         })
         return context
 
+
+
+class GuestRequestDetailView(TemplateView):
+    template_name = 'hotelkit/guest_requests/guest_request_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        pk = kwargs.get('pk')
+        gr = GuestRequest.objects.get(pk=pk)
+        context['guest_request'] = gr
+        return context
+
+
+class GuestRequestEditView(View):
+    template_name = 'hotelkit/guest_requests/guest_request_edit.html'
+
+    def get_object(self, pk):
+        return GuestRequest.objects.get(pk=pk)
+
+    def get(self, request, pk):
+        gr = self.get_object(pk)
+        form = GuestRequestForm(instance=gr)
+        return render(request, self.template_name, {'form': form, 'guest_request': gr})
+
+    def post(self, request, pk):
+        gr = self.get_object(pk)
+        form = GuestRequestForm(request.POST, instance=gr)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Guest request {gr.request_id} updated successfully.")
+            return redirect(reverse('guest_requests:guest_request_detail', args=[gr.pk]))
+        return render(request, self.template_name, {'form': form, 'guest_request': gr})
+
+
+def _is_staff_or_superuser(user):
+    return user.is_authenticated and (user.is_staff or user.is_superuser)
+
+
+@method_decorator(user_passes_test(_is_staff_or_superuser), name='dispatch')
+class GuestRequestDeleteView(View):
+    def post(self, request, pk):
+        try:
+            gr = GuestRequest.objects.get(pk=pk)
+            display_id = gr.request_id
+            gr.delete()
+            messages.success(request, f"Guest request {display_id} deleted successfully.")
+        except GuestRequest.DoesNotExist:
+            messages.error(request, "Guest request not found.")
+        return redirect(reverse('guest_requests:by_type'))
 

@@ -1,0 +1,86 @@
+{% extends 'dashboard_base.html' %}
+{% load static %}
+
+{% block title %}Guest Request #{{ guest_request.request_id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gr-detail-card { border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .gr-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 8px 8px 0 0; }
+    .gr-body { padding: 1.5rem; }
+    .status-badge { padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 600; }
+    .status-open { background-color: #fef3c7; color: #92400e; }
+    .status-in-progress { background-color: #dbeafe; color: #1e40af; }
+    .status-done { background-color: #d1fae5; color: #065f46; }
+    .status-evaluation { background-color: #f3e8ff; color: #7c3aed; }
+    .info-row { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #f3f4f6; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { font-weight: 600; color: #374151; min-width: 160px; }
+    .info-value { color: #1f2937; flex: 1; text-align: right; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+  <div class="hotel-info d-flex align-items-center">
+    <div class="flex-grow-1">
+      <h1 class="mb-2">Guest Request #{{ guest_request.request_id }}</h1>
+      <p class="mb-0 opacity-90">Detailed view of guest request</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'guest_requests:by_type' %}" class="btn btn-light">
+        <i class="fas fa-arrow-left me-2"></i>Back to List
+      </a>
+      <a href="{% url 'guest_requests:guest_request_edit' guest_request.id %}" class="btn btn-primary">
+        <i class="fas fa-edit me-2"></i>Edit
+      </a>
+      {% if user.is_staff or user.is_superuser %}
+      <form method="post" action="{% url 'guest_requests:guest_request_delete' guest_request.id %}" style="display:inline-block; margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete guest request #{{ guest_request.request_id }}?')">
+          <i class="fas fa-trash me-2"></i>Delete
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-lg-8">
+      <div class="gr-detail-card">
+        <div class="gr-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h3 class="mb-1">{{ guest_request.type|default:"Uncategorized" }}</h3>
+              <p class="mb-0 opacity-90">{{ guest_request.location|default:"-" }}</p>
+            </div>
+            <span class="status-badge status-{{ guest_request.state|lower|slugify }}">{{ guest_request.state|default:'-' }}</span>
+          </div>
+        </div>
+        <div class="gr-body">
+          <h5 class="mb-3">Basic Information</h5>
+          <div class="info-row"><span class="info-label">Creation Date:</span><span class="info-value">{{ guest_request.creation_date|date:"F d, Y H:i" }}</span></div>
+          <div class="info-row"><span class="info-label">Priority:</span><span class="info-value">{{ guest_request.priority|default:'-' }}</span></div>
+          <div class="info-row"><span class="info-label">Creator:</span><span class="info-value">{{ guest_request.creator|default:'-' }}</span></div>
+          <div class="info-row"><span class="info-label">Assigned To:</span><span class="info-value">{{ guest_request.recipients|default:'Unassigned' }}</span></div>
+          <div class="info-row"><span class="info-label">Response Time:</span><span class="info-value">{% if guest_request.response_time %}{{ guest_request.response_time }}{% else %}<span class="text-muted">N/A</span>{% endif %}</span></div>
+          <div class="info-row"><span class="info-label">Completion Time:</span><span class="info-value">{% if guest_request.completion_time %}{{ guest_request.completion_time }}{% else %}<span class="text-muted">N/A</span>{% endif %}</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card mb-4">
+        <div class="card-header"><h5 class="card-title mb-0">Timestamps</h5></div>
+        <div class="card-body">
+          <div class="info-row"><span class="info-label">Time Accepted:</span><span class="info-value">{% if guest_request.time_accepted %}{{ guest_request.time_accepted|date:"F d, Y H:i" }}{% else %}<span class="text-muted">N/A</span>{% endif %}</span></div>
+          <div class="info-row"><span class="info-label">Time Done:</span><span class="info-value">{% if guest_request.time_done %}{{ guest_request.time_done|date:"F d, Y H:i" }}{% else %}<span class="text-muted">N/A</span>{% endif %}</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
