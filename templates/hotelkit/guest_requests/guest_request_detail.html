@@ -62,6 +62,7 @@
         <div class="gr-body">
           <h5 class="mb-3">Basic Information</h5>
           <div class="info-row"><span class="info-label">Creation Date:</span><span class="info-value">{{ guest_request.creation_date|date:"F d, Y H:i" }}</span></div>
+          <div class="info-row"><span class="info-label">Type:</span><span class="info-value">{{ guest_request.type|default:'-' }}</span></div>
           <div class="info-row"><span class="info-label">Priority:</span><span class="info-value">{{ guest_request.priority|default:'-' }}</span></div>
           <div class="info-row"><span class="info-label">Creator:</span><span class="info-value">{{ guest_request.creator|default:'-' }}</span></div>
           <div class="info-row"><span class="info-label">Assigned To:</span><span class="info-value">{{ guest_request.recipients|default:'Unassigned' }}</span></div>
@@ -85,6 +86,14 @@
         <div class="card-header"><h5 class="card-title mb-0">Additional Information</h5></div>
         <div class="card-body">
           <div class="info-row"><span class="info-label">Request ID:</span><span class="info-value">{{ guest_request.request_id }}</span></div>
+          <div class="info-row"><span class="info-label">Ticket:</span><span class="info-value">{{ guest_request.ticket|default:'-' }}</span></div>
+          <div class="info-row"><span class="info-label">Link:</span><span class="info-value">
+            {% if guest_request.link %}
+              <a href="{{ guest_request.link }}" target="_blank" class="text-primary">{{ guest_request.link|truncatechars:30 }}</a>
+            {% else %}
+              <span class="text-muted">N/A</span>
+            {% endif %}
+          </span></div>
           <div class="info-row"><span class="info-label">Time Accepted:</span><span class="info-value">{% if guest_request.time_accepted %}{{ guest_request.time_accepted|date:"F d, Y H:i" }}{% else %}<span class="text-muted">N/A</span>{% endif %}</span></div>
           <div class="info-row"><span class="info-label">Time Done:</span><span class="info-value">{% if guest_request.time_done %}{{ guest_request.time_done|date:"F d, Y H:i" }}{% else %}<span class="text-muted">N/A</span>{% endif %}</span></div>
           <div class="info-row"><span class="info-label">Uploaded At:</span><span class="info-value">{{ guest_request.uploaded_at|date:"F d, Y H:i" }}</span></div>
