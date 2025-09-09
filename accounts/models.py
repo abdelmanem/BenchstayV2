@@ -13,6 +13,7 @@ class UserProfile(models.Model):
             ('view_reporting', 'Can view reporting pages'),
             ('view_hotelkit', 'Can view hotelkit pages'),
             ('view_hotel_management', 'Can view hotel management pages'),
+            ('view_data_entry', 'Can view Data Entry page only'),
             ('manage_users', 'Can manage users and roles'),
         ]
     

@@ -110,21 +110,27 @@
             <div class="col-md-3 col-lg-2 d-md-block sidebar collapse">
                 <div class="position-sticky pt-3">
                     <ul class="nav flex-column">
+                        {% if perms.accounts.view_hotel_management %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'hotel_management:home' %}">
                                 <i class="bi bi-speedometer2 me-2"></i> Home
                             </a>
                         </li>
+                        {% endif %}
+                        {% if perms.accounts.view_hotel_management or perms.accounts.view_data_entry %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'hotel_management:data_entry' %}">
                                 <i class="bi bi-pencil-square me-2"></i> Data Entry
                             </a>
                         </li>
+                        {% endif %}
+                        {% if perms.accounts.view_hotel_management %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'hotel_management:hotel_data' %}">
                                 <i class="bi bi-building me-2"></i> Hotels Portal
                             </a>
                         </li>
+                        {% endif %}
 
     
                         <li class="nav-item">
