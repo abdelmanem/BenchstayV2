@@ -136,11 +136,13 @@
                         <li class="nav-item">
 
                         </li>
+                        {% if perms.accounts.view_reporting %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'reporting:dashboard' %}">
                                 <i class="bi bi-file-earmark-text me-2"></i> Reports
                             </a>
                         </li>
+                        {% endif %}
                         {% if user.profile.is_admin %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'accounts:admin_settings' %}?tab=user_management">
