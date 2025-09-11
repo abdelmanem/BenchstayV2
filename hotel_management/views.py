@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, permission_required
+from django.core.exceptions import PermissionDenied
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Avg, Sum, Q
@@ -645,9 +646,14 @@ def calculate_market_indices(date_str):
         # Don't raise the exception, just log it
         # This ensures data entry still works even if index calculation fails
 @login_required
-@permission_required('accounts.view_hotel_management', raise_exception=True)
 def data_entry(request):
     """View for data entry and management of hotel and competitor data"""
+    # Allow users with either full hotel_management access or data_entry-only access
+    if not (
+        request.user.has_perm('accounts.view_hotel_management') or
+        request.user.has_perm('accounts.view_data_entry')
+    ):
+        raise PermissionDenied
     hotel = Hotel.objects.first()
     competitors = Competitor.objects.all().order_by('name')
     
@@ -877,9 +883,13 @@ def data_entry(request):
     return render(request, 'hotel_management/data_entry.html', context)
 
 @login_required
-@permission_required('accounts.view_hotel_management', raise_exception=True)
 def hotel_data_api(request, pk):
     """API endpoint for retrieving hotel data"""
+    if not (
+        request.user.has_perm('accounts.view_hotel_management') or
+        request.user.has_perm('accounts.view_data_entry')
+    ):
+        raise PermissionDenied
     try:
         data = get_object_or_404(DailyData, id=pk)
         return JsonResponse({
@@ -892,9 +902,13 @@ def hotel_data_api(request, pk):
         return JsonResponse({'error': str(e)}, status=400)
 
 @login_required
-@permission_required('accounts.view_hotel_management', raise_exception=True)
 def competitor_data_api(request, pk):
     """API endpoint for retrieving competitor data"""
+    if not (
+        request.user.has_perm('accounts.view_hotel_management') or
+        request.user.has_perm('accounts.view_data_entry')
+    ):
+        raise PermissionDenied
     try:
         data = get_object_or_404(CompetitorData, id=pk)
         return JsonResponse({
