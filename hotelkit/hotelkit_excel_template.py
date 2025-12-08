@@ -64,14 +64,19 @@ def populate_guest_requests(ws) -> None:
     ws.append(headers)
     style_header(ws[1])
 
+    # Anchor sample dates in the previous month so default filters show data
     today = date.today()
+    first_of_this_month = today.replace(day=1)
+    last_month_end = first_of_this_month - timedelta(days=1)
+    last_month_start = last_month_end.replace(day=1)
+    base_date = last_month_start
     samples: List[Tuple] = [
         ("GR-001", "Anna Li", "1205", "Housekeeping", "High", "Open",
-         today - timedelta(days=1), today + timedelta(days=1), None, "Extra towels"),
+         base_date + timedelta(days=2), base_date + timedelta(days=5), None, "Extra towels"),
         ("GR-002", "Mohamed Ali", "803", "Maintenance", "Medium", "In Progress",
-         today - timedelta(days=2), today + timedelta(days=2), None, "AC warm"),
+         base_date + timedelta(days=6), base_date + timedelta(days=10), None, "AC warm"),
         ("GR-003", "Sara Kim", "402", "Concierge", "Low", "Closed",
-         today - timedelta(days=5), today - timedelta(days=1), today - timedelta(days=1),
+         base_date + timedelta(days=12), base_date + timedelta(days=15), base_date + timedelta(days=15),
          "Restaurant booking done"),
     ]
     for row in samples:
@@ -90,16 +95,21 @@ def populate_repairs(ws) -> None:
     ws.append(headers)
     style_header(ws[1])
 
+    # Anchor sample dates in the previous month so default filters show data
     today = date.today()
+    first_of_this_month = today.replace(day=1)
+    last_month_end = first_of_this_month - timedelta(days=1)
+    last_month_start = last_month_end.replace(day=1)
+    base_date = last_month_start
     samples: List[Tuple] = [
         ("RP-1001", "Lobby", "Elevator A", "Door sensor fault", "High",
-         "In Progress", today - timedelta(days=1), today + timedelta(days=2), None,
+         "In Progress", base_date + timedelta(days=3), base_date + timedelta(days=8), None,
          "J. Ortega", "Waiting on part"),
         ("RP-1002", "Pool", "Pump 2", "Low pressure", "High",
-         "Open", today, today + timedelta(days=3), None, "K. Singh", None),
+         "Open", base_date + timedelta(days=9), base_date + timedelta(days=12), None, "K. Singh", None),
         ("RP-1003", "Rooms", "HVAC", "No cooling", "Medium",
-         "Closed", today - timedelta(days=4), today - timedelta(days=1),
-         today - timedelta(days=1), "L. Perez", "Recharged gas"),
+         "Closed", base_date + timedelta(days=14), base_date + timedelta(days=18),
+         base_date + timedelta(days=18), "L. Perez", "Recharged gas"),
     ]
     for row in samples:
         ws.append(row)
