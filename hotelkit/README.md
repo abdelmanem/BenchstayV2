@@ -38,6 +38,11 @@ Visit: `/hotelkit/repairs/dashboard/`
 ### Download Template
 Visit: `/hotelkit/repairs/api/repairs/template/`
 
+### Generate Excel Template Locally (one-click)
+1. Install Python and `openpyxl` (`pip install openpyxl`).
+2. In the `hotelkit` folder, double-click `run_excel_template.bat`.
+3. The script creates `hotelkit_template.xlsx` in the same folder with the guest requests and repairs dashboards.
+
 ### API Endpoints
 - `/hotelkit/repairs/api/repairs/` - CRUD operations
 - `/hotelkit/repairs/api/repairs/kpis/` - Key performance indicators

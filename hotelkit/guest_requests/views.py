@@ -13,6 +13,7 @@ from django.http import HttpResponse
 import json
 import pandas as pd
 
+from ..hotelkit_excel_template import render_template_bytes
 from ..utils import parse_excel_file
 import io
 try:
@@ -971,6 +972,22 @@ def _filter_guest_requests(request):
     if request_type:
         qs = qs.filter(type=request_type)
     return qs
+
+
+class GuestRequestsTemplateView(View):
+    """Download the combined hotelkit Excel template (guest + repairs dashboards)."""
+
+    def get(self, request):
+        try:
+            payload = render_template_bytes()
+            resp = HttpResponse(
+                payload,
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            resp['Content-Disposition'] = 'attachment; filename="hotelkit_template.xlsx"'
+            return resp
+        except Exception as exc:
+            return HttpResponse(f"Failed to generate template: {exc}", status=500)
 
 
 class GuestRequestsExportExcelView(View):

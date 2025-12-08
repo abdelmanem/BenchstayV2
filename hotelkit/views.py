@@ -31,7 +31,7 @@ from .serializers import (
 )
 from .utils import (
     parse_excel_file, import_repair_requests_from_dataframe,
-    create_excel_template, get_repair_kpis, get_repair_trends,
+    get_repair_kpis, get_repair_trends,
     get_repair_types, get_repair_heatmap, get_top_rooms,
     get_technician_performance, get_sla_compliance,
     # Advanced reporting functions
@@ -43,6 +43,7 @@ from .utils import (
     # Export functions
     export_to_excel, export_to_pdf
 )
+from .hotelkit_excel_template import render_template_bytes
 
 
 def json_serializer(obj):
@@ -408,23 +409,12 @@ class RepairTemplateView(APIView):
     def get(self, request):
         """Download Excel template."""
         try:
-            # Create template DataFrame
-            df = create_excel_template()
-            
-            # Create Excel file in memory
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                df.to_excel(writer, sheet_name='Repair Requests Template', index=False)
-            
-            output.seek(0)
-            
-            # Create HTTP response
+            payload = render_template_bytes()
             response = HttpResponse(
-                output.read(),
+                payload,
                 content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             )
-            response['Content-Disposition'] = 'attachment; filename="repair_requests_template.xlsx"'
-            
+            response['Content-Disposition'] = 'attachment; filename="hotelkit_template.xlsx"'
             return response
             
         except Exception as e:
