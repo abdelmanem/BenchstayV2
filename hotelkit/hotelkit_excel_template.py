@@ -36,9 +36,13 @@ def style_header(cells: Iterable) -> None:
 
 def auto_fit(ws) -> None:
     for column_cells in ws.columns:
+        # Find a real cell for column letter (skip merged placeholders)
+        first_real = next((c for c in column_cells if hasattr(c, "column_letter")), None)
+        if not first_real:
+            continue
         max_len = max(len(str(c.value)) if c.value else 0 for c in column_cells)
         adjusted = max(10, min(max_len + 2, 40))
-        ws.column_dimensions[column_cells[0].column_letter].width = adjusted
+        ws.column_dimensions[first_real.column_letter].width = adjusted
 
 
 def add_table(ws, name: str, ref: str) -> None:
