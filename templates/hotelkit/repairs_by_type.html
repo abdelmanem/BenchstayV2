@@ -98,7 +98,7 @@
 <!-- Filters -->
 <div class="card mb-4">
     <div class="card-body">
-        <form method="get" class="row g-3">
+        <form method="get" class="row gx-3 gy-3 align-items-end">
             <div class="col-md-2">
                 <label class="form-label">Start Date</label>
                 <input type="date" name="start_date" value="{{ start_date }}" class="form-control">
@@ -117,7 +117,7 @@
                     <option value="In Evaluation" {% if status == 'In Evaluation' %}selected{% endif %}>In Evaluation</option>
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Repair Type</label>
                 <select name="type" class="form-control">
                     <option value="">All Types</option>
@@ -128,8 +128,22 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary me-2">
+            <div class="col-md-3">
+                <label class="form-label">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="search"
+                           name="q"
+                           class="form-control"
+                           placeholder="Search all columns"
+                           value="{{ search_query }}">
+                </div>
+                <small class="text-muted">Match any text across ID, location, type, status, etc.</small>
+            </div>
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary">
                     <i class="fas fa-filter me-2"></i>Apply Filters
                 </button>
                 <a href="{% url 'repairs:repairs_by_type' %}" class="btn btn-outline-secondary">

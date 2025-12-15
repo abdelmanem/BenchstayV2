@@ -4,6 +4,8 @@ from ..views import (
     RepairRequestViewSet, RepairImportView, RepairTemplateView,
     RepairsDashboardView, RepairsByTypeView, repairs_import_view,
     RepairDetailView, RepairUpdateView, RepairDeleteView,
+    RepairsBulkDeleteView,
+    RepairsTableView,
     # Report Views
     DailyFlashReportView, WeeklyTrendReportView, MonthlyRootCauseReportView,
     # Export Views
@@ -28,6 +30,8 @@ urlpatterns = [
     path('api/', include(api_urlpatterns)),
     path('dashboard/', RepairsDashboardView.as_view(), name='repairs_dashboard'),
     path('by-type/', RepairsByTypeView.as_view(), name='repairs_by_type'),
+    path('table/', RepairsTableView.as_view(), name='repairs_table'),
+    path('bulk-delete/', RepairsBulkDeleteView.as_view(), name='repairs_bulk_delete'),
     path('repair/<int:id>/', RepairDetailView.as_view(), name='repair_detail'),
     path('repair/<int:id>/edit/', RepairUpdateView.as_view(), name='repair_edit'),
     path('repair/<int:id>/delete/', RepairDeleteView.as_view(), name='repair_delete'),

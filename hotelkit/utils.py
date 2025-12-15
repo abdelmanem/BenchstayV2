@@ -186,7 +186,19 @@ def get_repair_kpis(start_date=None, end_date=None):
         avg_response_time = None
     
     # Calculate average completion time
-    completion_times = queryset.exclude(completion_time__isnull=True).values_list('completion_time', flat=True)
+    # Keep only rows that actually completed (time_done + completion_time present)
+    completion_queryset = RepairRequest.objects.exclude(completion_time__isnull=True, time_done__isnull=True)
+    
+    # Apply date window based on creation date (to mirror Excel filter the user described)
+    if start_date:
+        completion_queryset = completion_queryset.filter(creation_date__date__gte=start_date)
+    if end_date:
+        completion_queryset = completion_queryset.filter(creation_date__date__lte=end_date)
+    
+    # Guard against bad data where completion_time is negative (time_done before creation)
+    completion_queryset = completion_queryset.filter(completion_time__gte=timezone.timedelta(0))
+    
+    completion_times = completion_queryset.values_list('completion_time', flat=True)
     if completion_times:
         total_completion_time = sum(completion_times, timezone.timedelta())
         avg_completion_time = total_completion_time / len(completion_times)
