@@ -67,6 +67,7 @@
             <table class="table performance-table mb-0">
                 <thead>
                     <tr>
+                        <th><input type="checkbox" id="arrival-select-all"></th>
                         <th role="button" data-sort-key="room">Room</th>
                         <th role="button" data-sort-key="guest_name">Guest Name</th>
                         <th role="button" data-sort-key="confirmation_number">Confirmation #</th>
@@ -81,7 +82,7 @@
                 </thead>
                 <tbody id="arrivals-body">
                     <tr>
-                        <td colspan="10" class="text-center py-4 text-muted">
+                        <td colspan="11" class="text-center py-4 text-muted">
                             Loading arrivals...
                         </td>
                     </tr>
@@ -100,11 +101,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('arrival-search-input');
     const pageSizeSelect = document.getElementById('arrival-page-size');
     const countLabel = document.getElementById('arrival-count');
+    const selectAllCheckbox = document.getElementById('arrival-select-all');
     const headerCells = document.querySelectorAll('thead th[data-sort-key]');
     let allArrivals = [];
     let currentSortKey = 'room';
     let currentSortDir = 'asc';
     let currentPage = 1;
+    let selectedIds = new Set(); // track selected by confirmation_number
 
     function renderTable() {
         const q = (searchInput.value || '').toLowerCase().trim();
@@ -173,13 +176,18 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (!pageItems.length) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No arrivals found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted">No arrivals found.</td></tr>';
             return;
         }
 
         pageItems.forEach(item => {
             const tr = document.createElement('tr');
+            const id = item.confirmation_number || '';
+            const isSelected = id && selectedIds.has(id);
+            tr.classList.toggle('selected-row', isSelected);
+
             tr.innerHTML = `
+                <td><input type="checkbox" class="arrival-row-checkbox" data-id="${id}" ${isSelected ? 'checked' : ''}></td>
                 <td>${item.room || '-'}</td>
                 <td>${item.guest_name || '-'}</td>
                 <td>${item.confirmation_number || '-'}</td>
@@ -191,17 +199,59 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td>${item.nights != null ? item.nights : '-'}</td>
                 <td>${item.status || '-'}</td>
             `;
-            // Click to highlight the active row
-            tr.addEventListener('click', () => {
-                tbody.querySelectorAll('.active-row').forEach(r => r.classList.remove('active-row'));
-                tr.classList.add('active-row');
+
+            // Row click toggles checkbox & selection
+            tr.addEventListener('click', (e) => {
+                // Avoid double-toggling when clicking directly on checkbox
+                if (e.target && e.target.classList.contains('arrival-row-checkbox')) {
+                    return;
+                }
+                const cb = tr.querySelector('.arrival-row-checkbox');
+                if (!cb) return;
+                cb.checked = !cb.checked;
+                const cid = cb.dataset.id;
+                if (cid) {
+                    if (cb.checked) {
+                        selectedIds.add(cid);
+                    } else {
+                        selectedIds.delete(cid);
+                    }
+                }
+                tr.classList.toggle('selected-row', cb.checked);
+                if (selectAllCheckbox) {
+                    const checkboxes = tbody.querySelectorAll('.arrival-row-checkbox');
+                    const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(c => c.checked);
+                    selectAllCheckbox.checked = allChecked;
+                }
             });
+
+            // Checkbox change keeps selection state
+            const cb = tr.querySelector('.arrival-row-checkbox');
+            if (cb) {
+                cb.addEventListener('change', () => {
+                    const cid = cb.dataset.id;
+                    if (cid) {
+                        if (cb.checked) {
+                            selectedIds.add(cid);
+                        } else {
+                            selectedIds.delete(cid);
+                        }
+                    }
+                    tr.classList.toggle('selected-row', cb.checked);
+                    if (selectAllCheckbox) {
+                        const checkboxes = tbody.querySelectorAll('.arrival-row-checkbox');
+                        const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(c => c.checked);
+                        selectAllCheckbox.checked = allChecked;
+                    }
+                });
+            }
+
             tbody.appendChild(tr);
         });
     }
 
     function loadArrivals() {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">Loading arrivals...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted">Loading arrivals...</td></tr>';
         let dateVal = dateInput.value;
         // Ensure default is today's date if no value is set
         if (!dateVal) {
@@ -219,10 +269,12 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => response.json())
             .then(data => {
                 allArrivals = data.results || [];
+                selectedIds.clear();
+                if (selectAllCheckbox) selectAllCheckbox.checked = false;
                 renderTable();
             })
             .catch(() => {
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-danger">Failed to load arrivals.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-danger">Failed to load arrivals.</td></tr>';
             });
     }
 
@@ -255,6 +307,26 @@ document.addEventListener('DOMContentLoaded', function () {
             renderTable();
         });
     });
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', () => {
+            const checked = selectAllCheckbox.checked;
+            const checkboxes = tbody.querySelectorAll('.arrival-row-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = checked;
+                const cid = cb.dataset.id;
+                const row = cb.closest('tr');
+                if (cid) {
+                    if (checked) {
+                        selectedIds.add(cid);
+                    } else {
+                        selectedIds.delete(cid);
+                    }
+                }
+                if (row) row.classList.toggle('selected-row', checked);
+            });
+        });
+    }
 
     loadArrivals();
 });
