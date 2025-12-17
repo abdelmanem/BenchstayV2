@@ -7,6 +7,7 @@ from django.views.decorators.http import require_POST
 import json
 import pandas as pd
 from .models import ArrivalRecord
+from django.db import models
 
 
 @login_required
@@ -274,27 +275,18 @@ def arrivals_api(request):
     except ValueError:
         return JsonResponse({"error": "Invalid date format, expected YYYY-MM-DD."}, status=400)
 
-    qs = ArrivalRecord.objects.filter(arrival_date=target_date).order_by("room")
-    today = timezone.localdate()
+    qs = ArrivalRecord.objects.filter(
+        arrival_date=target_date
+    ).exclude(status__iexact="in house").order_by("room")
     data = []
     for a in qs:
-        status = a.status
-        # For arrivals on the selected date that are currently marked as "In House",
-        # display them as "Expected" instead.
-        if (
-            status
-            and status.lower() == "in house"
-            and a.arrival_date == target_date
-        ):
-            status = "Expected"
-
         data.append(
             {
                 "room": a.room,
                 "guest_name": a.guest_name,
                 "eta": a.eta,
                 "nights": a.nights,
-                "status": status,
+                "status": a.status,
                 "property_name": a.property_name,
                 "confirmation_number": a.confirmation_number,
                 "first_name": a.first_name,
@@ -339,20 +331,67 @@ def delete_arrivals(request):
 
 @login_required
 @permission_required("accounts.view_hotel_management", raise_exception=True)
+@require_POST
+def mark_in_house(request):
+    """
+    Bulk update arrivals to In-House status by confirmation numbers.
+    Expects JSON body: {"confirmation_numbers": ["ABC123", "DEF456", ...]}
+    """
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    ids = payload.get("confirmation_numbers") or []
+    if not isinstance(ids, list):
+        return JsonResponse({"error": "confirmation_numbers must be a list"}, status=400)
+
+    cleaned_ids = [str(x).strip() for x in ids if str(x).strip()]
+    if not cleaned_ids:
+        return JsonResponse({"updated": 0})
+
+    updated = ArrivalRecord.objects.filter(
+        confirmation_number__in=cleaned_ids
+    ).update(status="In-House")
+
+    return JsonResponse({"updated": updated})
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
 def in_house_api(request):
     """
     API endpoint for in-house guests.
+    Returns guests whose status is 'In-House' for a given date (default: today).
     """
-    sample = [
+    date_param = request.GET.get("date")
+    try:
+        if date_param:
+            target_date = timezone.datetime.strptime(date_param, "%Y-%m-%d").date()
+        else:
+            target_date = timezone.localdate()
+    except ValueError:
+        return JsonResponse({"error": "Invalid date format, expected YYYY-MM-DD."}, status=400)
+
+    # In-house: status In-House and within stay dates if dates are available
+    qs = ArrivalRecord.objects.filter(status__iexact="in-house")
+    qs = qs.filter(
+        arrival_date__lte=target_date
+    ).filter(
+        models.Q(departure_date__isnull=True) | models.Q(departure_date__gte=target_date)
+    ).order_by("room")
+
+    data = [
         {
-            "room": "305",
-            "guest_name": "In House Guest",
-            "arrival_date": "2025-12-16",
-            "departure_date": "2025-12-20",
-            "status": "In House",
+            "room": a.room,
+            "guest_name": a.guest_name,
+            "arrival_date": a.arrival_date.isoformat() if a.arrival_date else None,
+            "departure_date": a.departure_date.isoformat() if a.departure_date else None,
+            "status": a.status,
         }
+        for a in qs
     ]
-    return JsonResponse({"results": sample})
+    return JsonResponse({"results": data})
 
 
 @login_required
