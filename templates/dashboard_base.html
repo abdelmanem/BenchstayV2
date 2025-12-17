@@ -931,25 +931,31 @@
             </a>
         </li>
         <div class="guest-experience-submenu" id="guestExperienceSubmenu" style="display: none;">
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'guest_experience:arrivals' %}" data-tooltip="Arrivals">
-                    <i class="fas fa-sign-in-alt"></i>
-                    <span class="nav-link-text">Arrivals</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'guest_experience:in_house' %}" data-tooltip="Guests In-House">
-                    <i class="fas fa-bed"></i>
-                    <span class="nav-link-text">Guests In-House</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{% url 'guest_experience:departures' %}" data-tooltip="Departures">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span class="nav-link-text">Departures</span>
-                </a>
-            </li>
-        </div>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'guest_experience:dashboard' %}" data-tooltip="Dashboard">
+                <i class="fas fa-chart-line"></i>
+                <span class="nav-link-text">Dashboard</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'guest_experience:arrivals' %}" data-tooltip="Arrivals">
+                <i class="fas fa-sign-in-alt"></i>
+                <span class="nav-link-text">Arrivals</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'guest_experience:in_house' %}" data-tooltip="Guests In-House">
+                <i class="fas fa-bed"></i>
+                <span class="nav-link-text">Guests In-House</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'guest_experience:departures' %}" data-tooltip="Departures">
+                <i class="fas fa-sign-out-alt"></i>
+                <span class="nav-link-text">Departures</span>
+            </a>
+        </li>
+    </div>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'accounts:help' %}" data-tooltip="Help">
                             <i class="fas fa-question-circle"></i>
