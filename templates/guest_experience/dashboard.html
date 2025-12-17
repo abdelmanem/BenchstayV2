@@ -1,0 +1,519 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}Guest Experience - Arrivals Dashboard{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .chart-container {
+        position: relative;
+        height: 350px;
+        width: 100%;
+    }
+    .metric-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .metric-label {
+        font-size: 0.9rem;
+        color: #6b7280;
+        margin-bottom: 8px;
+    }
+    .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #1f2937;
+    }
+    .metric-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Dashboard Header -->
+<div class="dashboard-header mb-4">
+    <div class="hotel-info d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="mb-1">Arrivals Dashboard</h1>
+            <p class="mb-0 text-white-50">Analytics and insights for guest arrivals</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'guest_experience:arrivals' %}" class="btn btn-light btn-sm">
+                <i class="fas fa-list me-1"></i>View Arrivals
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" id="dashboardFilters" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">End Date</label>
+                <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select name="status" id="status_filter" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="Expected" {% if status_filter == 'Expected' %}selected{% endif %}>Expected</option>
+                    <option value="In-House" {% if status_filter == 'In-House' %}selected{% endif %}>In-House</option>
+                    <option value="Departed" {% if status_filter == 'Departed' %}selected{% endif %}>Departed</option>
+                    <option value="Cancelled" {% if status_filter == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Country</label>
+                <input type="text" name="country" id="country_filter" value="{{ country_filter }}" class="form-control" placeholder="Filter by country">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Travel Agent</label>
+                <input type="text" name="travel_agent" id="travel_agent_filter" value="{{ travel_agent_filter }}" class="form-control" placeholder="Filter by agent">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Search</label>
+                <input type="text" name="search" id="search_filter" value="{{ search_query }}" class="form-control" placeholder="Search...">
+            </div>
+            <div class="col-md-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter me-2"></i>Apply Filters
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="resetFilters">
+                    <i class="fas fa-redo me-2"></i>Reset
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row mb-4" id="metricsCards">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                    <i class="fas fa-users metric-icon text-primary"></i>
+                </div>
+                <div>
+                    <div class="metric-label">Total Arrivals</div>
+                    <div class="metric-value" id="metric-total">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                    <i class="fas fa-clock metric-icon text-warning"></i>
+                </div>
+                <div>
+                    <div class="metric-label">Expected</div>
+                    <div class="metric-value" id="metric-expected">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                    <i class="fas fa-bed metric-icon text-success"></i>
+                </div>
+                <div>
+                    <div class="metric-label">In-House</div>
+                    <div class="metric-value" id="metric-inhouse">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                    <i class="fas fa-sign-out-alt metric-icon text-info"></i>
+                </div>
+                <div>
+                    <div class="metric-label">Departed</div>
+                    <div class="metric-value" id="metric-departed">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 1 -->
+<div class="row mb-4">
+    <div class="col-lg-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-chart-line me-2"></i>Daily Arrivals Trend</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="dailyTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-chart-pie me-2"></i>Status Breakdown</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 2 -->
+<div class="row mb-4">
+    <div class="col-lg-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-globe me-2"></i>Top Countries</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="countryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-user-tag me-2"></i>Top Nationalities</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="nationalityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 3 -->
+<div class="row mb-4">
+    <div class="col-lg-12 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0"><i class="fas fa-briefcase me-2"></i>Top Travel Agents</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="agentChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let chartInstances = {};
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardData();
+    
+    // Reset filters button
+    document.getElementById('resetFilters').addEventListener('click', function() {
+        const today = new Date().toISOString().split('T')[0];
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        document.getElementById('start_date').value = thirtyDaysAgo;
+        document.getElementById('end_date').value = today;
+        document.getElementById('status_filter').value = '';
+        document.getElementById('country_filter').value = '';
+        document.getElementById('search_filter').value = '';
+        loadDashboardData();
+    });
+    
+    // Auto-refresh on filter change (optional - can be removed if you prefer manual submit)
+    // document.getElementById('dashboardFilters').addEventListener('change', function() {
+    //     loadDashboardData();
+    // });
+});
+
+function loadDashboardData() {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    const status = document.getElementById('status_filter').value;
+    const country = document.getElementById('country_filter').value;
+    const travelAgent = document.getElementById('travel_agent_filter').value;
+    const search = document.getElementById('search_filter').value;
+    
+    const params = new URLSearchParams({
+        start_date: startDate,
+        end_date: endDate,
+        status: status,
+        country: country,
+        travel_agent: travelAgent,
+        search: search
+    });
+    
+    fetch(`{% url 'guest_experience:dashboard_api' %}?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            updateMetrics(data.metrics);
+            updateCharts(data.charts);
+        })
+        .catch(error => {
+            console.error('Error loading dashboard data:', error);
+        });
+}
+
+function updateMetrics(metrics) {
+    document.getElementById('metric-total').textContent = metrics.total_arrivals || 0;
+    document.getElementById('metric-expected').textContent = metrics.expected || 0;
+    document.getElementById('metric-inhouse').textContent = metrics.in_house || 0;
+    document.getElementById('metric-departed').textContent = metrics.departed || 0;
+}
+
+function updateCharts(charts) {
+    // Daily Trend Chart
+    updateDailyTrendChart(charts.daily_trend);
+    
+    // Status Breakdown Chart
+    updateStatusChart(charts.status_breakdown);
+    
+    // Country Chart
+    updateCountryChart(charts.country_breakdown);
+    
+    // Nationality Chart
+    updateNationalityChart(charts.nationality_breakdown);
+    
+    // Agent Chart
+    updateAgentChart(charts.agent_breakdown);
+}
+
+function updateDailyTrendChart(data) {
+    const ctx = document.getElementById('dailyTrendChart').getContext('2d');
+    
+    if (chartInstances.dailyTrend) {
+        chartInstances.dailyTrend.destroy();
+    }
+    
+    chartInstances.dailyTrend = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.labels || [],
+            datasets: [{
+                label: 'Arrivals',
+                data: data.data || [],
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+function updateStatusChart(data) {
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    
+    if (chartInstances.status) {
+        chartInstances.status.destroy();
+    }
+    
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    const colors = [
+        'rgba(59, 130, 246, 0.8)',   // blue
+        'rgba(16, 185, 129, 0.8)',   // green
+        'rgba(245, 158, 11, 0.8)',   // yellow
+        'rgba(239, 68, 68, 0.8)',    // red
+        'rgba(139, 92, 246, 0.8)',   // purple
+    ];
+    
+    chartInstances.status = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: values,
+                backgroundColor: colors.slice(0, labels.length),
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function updateCountryChart(data) {
+    const ctx = document.getElementById('countryChart').getContext('2d');
+    
+    if (chartInstances.country) {
+        chartInstances.country.destroy();
+    }
+    
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    
+    chartInstances.country = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Arrivals',
+                data: values,
+                backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                borderColor: 'rgb(59, 130, 246)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+function updateNationalityChart(data) {
+    const ctx = document.getElementById('nationalityChart').getContext('2d');
+    
+    if (chartInstances.nationality) {
+        chartInstances.nationality.destroy();
+    }
+    
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    
+    chartInstances.nationality = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Arrivals',
+                data: values,
+                backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                borderColor: 'rgb(16, 185, 129)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+function updateAgentChart(data) {
+    const ctx = document.getElementById('agentChart').getContext('2d');
+    
+    if (chartInstances.agent) {
+        chartInstances.agent.destroy();
+    }
+    
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    
+    chartInstances.agent = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Arrivals',
+                data: values,
+                backgroundColor: 'rgba(139, 92, 246, 0.8)',
+                borderColor: 'rgb(139, 92, 246)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+</script>
+{% endblock %}
+
