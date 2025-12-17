@@ -62,9 +62,12 @@
             </div>
             <div class="d-flex flex-column">
                 <label class="small text-muted mb-1">&nbsp;</label>
-                <div>
+                <div class="d-flex gap-2">
                     <button id="arrival-delete-selected" class="btn btn-sm btn-outline-danger" disabled>
                         <i class="fas fa-trash-alt me-1"></i>Delete Selected
+                    </button>
+                    <button id="arrival-mark-inhouse-selected" class="btn btn-sm btn-outline-primary" disabled>
+                        <i class="fas fa-bed me-1"></i>Mark In-House
                     </button>
                 </div>
             </div>
@@ -111,6 +114,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const countLabel = document.getElementById('arrival-count');
     const selectAllCheckbox = document.getElementById('arrival-select-all');
     const deleteButton = document.getElementById('arrival-delete-selected');
+    const markInHouseButton = document.getElementById('arrival-mark-inhouse-selected');
     const headerCells = document.querySelectorAll('thead th[data-sort-key]');
     let allArrivals = [];
     let currentSortKey = 'room';
@@ -133,9 +137,10 @@ document.addEventListener('DOMContentLoaded', function () {
         return cookieValue;
     }
 
-    function updateDeleteButton() {
-        if (!deleteButton) return;
-        deleteButton.disabled = selectedIds.size === 0;
+    function updateActionButtons() {
+        const disabled = selectedIds.size === 0;
+        if (deleteButton) deleteButton.disabled = disabled;
+        if (markInHouseButton) markInHouseButton.disabled = disabled;
     }
 
     function renderTable() {
@@ -272,7 +277,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(c => c.checked);
                         selectAllCheckbox.checked = allChecked;
                     }
-                    updateDeleteButton();
+                    updateActionButtons();
                 });
             }
 
@@ -355,6 +360,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 if (row) row.classList.toggle('selected-row', checked);
             });
+            updateActionButtons();
         });
     }
 
@@ -382,11 +388,41 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(() => {
                 selectedIds.clear();
                 if (selectAllCheckbox) selectAllCheckbox.checked = false;
-                updateDeleteButton();
+                updateActionButtons();
                 loadArrivals();
             })
             .catch(() => {
                 alert('Failed to delete selected arrivals.');
+            });
+        });
+    }
+
+    if (markInHouseButton) {
+        markInHouseButton.addEventListener('click', () => {
+            if (!selectedIds.size) return;
+            const csrftoken = getCookie('csrftoken');
+            fetch("{% url 'guest_experience:mark_in_house' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken || ''
+                },
+                body: JSON.stringify({ confirmation_numbers: Array.from(selectedIds) })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to update arrivals');
+                }
+                return response.json();
+            })
+            .then(() => {
+                selectedIds.clear();
+                if (selectAllCheckbox) selectAllCheckbox.checked = false;
+                updateActionButtons();
+                loadArrivals();
+            })
+            .catch(() => {
+                alert('Failed to mark selected arrivals as In-House.');
             });
         });
     }
