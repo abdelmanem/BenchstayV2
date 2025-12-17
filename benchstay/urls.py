@@ -27,6 +27,7 @@ urlpatterns = [
     path('hotel/', include('hotel_management.urls')),
     path('reports/', include('reporting.urls')),
     path('hotelkit/', include('hotelkit.urls')),
+    path('guest-experience/', include(('guest_experience.urls', 'guest_experience'), namespace='guest_experience')),
 ]
 
 if settings.DEBUG:

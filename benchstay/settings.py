@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'hotel_management',
     'reporting',
     'hotelkit',
+    'guest_experience',
 ]
 
 MIDDLEWARE = [

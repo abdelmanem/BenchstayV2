@@ -1,0 +1,77 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}Guest Experience - Departures{% endblock %}
+
+{% block content %}
+<div class="dashboard-header mb-4">
+    <div class="hotel-info d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="mb-1">Departures</h1>
+            <p class="mb-0 text-white-50">Follow guests due to depart and their checkout status.</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Departures Overview</h5>
+        <span class="text-muted small">Date: {{ today }}</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table performance-table mb-0">
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th>Guest Name</th>
+                        <th>Checkout Time</th>
+                        <th>Balance</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="departures-body">
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">
+                            Loading departures...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    fetch("{% url 'guest_experience:departures_api' %}")
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('departures-body');
+            tbody.innerHTML = '';
+            if (!data.results || data.results.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No departures found.</td></tr>';
+                return;
+            }
+            data.results.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.room || '-'}</td>
+                    <td>${item.guest_name || '-'}</td>
+                    <td>${item.checkout_time || '-'}</td>
+                    <td>${item.balance ?? '-'}</td>
+                    <td>${item.status || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        })
+        .catch(() => {
+            const tbody = document.getElementById('departures-body');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Failed to load departures.</td></tr>';
+        });
+});
+</script>
+{% endblock %}
+
+

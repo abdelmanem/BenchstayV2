@@ -1,0 +1,256 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}Guest Experience - Arrivals{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Highlight row in blue on hover */
+    #arrivals-body tr:hover {
+        background-color: #e0f2ff !important; /* light blue */
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header mb-4">
+    <div class="hotel-info d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="mb-1">Arrivals</h1>
+            <p class="mb-0 text-white-50">Track expected guests arriving today and upcoming days.</p>
+        </div>
+        <form method="post" action="{% url 'guest_experience:upload_arrivals' %}" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+            {% csrf_token %}
+            <input type="file" name="file" accept=".xlsx,.xls" class="form-control form-control-sm" required>
+            <button type="submit" class="btn btn-light btn-sm">
+                <i class="fas fa-upload me-1"></i>Import Excel
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h5 class="card-title mb-0">Arrivals Overview</h5>
+            <small class="text-muted">Showing arrivals for selected date</small>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <div class="d-flex flex-column">
+                <label class="small text-muted mb-1" for="arrival-date-filter">Arrival Date</label>
+                <input type="date" id="arrival-date-filter" class="form-control form-control-sm" value="{{ today }}">
+            </div>
+            <div class="d-flex flex-column">
+                <label class="small text-muted mb-1" for="arrival-search-input">Search</label>
+                <input type="text" id="arrival-search-input" class="form-control form-control-sm" placeholder="Search room, guest, confirmation, agent, country">
+            </div>
+            <div class="d-flex flex-column">
+                <label class="small text-muted mb-1" for="arrival-page-size">Rows per page</label>
+                <select id="arrival-page-size" class="form-select form-select-sm">
+                    <option value="all" selected>All</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <div class="d-flex flex-column">
+                <label class="small text-muted mb-1">&nbsp;</label>
+                <div id="arrival-count" class="small text-muted">0 rows</div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table performance-table mb-0">
+                <thead>
+                    <tr>
+                        <th role="button" data-sort-key="room">Room</th>
+                        <th role="button" data-sort-key="guest_name">Guest Name</th>
+                        <th role="button" data-sort-key="confirmation_number">Confirmation #</th>
+                        <th role="button" data-sort-key="phone">Phone</th>
+                        <th role="button" data-sort-key="country">Country</th>
+                        <th role="button" data-sort-key="travel_agent_name">Travel Agent</th>
+                        <th role="button" data-sort-key="arrival_date">Arrival</th>
+                        <th role="button" data-sort-key="departure_date">Departure</th>
+                        <th role="button" data-sort-key="nights">Nights</th>
+                        <th role="button" data-sort-key="status">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="arrivals-body">
+                    <tr>
+                        <td colspan="10" class="text-center py-4 text-muted">
+                            Loading arrivals...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tbody = document.getElementById('arrivals-body');
+    const dateInput = document.getElementById('arrival-date-filter');
+    const searchInput = document.getElementById('arrival-search-input');
+    const pageSizeSelect = document.getElementById('arrival-page-size');
+    const countLabel = document.getElementById('arrival-count');
+    const headerCells = document.querySelectorAll('thead th[data-sort-key]');
+    let allArrivals = [];
+    let currentSortKey = 'room';
+    let currentSortDir = 'asc';
+    let currentPage = 1;
+
+    function renderTable() {
+        const q = (searchInput.value || '').toLowerCase().trim();
+        tbody.innerHTML = '';
+
+        let filtered = allArrivals.filter(item => {
+            if (!q) return true;
+            const haystack = [
+                item.room,
+                item.guest_name,
+                item.phone,
+                item.confirmation_number,
+                item.travel_agent_name,
+                item.country,
+                item.nationality,
+            ].map(v => (v || '').toString().toLowerCase()).join(' ');
+            return haystack.includes(q);
+        });
+
+        // Sort
+        if (currentSortKey) {
+            filtered = filtered.slice().sort((a, b) => {
+                const av = a[currentSortKey];
+                const bv = b[currentSortKey];
+
+                // Handle null/undefined
+                if (av == null && bv == null) return 0;
+                if (av == null) return currentSortDir === 'asc' ? 1 : -1;
+                if (bv == null) return currentSortDir === 'asc' ? -1 : 1;
+
+                // Numeric sort for nights
+                if (currentSortKey === 'nights') {
+                    const an = Number(av) || 0;
+                    const bn = Number(bv) || 0;
+                    return currentSortDir === 'asc' ? an - bn : bn - an;
+                }
+
+                const as = av.toString().toLowerCase();
+                const bs = bv.toString().toLowerCase();
+                if (as < bs) return currentSortDir === 'asc' ? -1 : 1;
+                if (as > bs) return currentSortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        const total = filtered.length;
+        const pageSizeVal = pageSizeSelect ? pageSizeSelect.value : 'all';
+        let pageSize = pageSizeVal === 'all' ? total || 1 : parseInt(pageSizeVal, 10) || total || 1;
+
+        const totalPages = pageSizeVal === 'all' ? 1 : Math.max(1, Math.ceil(total / pageSize));
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const startIndex = pageSizeVal === 'all' ? 0 : (currentPage - 1) * pageSize;
+        const endIndex = pageSizeVal === 'all' ? total : Math.min(startIndex + pageSize, total);
+        const pageItems = filtered.slice(startIndex, endIndex);
+
+        if (countLabel) {
+            if (!total) {
+                countLabel.textContent = '0 rows';
+            } else if (pageSizeVal === 'all') {
+                countLabel.textContent = `${total} rows`;
+            } else {
+                countLabel.textContent = `Showing ${startIndex + 1}–${endIndex} of ${total}`;
+            }
+        }
+
+        if (!pageItems.length) {
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No arrivals found.</td></tr>';
+            return;
+        }
+
+        pageItems.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.room || '-'}</td>
+                <td>${item.guest_name || '-'}</td>
+                <td>${item.confirmation_number || '-'}</td>
+                <td>${item.phone || '-'}</td>
+                <td>${item.country || '-'}</td>
+                <td>${item.travel_agent_name || '-'}</td>
+                <td>${item.arrival_date || '-'}</td>
+                <td>${item.departure_date || '-'}</td>
+                <td>${item.nights != null ? item.nights : '-'}</td>
+                <td>${item.status || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function loadArrivals() {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">Loading arrivals...</td></tr>';
+        let dateVal = dateInput.value;
+        // Ensure default is today's date if no value is set
+        if (!dateVal) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            dateVal = `${yyyy}-${mm}-${dd}`;
+            if (dateInput) {
+                dateInput.value = dateVal;
+            }
+        }
+        const params = dateVal ? `?date=${encodeURIComponent(dateVal)}` : '';
+        fetch("{% url 'guest_experience:arrivals_api' %}" + params)
+            .then(response => response.json())
+            .then(data => {
+                allArrivals = data.results || [];
+                renderTable();
+            })
+            .catch(() => {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-danger">Failed to load arrivals.</td></tr>';
+            });
+    }
+
+    if (dateInput) {
+        dateInput.addEventListener('change', loadArrivals);
+    }
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            currentPage = 1;
+            renderTable();
+        });
+    }
+    if (pageSizeSelect) {
+        pageSizeSelect.addEventListener('change', () => {
+            currentPage = 1;
+            renderTable();
+        });
+    }
+    headerCells.forEach(th => {
+        th.addEventListener('click', () => {
+            const key = th.getAttribute('data-sort-key');
+            if (!key) return;
+            if (currentSortKey === key) {
+                currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortKey = key;
+                currentSortDir = 'asc';
+            }
+            currentPage = 1;
+            renderTable();
+        });
+    });
+
+    loadArrivals();
+});
+</script>
+{% endblock %}
+
+

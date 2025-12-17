@@ -284,7 +284,7 @@
         }
 
         /* Collapsible submenu styles */
-        .repairs-submenu, .reports-submenu, .guest-requests-submenu {
+        .repairs-submenu, .reports-submenu, .guest-requests-submenu, .guest-experience-submenu {
             margin-left: 1rem;
             border-left: 2px solid rgba(37, 99, 235, 0.2);
             padding-left: 0.5rem;
@@ -292,7 +292,7 @@
             margin-bottom: 0.5rem;
         }
 
-        .repairs-submenu .nav-link, .reports-submenu .nav-link, .guest-requests-submenu .nav-link {
+        .repairs-submenu .nav-link, .reports-submenu .nav-link, .guest-requests-submenu .nav-link, .guest-experience-submenu .nav-link {
             padding: 0.5rem 1rem;
             font-size: 0.875rem;
             margin-bottom: 0.25rem;
@@ -301,7 +301,8 @@
 
         .repairs-submenu .nav-link i:first-child,
         .reports-submenu .nav-link i:first-child,
-        .guest-requests-submenu .nav-link i:first-child {
+        .guest-requests-submenu .nav-link i:first-child,
+        .guest-experience-submenu .nav-link i:first-child {
             width: 16px;
             min-width: 16px;
             font-size: 0.875rem;
@@ -309,14 +310,16 @@
 
         .repairs-submenu .nav-link:hover,
         .reports-submenu .nav-link:hover,
-        .guest-requests-submenu .nav-link:hover {
+        .guest-requests-submenu .nav-link:hover,
+        .guest-experience-submenu .nav-link:hover {
             background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(8, 145, 178, 0.05));
             transform: translateX(2px);
         }
 
         .sidebar.collapsed .repairs-submenu,
         .sidebar.collapsed .reports-submenu,
-        .sidebar.collapsed .guest-requests-submenu {
+        .sidebar.collapsed .guest-requests-submenu,
+        .sidebar.collapsed .guest-experience-submenu {
             display: none !important;
         }
 
@@ -817,12 +820,6 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="{% url 'repairs:repairs_table' %}" data-tooltip="Repairs Table">
-                    <i class="fas fa-table"></i>
-                    <span class="nav-link-text">Repairs Table</span>
-                </a>
-            </li>
-            <li class="nav-item">
                 <a class="nav-link" href="#" data-tooltip="Reports" id="reportsMenuToggle">
                     <i class="fas fa-chart-bar"></i>
                     <span class="nav-link-text">Reports</span>
@@ -923,6 +920,33 @@
                 <a class="nav-link" href="{% url 'guest_requests:department_performance' %}" data-tooltip="Department Performance">
                     <i class="fas fa-people-group"></i>
                     <span class="nav-link-text">Department Performance</span>
+                </a>
+            </li>
+        </div>
+        <li class="nav-item">
+            <a class="nav-link" href="#" data-tooltip="Guest Experience" id="guestExperienceMenuToggle">
+                <i class="fas fa-smile"></i>
+                <span class="nav-link-text">Guest Experience</span>
+                <i class="fas fa-chevron-down ms-auto" id="guestExperienceChevron"></i>
+            </a>
+        </li>
+        <div class="guest-experience-submenu" id="guestExperienceSubmenu" style="display: none;">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'guest_experience:arrivals' %}" data-tooltip="Arrivals">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span class="nav-link-text">Arrivals</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'guest_experience:in_house' %}" data-tooltip="Guests In-House">
+                    <i class="fas fa-bed"></i>
+                    <span class="nav-link-text">Guests In-House</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'guest_experience:departures' %}" data-tooltip="Departures">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="nav-link-text">Departures</span>
                 </a>
             </li>
         </div>
@@ -1230,6 +1254,27 @@
                     }
                 });
             }
+
+            // Guest Experience menu toggle
+            const gxMenuToggle = document.getElementById('guestExperienceMenuToggle');
+            const gxSubmenu = document.getElementById('guestExperienceSubmenu');
+            const gxChevron = document.getElementById('guestExperienceChevron');
+            if (gxMenuToggle && gxSubmenu && gxChevron) {
+                gxMenuToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const isExpanded = gxSubmenu.style.display !== 'none';
+                    if (isExpanded) {
+                        gxSubmenu.style.display = 'none';
+                        gxChevron.style.transform = 'rotate(0deg)';
+                        gxMenuToggle.setAttribute('aria-expanded', 'false');
+                    } else {
+                        gxSubmenu.style.display = 'block';
+                        gxChevron.style.transform = 'rotate(180deg)';
+                        gxMenuToggle.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            }
             
             // Close submenus when clicking outside
             document.addEventListener('click', function(e) {
@@ -1253,6 +1298,16 @@
                         guestSubmenu.style.display = 'none';
                         if (guestChevron) guestChevron.style.transform = 'rotate(0deg)';
                         if (guestMenuToggle) guestMenuToggle.setAttribute('aria-expanded', 'false');
+                    }
+                }
+                const gxMenuToggle = document.getElementById('guestExperienceMenuToggle');
+                const gxSubmenu = document.getElementById('guestExperienceSubmenu');
+                const gxChevron = document.getElementById('guestExperienceChevron');
+                if (!e.target.closest('.guest-experience-submenu') && !e.target.closest('#guestExperienceMenuToggle')) {
+                    if (gxSubmenu) {
+                        gxSubmenu.style.display = 'none';
+                        if (gxChevron) gxChevron.style.transform = 'rotate(0deg)';
+                        if (gxMenuToggle) gxMenuToggle.setAttribute('aria-expanded', 'false');
                     }
                 }
             });

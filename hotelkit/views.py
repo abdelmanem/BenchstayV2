@@ -3,12 +3,11 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.views.generic import TemplateView, ListView, DetailView, UpdateView, DeleteView, View
+from django.views.generic import TemplateView, ListView, DetailView, UpdateView, DeleteView
 from django.core.paginator import Paginator
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin, PermissionRequiredMixin
 from django.urls import reverse_lazy
 from django.contrib import messages
-from urllib.parse import urlencode
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -525,7 +524,6 @@ class RepairsByTypeView(PermissionRequiredMixin, ListView):
         # Date filters
         start_date = self.request.GET.get('start_date')
         end_date = self.request.GET.get('end_date')
-        search_query = self.request.GET.get('q', '').strip()
         
         if start_date:
             try:
@@ -551,41 +549,8 @@ class RepairsByTypeView(PermissionRequiredMixin, ListView):
         if repair_type:
             queryset = queryset.filter(type=repair_type)
         
-        # Free-text search across common fields and IDs
-        if search_query:
-            search_filters = (
-                Q(id_field__icontains=search_query) |
-                Q(location__icontains=search_query) |
-                Q(location_path__icontains=search_query) |
-                Q(type__icontains=search_query) |
-                Q(type_path__icontains=search_query) |
-                Q(assets__icontains=search_query) |
-                Q(ticket__icontains=search_query) |
-                Q(priority__icontains=search_query) |
-                Q(state__icontains=search_query) |
-                Q(creator__icontains=search_query) |
-                Q(recipients__icontains=search_query) |
-                Q(text__icontains=search_query) |
-                Q(comments__icontains=search_query) |
-                Q(submitted_result__icontains=search_query) |
-                Q(link__icontains=search_query) |
-                Q(parking_reason__icontains=search_query) |
-                Q(parking_information__icontains=search_query)
-            )
-            
-            if search_query.isdigit():
-                search_filters |= Q(id=int(search_query)) | Q(position=int(search_query))
-            
-            try:
-                search_date = datetime.strptime(search_query, '%Y-%m-%d').date()
-                search_filters |= Q(creation_date__date=search_date)
-            except ValueError:
-                pass
-            
-            queryset = queryset.filter(search_filters)
-        
         # If no filters, default to last month
-        if not start_date and not end_date and not status and not repair_type and not search_query:
+        if not start_date and not end_date and not status and not repair_type:
             from datetime import date
             import calendar
             today = date.today()
@@ -675,175 +640,8 @@ class RepairsByTypeView(PermissionRequiredMixin, ListView):
         
         context['status'] = self.request.GET.get('status', '')
         context['repair_type'] = self.request.GET.get('type', '')
-        context['search_query'] = self.request.GET.get('q', '').strip()
         
         return context
-
-
-class RepairsTableView(PermissionRequiredMixin, ListView):
-    """Flat table view of repair requests with filters, search, and sorting."""
-    model = RepairRequest
-    template_name = 'hotelkit/repairs_table.html'
-    context_object_name = 'repairs'
-    paginate_by = None
-    permission_required = 'accounts.view_hotelkit'
-    raise_exception = True
-    
-    sortable_fields = {
-        'id': 'id',
-        'request_id': 'id_field',
-        'created': 'creation_date',
-        'done': 'time_done',
-        'state': 'state',
-        'priority': 'priority',
-        'type': 'type',
-        'location': 'location',
-    }
-    
-    def get_ordering(self):
-        sort_param = self.request.GET.get('sort', '-created')
-        field = sort_param.lstrip('-')
-        if field in self.sortable_fields:
-            mapped = self.sortable_fields[field]
-            return f"-{mapped}" if sort_param.startswith('-') else mapped
-        return '-creation_date'
-    
-    def get_queryset(self):
-        qs = RepairRequest.objects.all()
-        q = self.request.GET.get('q', '').strip()
-        
-        # creation date range
-        start_date = self.request.GET.get('start_date')
-        end_date = self.request.GET.get('end_date')
-        if start_date:
-            try:
-                start = datetime.strptime(start_date, '%Y-%m-%d').date()
-                qs = qs.filter(creation_date__date__gte=start)
-            except ValueError:
-                pass
-        if end_date:
-            try:
-                end = datetime.strptime(end_date, '%Y-%m-%d').date()
-                qs = qs.filter(creation_date__date__lte=end)
-            except ValueError:
-                pass
-        
-        # time done range
-        done_start = self.request.GET.get('done_start')
-        done_end = self.request.GET.get('done_end')
-        if done_start:
-            try:
-                ds = datetime.strptime(done_start, '%Y-%m-%d').date()
-                qs = qs.filter(time_done__date__gte=ds)
-            except ValueError:
-                pass
-        if done_end:
-            try:
-                de = datetime.strptime(done_end, '%Y-%m-%d').date()
-                qs = qs.filter(time_done__date__lte=de)
-            except ValueError:
-                pass
-        
-        # state/type/priority filters if needed later (reserved)
-        state = self.request.GET.get('state')
-        if state:
-            qs = qs.filter(state=state)
-        rtype = self.request.GET.get('type')
-        if rtype:
-            qs = qs.filter(type=rtype)
-        priority = self.request.GET.get('priority')
-        if priority:
-            qs = qs.filter(priority=priority)
-        recipients = self.request.GET.get('recipients')
-        if recipients:
-            qs = qs.filter(recipients__icontains=recipients)
-        
-        # search across many columns
-        if q:
-            search_filters = (
-                Q(id_field__icontains=q) |
-                Q(location__icontains=q) |
-                Q(location_path__icontains=q) |
-                Q(type__icontains=q) |
-                Q(type_path__icontains=q) |
-                Q(assets__icontains=q) |
-                Q(ticket__icontains=q) |
-                Q(priority__icontains=q) |
-                Q(state__icontains=q) |
-                Q(creator__icontains=q) |
-                Q(recipients__icontains=q) |
-                Q(text__icontains=q) |
-                Q(comments__icontains=q) |
-                Q(submitted_result__icontains=q) |
-                Q(link__icontains=q) |
-                Q(parking_reason__icontains=q) |
-                Q(parking_information__icontains=q)
-            )
-            
-            if q.isdigit():
-                search_filters |= Q(id=int(q)) | Q(position=int(q))
-            
-            try:
-                q_date = datetime.strptime(q, '%Y-%m-%d').date()
-                search_filters |= Q(creation_date__date=q_date) | Q(time_done__date=q_date)
-            except ValueError:
-                pass
-            
-            qs = qs.filter(search_filters)
-        
-        ordering = self.get_ordering()
-        return qs.order_by(ordering)
-    
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        params = self.request.GET.copy()
-        ctx['q'] = params.get('q', '')
-        ctx['start_date'] = params.get('start_date', '')
-        ctx['end_date'] = params.get('end_date', '')
-        ctx['done_start'] = params.get('done_start', '')
-        ctx['done_end'] = params.get('done_end', '')
-        ctx['state'] = params.get('state', '')
-        ctx['priority'] = params.get('priority', '')
-        ctx['recipients'] = params.get('recipients', '')
-        ctx['rtype'] = params.get('type', '')
-        ctx['current_sort'] = self.request.GET.get('sort', '-created')
-        ctx['total_count'] = self.get_queryset().count()
-        
-        def sort_url(field):
-            current = self.request.GET.copy()
-            cur_sort = current.get('sort', '-created')
-            if cur_sort.lstrip('-') == field and not cur_sort.startswith('-'):
-                current['sort'] = f"-{field}"
-            else:
-                current['sort'] = field
-            return f"?{urlencode(current, doseq=True)}"
-        
-        # Precompute sort links for template (templates cannot call functions with args)
-        sort_fields = ['id', 'request_id', 'created', 'done', 'state', 'priority', 'type', 'location']
-        ctx['sort_links'] = {f: sort_url(f) for f in sort_fields}
-        return ctx
-
-
-class RepairsBulkDeleteView(PermissionRequiredMixin, View):
-    """Handle bulk deletion of repair requests from the table view."""
-    permission_required = 'accounts.view_hotelkit'
-    raise_exception = True
-    
-    def post(self, request):
-        ids = request.POST.getlist('selected_ids')
-        return_url = request.POST.get('return_url') or reverse_lazy('repairs:repairs_table')
-        
-        if not ids:
-            messages.warning(request, 'No repairs selected for deletion.')
-            return redirect(return_url)
-        
-        try:
-            deleted_count, _ = RepairRequest.objects.filter(id__in=ids).delete()
-            messages.success(request, f'{deleted_count} repair(s) deleted.')
-        except Exception as exc:
-            messages.error(request, f'Error deleting repairs: {exc}')
-        
-        return redirect(return_url)
 
 
 class RepairDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
