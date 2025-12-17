@@ -60,6 +60,14 @@
                 <label class="small text-muted mb-1">&nbsp;</label>
                 <div id="arrival-count" class="small text-muted">0 rows</div>
             </div>
+            <div class="d-flex flex-column">
+                <label class="small text-muted mb-1">&nbsp;</label>
+                <div>
+                    <button id="arrival-delete-selected" class="btn btn-sm btn-outline-danger" disabled>
+                        <i class="fas fa-trash-alt me-1"></i>Delete Selected
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
     <div class="card-body">
@@ -102,12 +110,33 @@ document.addEventListener('DOMContentLoaded', function () {
     const pageSizeSelect = document.getElementById('arrival-page-size');
     const countLabel = document.getElementById('arrival-count');
     const selectAllCheckbox = document.getElementById('arrival-select-all');
+    const deleteButton = document.getElementById('arrival-delete-selected');
     const headerCells = document.querySelectorAll('thead th[data-sort-key]');
     let allArrivals = [];
     let currentSortKey = 'room';
     let currentSortDir = 'asc';
     let currentPage = 1;
     let selectedIds = new Set(); // track selected by confirmation_number
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function updateDeleteButton() {
+        if (!deleteButton) return;
+        deleteButton.disabled = selectedIds.size === 0;
+    }
 
     function renderTable() {
         const q = (searchInput.value || '').toLowerCase().trim();
@@ -243,6 +272,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(c => c.checked);
                         selectAllCheckbox.checked = allChecked;
                     }
+                    updateDeleteButton();
                 });
             }
 
@@ -324,6 +354,39 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
                 if (row) row.classList.toggle('selected-row', checked);
+            });
+        });
+    }
+
+    if (deleteButton) {
+        deleteButton.addEventListener('click', () => {
+            if (!selectedIds.size) return;
+            if (!confirm('Are you sure you want to delete the selected arrivals?')) {
+                return;
+            }
+            const csrftoken = getCookie('csrftoken');
+            fetch("{% url 'guest_experience:delete_arrivals' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken || ''
+                },
+                body: JSON.stringify({ confirmation_numbers: Array.from(selectedIds) })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to delete arrivals');
+                }
+                return response.json();
+            })
+            .then(() => {
+                selectedIds.clear();
+                if (selectAllCheckbox) selectAllCheckbox.checked = false;
+                updateDeleteButton();
+                loadArrivals();
+            })
+            .catch(() => {
+                alert('Failed to delete selected arrivals.');
             });
         });
     }

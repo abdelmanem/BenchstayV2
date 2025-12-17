@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
+from django.views.decorators.http import require_POST
+import json
 import pandas as pd
 from .models import ArrivalRecord
 
@@ -307,6 +309,32 @@ def arrivals_api(request):
             }
         )
     return JsonResponse({"results": data})
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+@require_POST
+def delete_arrivals(request):
+    """
+    Bulk delete arrivals by confirmation numbers.
+    Expects JSON body: {"confirmation_numbers": ["ABC123", "DEF456", ...]}
+    """
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    ids = payload.get("confirmation_numbers") or []
+    if not isinstance(ids, list):
+        return JsonResponse({"error": "confirmation_numbers must be a list"}, status=400)
+
+    # Normalize and filter out empty values
+    cleaned_ids = [str(x).strip() for x in ids if str(x).strip()]
+    if not cleaned_ids:
+        return JsonResponse({"deleted": 0})
+
+    deleted_count, _ = ArrivalRecord.objects.filter(confirmation_number__in=cleaned_ids).delete()
+    return JsonResponse({"deleted": deleted_count})
 
 
 @login_required

@@ -7,6 +7,7 @@ urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("arrivals/", views.arrivals, name="arrivals"),
     path("arrivals/upload/", views.upload_arrivals, name="upload_arrivals"),
+    path("arrivals/delete/", views.delete_arrivals, name="delete_arrivals"),
     path("in-house/", views.in_house, name="in_house"),
     path("departures/", views.departures, name="departures"),
     # API endpoints
