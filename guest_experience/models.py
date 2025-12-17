@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class ArrivalRecord(models.Model):
@@ -30,6 +31,8 @@ class ArrivalRecord(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="arrival_records_created")
+    updated_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="arrival_records_updated")
 
     class Meta:
         ordering = ["arrival_date", "room"]

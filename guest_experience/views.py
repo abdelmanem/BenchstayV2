@@ -215,6 +215,8 @@ def upload_arrivals(request):
             eta=eta,
             nights=nights,
             status=status,
+            created_by=request.user,
+            updated_by=request.user,
         )
         created_or_updated += 1
 
@@ -352,7 +354,7 @@ def mark_in_house(request):
 
     updated = ArrivalRecord.objects.filter(
         confirmation_number__in=cleaned_ids
-    ).update(status="In-House")
+    ).update(status="In-House", updated_by=request.user, updated_at=timezone.now())
 
     return JsonResponse({"updated": updated})
 
