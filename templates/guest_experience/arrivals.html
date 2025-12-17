@@ -153,7 +153,78 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Nationality</label>
-                            <input type="text" class="form-control" id="edit-nationality" name="nationality">
+                            <select class="form-select" id="edit-nationality" name="nationality">
+                                <option value="">Select Nationality...</option>
+                                <option value="Afghan">Afghan</option>
+                                <option value="Albanian">Albanian</option>
+                                <option value="Algerian">Algerian</option>
+                                <option value="Argentine">Argentine</option>
+                                <option value="Australian">Australian</option>
+                                <option value="Austrian">Austrian</option>
+                                <option value="Bahraini">Bahraini</option>
+                                <option value="Bangladeshi">Bangladeshi</option>
+                                <option value="Belgian">Belgian</option>
+                                <option value="Brazilian">Brazilian</option>
+                                <option value="Bulgarian">Bulgarian</option>
+                                <option value="Canadian">Canadian</option>
+                                <option value="Chilean">Chilean</option>
+                                <option value="Chinese">Chinese</option>
+                                <option value="Colombian">Colombian</option>
+                                <option value="Croatian">Croatian</option>
+                                <option value="Czech">Czech</option>
+                                <option value="Danish">Danish</option>
+                                <option value="Egyptian">Egyptian</option>
+                                <option value="Finnish">Finnish</option>
+                                <option value="French">French</option>
+                                <option value="German">German</option>
+                                <option value="Greek">Greek</option>
+                                <option value="Hong Konger">Hong Konger</option>
+                                <option value="Hungarian">Hungarian</option>
+                                <option value="Indian">Indian</option>
+                                <option value="Indonesian">Indonesian</option>
+                                <option value="Iranian">Iranian</option>
+                                <option value="Iraqi">Iraqi</option>
+                                <option value="Irish">Irish</option>
+                                <option value="Israeli">Israeli</option>
+                                <option value="Italian">Italian</option>
+                                <option value="Japanese">Japanese</option>
+                                <option value="Jordanian">Jordanian</option>
+                                <option value="Kenyan">Kenyan</option>
+                                <option value="Kuwaiti">Kuwaiti</option>
+                                <option value="Lebanese">Lebanese</option>
+                                <option value="Malaysian">Malaysian</option>
+                                <option value="Mexican">Mexican</option>
+                                <option value="Moroccan">Moroccan</option>
+                                <option value="Dutch">Dutch</option>
+                                <option value="New Zealander">New Zealander</option>
+                                <option value="Nigerian">Nigerian</option>
+                                <option value="Norwegian">Norwegian</option>
+                                <option value="Omani">Omani</option>
+                                <option value="Pakistani">Pakistani</option>
+                                <option value="Filipino">Filipino</option>
+                                <option value="Polish">Polish</option>
+                                <option value="Portuguese">Portuguese</option>
+                                <option value="Qatari">Qatari</option>
+                                <option value="Romanian">Romanian</option>
+                                <option value="Russian">Russian</option>
+                                <option value="Saudi Arabian">Saudi Arabian</option>
+                                <option value="Singaporean">Singaporean</option>
+                                <option value="South African">South African</option>
+                                <option value="South Korean">South Korean</option>
+                                <option value="Spanish">Spanish</option>
+                                <option value="Swedish">Swedish</option>
+                                <option value="Swiss">Swiss</option>
+                                <option value="Taiwanese">Taiwanese</option>
+                                <option value="Thai">Thai</option>
+                                <option value="Turkish">Turkish</option>
+                                <option value="Ukrainian">Ukrainian</option>
+                                <option value="Emirati">Emirati</option>
+                                <option value="British">British</option>
+                                <option value="American">American</option>
+                                <option value="Venezuelan">Venezuelan</option>
+                                <option value="Vietnamese">Vietnamese</option>
+                                <option value="Yemeni">Yemeni</option>
+                            </select>
                         </div>
                     </div>
                     <div class="row">
@@ -589,7 +660,25 @@ document.addEventListener('DOMContentLoaded', function () {
                             document.getElementById('edit-guest-name').value = data.guest_name || '';
                             document.getElementById('edit-phone').value = data.phone || '';
                             document.getElementById('edit-email').value = data.email || '';
-                            document.getElementById('edit-nationality').value = data.nationality || '';
+                            // Set nationality dropdown value, or add as option if not in list
+                            const nationalitySelect = document.getElementById('edit-nationality');
+                            const nationalityValue = data.nationality || '';
+                            if (nationalityValue) {
+                                // Check if the value exists in the options
+                                const optionExists = Array.from(nationalitySelect.options).some(opt => opt.value === nationalityValue);
+                                if (optionExists) {
+                                    nationalitySelect.value = nationalityValue;
+                                } else {
+                                    // If nationality not in list, add it as an option and select it
+                                    const option = document.createElement('option');
+                                    option.value = nationalityValue;
+                                    option.textContent = nationalityValue;
+                                    nationalitySelect.appendChild(option);
+                                    nationalitySelect.value = nationalityValue;
+                                }
+                            } else {
+                                nationalitySelect.value = '';
+                            }
                             // Set country dropdown value, or add as option if not in list
                             const countrySelect = document.getElementById('edit-country');
                             const countryValue = data.country || '';
