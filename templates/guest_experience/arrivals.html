@@ -103,6 +103,105 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Reservation Modal -->
+<div class="modal fade" id="editReservationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Reservation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editReservationForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="edit-confirmation-number" name="confirmation_number">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Confirmation Number</label>
+                            <input type="text" class="form-control" id="edit-confirmation-display" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Room Number <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="edit-room" name="room" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">First Name</label>
+                            <input type="text" class="form-control" id="edit-first-name" name="first_name">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" class="form-control" id="edit-last-name" name="last_name">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Guest Name</label>
+                            <input type="text" class="form-control" id="edit-guest-name" name="guest_name">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="edit-phone" name="phone">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="edit-email" name="email">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nationality</label>
+                            <input type="text" class="form-control" id="edit-nationality" name="nationality">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Country</label>
+                            <input type="text" class="form-control" id="edit-country" name="country">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Travel Agent</label>
+                            <input type="text" class="form-control" id="edit-travel-agent" name="travel_agent_name">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Arrival Date</label>
+                            <input type="date" class="form-control" id="edit-arrival-date" name="arrival_date">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Departure Date</label>
+                            <input type="date" class="form-control" id="edit-departure-date" name="departure_date">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="edit-status" name="status">
+                                <option value="Expected">Expected</option>
+                                <option value="In-House">In-House</option>
+                                <option value="Departed">Departed</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">ETA</label>
+                            <input type="text" class="form-control" id="edit-eta" name="eta" placeholder="e.g., 14:00">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -242,11 +341,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td>${item.status || '-'}</td>
                 <td>
                     <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" class="btn btn-outline-danger btn-sm arrival-delete-btn" data-id="${id}" title="Delete">
-                            <i class="fas fa-trash-alt"></i>
+                        <button type="button" class="btn btn-outline-info btn-sm arrival-edit-btn" data-id="${id}" title="Edit">
+                            <i class="fas fa-edit"></i>
                         </button>
                         <button type="button" class="btn btn-outline-primary btn-sm arrival-mark-inhouse-btn" data-id="${id}" title="Mark In-House">
                             <i class="fas fa-bed"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger btn-sm arrival-delete-btn" data-id="${id}" title="Delete">
+                            <i class="fas fa-trash-alt"></i>
                         </button>
                     </div>
                 </td>
@@ -259,6 +361,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     e.target.classList.contains('arrival-row-checkbox') ||
                     e.target.closest('.arrival-delete-btn') ||
                     e.target.closest('.arrival-mark-inhouse-btn') ||
+                    e.target.closest('.arrival-edit-btn') ||
                     e.target.closest('.btn-group')
                 )) {
                     return;

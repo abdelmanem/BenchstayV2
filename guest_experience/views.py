@@ -310,6 +310,109 @@ def arrivals_api(request):
 
 @login_required
 @permission_required("accounts.view_hotel_management", raise_exception=True)
+def edit_arrival(request, confirmation_number):
+    """
+    Edit an arrival record by confirmation number.
+    GET: Returns JSON with record data
+    POST: Updates the record
+    """
+    try:
+        record = ArrivalRecord.objects.get(confirmation_number=confirmation_number)
+    except ArrivalRecord.DoesNotExist:
+        return JsonResponse({"error": "Record not found"}, status=404)
+
+    if request.method == "GET":
+        # Return record data for editing
+        return JsonResponse({
+            "confirmation_number": record.confirmation_number,
+            "room": record.room or "",
+            "first_name": record.first_name or "",
+            "last_name": record.last_name or "",
+            "guest_name": record.guest_name or "",
+            "phone": record.phone or "",
+            "email": record.email or "",
+            "nationality": record.nationality or "",
+            "country": record.country or "",
+            "arrival_date": record.arrival_date.isoformat() if record.arrival_date else "",
+            "departure_date": record.departure_date.isoformat() if record.departure_date else "",
+            "travel_agent_name": record.travel_agent_name or "",
+            "status": record.status or "",
+            "eta": record.eta or "",
+        })
+
+    elif request.method == "POST":
+        # Update the record
+        try:
+            payload = json.loads(request.body.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        # Update fields
+        if "room" in payload:
+            record.room = payload["room"].strip() or None
+        if "first_name" in payload:
+            record.first_name = payload["first_name"].strip()
+        if "last_name" in payload:
+            record.last_name = payload["last_name"].strip()
+        if "guest_name" in payload:
+            record.guest_name = payload["guest_name"].strip()
+        elif "first_name" in payload or "last_name" in payload:
+            # Auto-update guest_name if first/last name changed
+            first = record.first_name or ""
+            last = record.last_name or ""
+            record.guest_name = (first + " " + last).strip()
+        if "phone" in payload:
+            record.phone = payload["phone"].strip()
+        if "email" in payload:
+            record.email = payload["email"].strip()
+        if "nationality" in payload:
+            record.nationality = payload["nationality"].strip()
+        if "country" in payload:
+            record.country = payload["country"].strip()
+        if "arrival_date" in payload:
+            try:
+                if payload["arrival_date"]:
+                    record.arrival_date = timezone.datetime.strptime(payload["arrival_date"], "%Y-%m-%d").date()
+                else:
+                    record.arrival_date = None
+            except (ValueError, TypeError):
+                pass
+        if "departure_date" in payload:
+            try:
+                if payload["departure_date"]:
+                    record.departure_date = timezone.datetime.strptime(payload["departure_date"], "%Y-%m-%d").date()
+                else:
+                    record.departure_date = None
+            except (ValueError, TypeError):
+                pass
+        if "travel_agent_name" in payload:
+            record.travel_agent_name = payload["travel_agent_name"].strip()
+        if "status" in payload:
+            record.status = payload["status"].strip()
+        if "eta" in payload:
+            record.eta = payload["eta"].strip()
+
+        # Recalculate nights if dates changed
+        if record.arrival_date and record.departure_date:
+            try:
+                diff = (record.departure_date - record.arrival_date).days
+                record.nights = diff if diff >= 0 else None
+            except Exception:
+                pass
+
+        record.updated_by = request.user
+        record.updated_at = timezone.now()
+        record.save()
+
+        return JsonResponse({
+            "success": True,
+            "message": "Record updated successfully",
+            "confirmation_number": record.confirmation_number
+        })
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
 @require_POST
 def delete_arrivals(request):
     """

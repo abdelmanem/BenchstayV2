@@ -7,6 +7,7 @@ urlpatterns = [
     path("", views.dashboard, name="dashboard"),
     path("arrivals/", views.arrivals, name="arrivals"),
     path("arrivals/upload/", views.upload_arrivals, name="upload_arrivals"),
+    path("arrivals/edit/<str:confirmation_number>/", views.edit_arrival, name="edit_arrival"),
     path("arrivals/delete/", views.delete_arrivals, name="delete_arrivals"),
     path("arrivals/mark-in-house/", views.mark_in_house, name="mark_in_house"),
     path("in-house/", views.in_house, name="in_house"),
