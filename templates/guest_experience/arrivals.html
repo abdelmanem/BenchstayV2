@@ -4,10 +4,13 @@
 
 {% block extra_css %}
 <style>
-    /* Highlight row in blue on hover */
-    #arrivals-body tr:hover {
+    /* Highlight row in blue on hover or when active (clicked) */
+    .performance-table tbody tr:hover {
         background-color: #e0f2ff !important; /* light blue */
         cursor: pointer;
+    }
+    .performance-table tbody tr.active-row {
+        background-color: #bfdbfe !important; /* slightly darker blue when selected */
     }
 </style>
 {% endblock %}
@@ -188,6 +191,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td>${item.nights != null ? item.nights : '-'}</td>
                 <td>${item.status || '-'}</td>
             `;
+            // Click to highlight the active row
+            tr.addEventListener('click', () => {
+                tbody.querySelectorAll('.active-row').forEach(r => r.classList.remove('active-row'));
+                tr.classList.add('active-row');
+            });
             tbody.appendChild(tr);
         });
     }
