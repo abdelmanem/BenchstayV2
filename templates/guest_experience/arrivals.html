@@ -94,7 +94,7 @@
                 </thead>
                 <tbody id="arrivals-body">
                     <tr>
-                        <td colspan="11" class="text-center py-4 text-muted">
+                        <td colspan="12" class="text-center py-4 text-muted">
                             Loading arrivals...
                         </td>
                     </tr>
@@ -491,7 +491,121 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             }
 
+            // Individual edit button
+            const editBtn = tr.querySelector('.arrival-edit-btn');
+            if (editBtn) {
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const cid = editBtn.dataset.id;
+                    if (!cid) return;
+                    
+                    // Load reservation data
+                    const editUrl = `/guest-experience/arrivals/edit/${encodeURIComponent(cid)}/`;
+                    fetch(editUrl)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error('Failed to load reservation data');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            // Populate modal fields
+                            document.getElementById('edit-confirmation-number').value = data.confirmation_number || '';
+                            document.getElementById('edit-confirmation-display').value = data.confirmation_number || '';
+                            document.getElementById('edit-room').value = data.room || '';
+                            document.getElementById('edit-first-name').value = data.first_name || '';
+                            document.getElementById('edit-last-name').value = data.last_name || '';
+                            document.getElementById('edit-guest-name').value = data.guest_name || '';
+                            document.getElementById('edit-phone').value = data.phone || '';
+                            document.getElementById('edit-email').value = data.email || '';
+                            document.getElementById('edit-nationality').value = data.nationality || '';
+                            document.getElementById('edit-country').value = data.country || '';
+                            document.getElementById('edit-travel-agent').value = data.travel_agent_name || '';
+                            document.getElementById('edit-arrival-date').value = data.arrival_date || '';
+                            document.getElementById('edit-departure-date').value = data.departure_date || '';
+                            document.getElementById('edit-status').value = data.status || 'Expected';
+                            document.getElementById('edit-eta').value = data.eta || '';
+                            
+                            // Show modal
+                            const modal = new bootstrap.Modal(document.getElementById('editReservationModal'));
+                            modal.show();
+                        })
+                        .catch((error) => {
+                            console.error('Load error:', error);
+                            alert('Failed to load reservation data: ' + error.message);
+                        });
+                });
+            }
+
             tbody.appendChild(tr);
+        });
+    }
+
+    // Handle edit form submission
+    const editForm = document.getElementById('editReservationForm');
+    if (editForm) {
+        editForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const confirmationNumber = document.getElementById('edit-confirmation-number').value;
+            if (!confirmationNumber) {
+                alert('Confirmation number is required.');
+                return;
+            }
+
+            const formData = {
+                room: document.getElementById('edit-room').value.trim(),
+                first_name: document.getElementById('edit-first-name').value.trim(),
+                last_name: document.getElementById('edit-last-name').value.trim(),
+                guest_name: document.getElementById('edit-guest-name').value.trim(),
+                phone: document.getElementById('edit-phone').value.trim(),
+                email: document.getElementById('edit-email').value.trim(),
+                nationality: document.getElementById('edit-nationality').value.trim(),
+                country: document.getElementById('edit-country').value.trim(),
+                travel_agent_name: document.getElementById('edit-travel-agent').value.trim(),
+                arrival_date: document.getElementById('edit-arrival-date').value,
+                departure_date: document.getElementById('edit-departure-date').value,
+                status: document.getElementById('edit-status').value,
+                eta: document.getElementById('edit-eta').value.trim(),
+            };
+
+            const csrftoken = getCookie('csrftoken');
+            if (!csrftoken) {
+                alert('CSRF token not found. Please refresh the page.');
+                return;
+            }
+
+            const updateUrl = `/guest-experience/arrivals/edit/${encodeURIComponent(confirmationNumber)}/`;
+            fetch(updateUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.error || 'Failed to update reservation');
+                    });
+                }
+                return response.json();
+            })
+            .then((data) => {
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editReservationModal'));
+                if (modal) modal.hide();
+                
+                // Reload arrivals
+                loadArrivals();
+                
+                // Show success message
+                alert('Reservation updated successfully!');
+            })
+            .catch((error) => {
+                console.error('Update error:', error);
+                alert('Failed to update reservation: ' + error.message);
+            });
         });
     }
 
