@@ -277,9 +277,12 @@ def arrivals_api(request):
     except ValueError:
         return JsonResponse({"error": "Invalid date format, expected YYYY-MM-DD."}, status=400)
 
+    # Exclude records with "In-House" status (case-insensitive, handles both "In-House" and "in house")
     qs = ArrivalRecord.objects.filter(
         arrival_date=target_date
-    ).exclude(status__iexact="in house").order_by("room")
+    ).exclude(
+        models.Q(status__iexact="in-house") | models.Q(status__iexact="in house")
+    ).order_by("room")
     data = []
     for a in qs:
         data.append(
@@ -375,8 +378,10 @@ def in_house_api(request):
     except ValueError:
         return JsonResponse({"error": "Invalid date format, expected YYYY-MM-DD."}, status=400)
 
-    # In-house: status In-House and within stay dates if dates are available
-    qs = ArrivalRecord.objects.filter(status__iexact="in-house")
+    # In-house: status In-House (case-insensitive, handles both "In-House" and "in house")
+    qs = ArrivalRecord.objects.filter(
+        models.Q(status__iexact="in-house") | models.Q(status__iexact="in house")
+    )
     qs = qs.filter(
         arrival_date__lte=target_date
     ).filter(
@@ -387,8 +392,13 @@ def in_house_api(request):
         {
             "room": a.room,
             "guest_name": a.guest_name,
+            "confirmation_number": a.confirmation_number,
+            "phone": a.phone,
+            "country": a.country,
+            "travel_agent_name": a.travel_agent_name,
             "arrival_date": a.arrival_date.isoformat() if a.arrival_date else None,
             "departure_date": a.departure_date.isoformat() if a.departure_date else None,
+            "nights": a.nights,
             "status": a.status,
         }
         for a in qs

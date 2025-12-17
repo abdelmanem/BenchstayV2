@@ -58,6 +58,7 @@
                     <tr>
                         <th role="button" data-sort-key="room">Room</th>
                         <th role="button" data-sort-key="guest_name">Guest Name</th>
+                        <th role="button" data-sort-key="confirmation_number">Confirmation #</th>
                         <th role="button" data-sort-key="phone">Phone</th>
                         <th role="button" data-sort-key="country">Country</th>
                         <th role="button" data-sort-key="travel_agent_name">Travel Agent</th>
@@ -69,7 +70,7 @@
                 </thead>
                 <tbody id="inhouse-body">
                     <tr>
-                        <td colspan="9" class="text-center py-4 text-muted">
+                        <td colspan="10" class="text-center py-4 text-muted">
                             Loading in-house guests...
                         </td>
                     </tr>
@@ -104,6 +105,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const haystack = [
                 item.room,
                 item.guest_name,
+                item.confirmation_number,
                 item.phone,
                 item.country,
                 item.travel_agent_name,
@@ -157,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (!pageItems.length) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No in-house guests found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No in-house guests found.</td></tr>';
             return;
         }
 
@@ -166,6 +168,7 @@ document.addEventListener('DOMContentLoaded', function () {
             tr.innerHTML = `
                 <td>${item.room || '-'}</td>
                 <td>${item.guest_name || '-'}</td>
+                <td>${item.confirmation_number || '-'}</td>
                 <td>${item.phone || '-'}</td>
                 <td>${item.country || '-'}</td>
                 <td>${item.travel_agent_name || '-'}</td>
@@ -179,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function loadInHouse() {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">Loading in-house guests...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">Loading in-house guests...</td></tr>';
         let dateVal = dateInput.value;
         if (!dateVal) {
             const today = new Date();
@@ -200,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 renderTable();
             })
             .catch(() => {
-                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger">Failed to load in-house guests.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-danger">Failed to load in-house guests.</td></tr>';
             });
     }
 

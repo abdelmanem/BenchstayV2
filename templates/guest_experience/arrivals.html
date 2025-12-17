@@ -89,6 +89,7 @@
                         <th role="button" data-sort-key="departure_date">Departure</th>
                         <th role="button" data-sort-key="nights">Nights</th>
                         <th role="button" data-sort-key="status">Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="arrivals-body">
@@ -132,6 +133,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                     break;
                 }
+            }
+        }
+        // Fallback: try to get from hidden input
+        if (!cookieValue) {
+            const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+            if (csrfInput) {
+                cookieValue = csrfInput.value;
             }
         }
         return cookieValue;
@@ -210,7 +218,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (!pageItems.length) {
-            tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted">No arrivals found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-muted">No arrivals found.</td></tr>';
             return;
         }
 
@@ -232,12 +240,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td>${item.departure_date || '-'}</td>
                 <td>${item.nights != null ? item.nights : '-'}</td>
                 <td>${item.status || '-'}</td>
+                <td>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-danger btn-sm arrival-delete-btn" data-id="${id}" title="Delete">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm arrival-mark-inhouse-btn" data-id="${id}" title="Mark In-House">
+                            <i class="fas fa-bed"></i>
+                        </button>
+                    </div>
+                </td>
             `;
 
-            // Row click toggles checkbox & selection
+            // Row click toggles checkbox & selection (but not when clicking action buttons)
             tr.addEventListener('click', (e) => {
-                // Avoid double-toggling when clicking directly on checkbox
-                if (e.target && e.target.classList.contains('arrival-row-checkbox')) {
+                // Don't toggle if clicking on checkbox, action buttons, or inside action buttons
+                if (e.target && (
+                    e.target.classList.contains('arrival-row-checkbox') ||
+                    e.target.closest('.arrival-delete-btn') ||
+                    e.target.closest('.arrival-mark-inhouse-btn') ||
+                    e.target.closest('.btn-group')
+                )) {
                     return;
                 }
                 const cb = tr.querySelector('.arrival-row-checkbox');
@@ -257,6 +280,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(c => c.checked);
                     selectAllCheckbox.checked = allChecked;
                 }
+                updateActionButtons();
             });
 
             // Checkbox change keeps selection state
@@ -281,12 +305,95 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             }
 
+            // Individual delete button
+            const deleteBtn = tr.querySelector('.arrival-delete-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const cid = deleteBtn.dataset.id;
+                    if (!cid) return;
+                    if (!confirm('Are you sure you want to delete this arrival?')) {
+                        return;
+                    }
+                    const csrftoken = getCookie('csrftoken');
+                    if (!csrftoken) {
+                        alert('CSRF token not found. Please refresh the page.');
+                        return;
+                    }
+                    fetch("{% url 'guest_experience:delete_arrivals' %}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken
+                        },
+                        body: JSON.stringify({ confirmation_numbers: [cid] })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(err => {
+                                throw new Error(err.error || 'Failed to delete arrival');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(() => {
+                        selectedIds.delete(cid);
+                        updateActionButtons();
+                        loadArrivals();
+                    })
+                    .catch((error) => {
+                        console.error('Delete error:', error);
+                        alert('Failed to delete arrival: ' + error.message);
+                    });
+                });
+            }
+
+            // Individual mark in-house button
+            const markInHouseBtn = tr.querySelector('.arrival-mark-inhouse-btn');
+            if (markInHouseBtn) {
+                markInHouseBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const cid = markInHouseBtn.dataset.id;
+                    if (!cid) return;
+                    const csrftoken = getCookie('csrftoken');
+                    if (!csrftoken) {
+                        alert('CSRF token not found. Please refresh the page.');
+                        return;
+                    }
+                    fetch("{% url 'guest_experience:mark_in_house' %}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrftoken
+                        },
+                        body: JSON.stringify({ confirmation_numbers: [cid] })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(err => {
+                                throw new Error(err.error || 'Failed to update arrival');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(() => {
+                        selectedIds.delete(cid);
+                        updateActionButtons();
+                        loadArrivals();
+                    })
+                    .catch((error) => {
+                        console.error('Mark In-House error:', error);
+                        alert('Failed to mark arrival as In-House: ' + error.message);
+                    });
+                });
+            }
+
             tbody.appendChild(tr);
         });
     }
 
     function loadArrivals() {
-        tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted">Loading arrivals...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-muted">Loading arrivals...</td></tr>';
         let dateVal = dateInput.value;
         // Ensure default is today's date if no value is set
         if (!dateVal) {
@@ -309,7 +416,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 renderTable();
             })
             .catch(() => {
-                tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-danger">Failed to load arrivals.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-danger">Failed to load arrivals.</td></tr>';
             });
     }
 
@@ -364,6 +471,9 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Initialize action buttons state
+    updateActionButtons();
+
     if (deleteButton) {
         deleteButton.addEventListener('click', () => {
             if (!selectedIds.size) return;
@@ -371,28 +481,35 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
             const csrftoken = getCookie('csrftoken');
+            if (!csrftoken) {
+                alert('CSRF token not found. Please refresh the page.');
+                return;
+            }
             fetch("{% url 'guest_experience:delete_arrivals' %}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken || ''
+                    'X-CSRFToken': csrftoken
                 },
                 body: JSON.stringify({ confirmation_numbers: Array.from(selectedIds) })
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Failed to delete arrivals');
+                    return response.json().then(err => {
+                        throw new Error(err.error || 'Failed to delete arrivals');
+                    });
                 }
                 return response.json();
             })
-            .then(() => {
+            .then((data) => {
                 selectedIds.clear();
                 if (selectAllCheckbox) selectAllCheckbox.checked = false;
                 updateActionButtons();
                 loadArrivals();
             })
-            .catch(() => {
-                alert('Failed to delete selected arrivals.');
+            .catch((error) => {
+                console.error('Delete error:', error);
+                alert('Failed to delete selected arrivals: ' + error.message);
             });
         });
     }
@@ -401,28 +518,35 @@ document.addEventListener('DOMContentLoaded', function () {
         markInHouseButton.addEventListener('click', () => {
             if (!selectedIds.size) return;
             const csrftoken = getCookie('csrftoken');
+            if (!csrftoken) {
+                alert('CSRF token not found. Please refresh the page.');
+                return;
+            }
             fetch("{% url 'guest_experience:mark_in_house' %}", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken || ''
+                    'X-CSRFToken': csrftoken
                 },
                 body: JSON.stringify({ confirmation_numbers: Array.from(selectedIds) })
             })
             .then(response => {
                 if (!response.ok) {
-                    throw new Error('Failed to update arrivals');
+                    return response.json().then(err => {
+                        throw new Error(err.error || 'Failed to update arrivals');
+                    });
                 }
                 return response.json();
             })
-            .then(() => {
+            .then((data) => {
                 selectedIds.clear();
                 if (selectAllCheckbox) selectAllCheckbox.checked = false;
                 updateActionButtons();
                 loadArrivals();
             })
-            .catch(() => {
-                alert('Failed to mark selected arrivals as In-House.');
+            .catch((error) => {
+                console.error('Mark In-House error:', error);
+                alert('Failed to mark selected arrivals as In-House: ' + error.message);
             });
         });
     }
