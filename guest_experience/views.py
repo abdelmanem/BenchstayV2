@@ -693,10 +693,14 @@ def courtesy_calls_api(request):
                 "first_courtesy_done_at": a.first_courtesy_done_at.isoformat() if a.first_courtesy_done_at else None,
                 "first_courtesy_by": a.first_courtesy_by.username if a.first_courtesy_by else None,
                 "first_courtesy_status": first_status,
+                "first_courtesy_outcome": a.first_courtesy_outcome,
+                "first_courtesy_notes": a.first_courtesy_notes,
                 "second_courtesy_due_at": a.second_courtesy_due_at.isoformat() if a.second_courtesy_due_at else None,
                 "second_courtesy_done_at": a.second_courtesy_done_at.isoformat() if a.second_courtesy_done_at else None,
                 "second_courtesy_by": a.second_courtesy_by.username if a.second_courtesy_by else None,
                 "second_courtesy_status": second_status,
+                "second_courtesy_outcome": a.second_courtesy_outcome,
+                "second_courtesy_notes": a.second_courtesy_notes,
             }
         )
 
@@ -709,7 +713,13 @@ def courtesy_calls_api(request):
 def mark_courtesy_done(request):
     """
     Mark a courtesy call as completed.
-    Expects JSON: {"confirmation_number": "...", "which": "first"|"second"}
+    Expects JSON:
+      {
+        "confirmation_number": "...",
+        "which": "first"|"second",
+        "outcome": "...",
+        "notes": "..."
+      }
     """
     try:
         payload = json.loads(request.body.decode("utf-8") or "{}")
@@ -718,6 +728,8 @@ def mark_courtesy_done(request):
 
     confirmation_number = str(payload.get("confirmation_number") or "").strip()
     which = str(payload.get("which") or "").strip().lower()
+    outcome = str(payload.get("outcome") or "").strip()
+    notes = str(payload.get("notes") or "").strip()
     if not confirmation_number or which not in {"first", "second"}:
         return JsonResponse({"error": "Invalid parameters"}, status=400)
 
@@ -730,9 +742,13 @@ def mark_courtesy_done(request):
     if which == "first":
         record.first_courtesy_done_at = now
         record.first_courtesy_by = request.user
+        record.first_courtesy_outcome = outcome
+        record.first_courtesy_notes = notes
     else:
         record.second_courtesy_done_at = now
         record.second_courtesy_by = request.user
+        record.second_courtesy_outcome = outcome
+        record.second_courtesy_notes = notes
     record.updated_by = request.user
     record.updated_at = now
     record.save()

@@ -38,6 +38,10 @@ class ArrivalRecord(models.Model):
     second_courtesy_due_at = models.DateTimeField(null=True, blank=True)
     second_courtesy_done_at = models.DateTimeField(null=True, blank=True)
     second_courtesy_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="arrival_records_second_courtesy")
+    first_courtesy_outcome = models.CharField(max_length=100, blank=True)
+    first_courtesy_notes = models.TextField(blank=True)
+    second_courtesy_outcome = models.CharField(max_length=100, blank=True)
+    second_courtesy_notes = models.TextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

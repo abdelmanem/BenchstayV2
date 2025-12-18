@@ -65,6 +65,47 @@
         </div>
     </div>
 </div>
+
+<!-- Courtesy Call Outcome Modal -->
+<div class="modal fade" id="courtesyOutcomeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-phone me-2"></i>Complete Courtesy Call</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="courtesyOutcomeForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="courtesy-confirmation-number">
+                    <input type="hidden" id="courtesy-which">
+                    <div class="mb-3">
+                        <label class="form-label">Call Outcome</label>
+                        <select class="form-select" id="courtesy-outcome" required>
+                            <option value="">Select outcome...</option>
+                            <option value="Very Satisfied">Very Satisfied</option>
+                            <option value="Satisfied">Satisfied</option>
+                            <option value="Neutral">Neutral</option>
+                            <option value="Issue Reported">Issue Reported</option>
+                            <option value="Could Not Reach Guest">Could Not Reach Guest</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Call Notes / Guest Feedback</label>
+                        <textarea class="form-control" id="courtesy-notes" rows="4" placeholder="Summarize how the call went and any guest issues, preferences, or follow-up needed."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check me-1"></i>Save & Mark Done
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -74,6 +115,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('courtesy-search-input');
     const countLabel = document.getElementById('courtesy-count');
     let allRows = [];
+
+    const outcomeModalEl = document.getElementById('courtesyOutcomeModal');
+    const outcomeForm = document.getElementById('courtesyOutcomeForm');
+    const outcomeSelect = document.getElementById('courtesy-outcome');
+    const notesInput = document.getElementById('courtesy-notes');
+    const hiddenConfirmation = document.getElementById('courtesy-confirmation-number');
+    const hiddenWhich = document.getElementById('courtesy-which');
 
     function formatDate(isoString) {
         if (!isoString) return '-';
@@ -180,38 +228,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 const cid = btn.getAttribute('data-id');
                 if (!which || !cid) return;
 
-                const csrftoken = getCookie('csrftoken');
-                if (!csrftoken) {
-                    alert('CSRF token not found. Please refresh the page.');
-                    return;
-                }
+                hiddenConfirmation.value = cid;
+                hiddenWhich.value = which;
+                outcomeSelect.value = '';
+                notesInput.value = '';
 
-                fetch("{% url 'guest_experience:mark_courtesy_done' %}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrftoken
-                    },
-                    body: JSON.stringify({
-                        confirmation_number: cid,
-                        which: which
-                    })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(err => {
-                            throw new Error(err.error || 'Failed to update courtesy call');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(() => {
-                    loadCourtesyCalls();
-                })
-                .catch(error => {
-                    console.error('Courtesy update error:', error);
-                    alert('Failed to update courtesy call: ' + error.message);
-                });
+                const modal = new bootstrap.Modal(outcomeModalEl);
+                modal.show();
             });
         });
     }
@@ -233,6 +256,62 @@ document.addEventListener('DOMContentLoaded', function () {
     if (searchInput) {
         searchInput.addEventListener('input', () => {
             renderTable();
+        });
+    }
+
+    if (outcomeForm) {
+        outcomeForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const cid = hiddenConfirmation.value;
+            const which = hiddenWhich.value;
+            const outcome = outcomeSelect.value;
+            const notes = notesInput.value;
+
+            if (!cid || !which) {
+                alert('Missing reservation information.');
+                return;
+            }
+            if (!outcome) {
+                alert('Please select a call outcome.');
+                return;
+            }
+
+            const csrftoken = getCookie('csrftoken');
+            if (!csrftoken) {
+                alert('CSRF token not found. Please refresh the page.');
+                return;
+            }
+
+            fetch("{% url 'guest_experience:mark_courtesy_done' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    confirmation_number: cid,
+                    which: which,
+                    outcome: outcome,
+                    notes: notes
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.error || 'Failed to update courtesy call');
+                    });
+                }
+                return response.json();
+            })
+            .then(() => {
+                const modal = bootstrap.Modal.getInstance(outcomeModalEl);
+                if (modal) modal.hide();
+                loadCourtesyCalls();
+            })
+            .catch(error => {
+                console.error('Courtesy update error:', error);
+                alert('Failed to update courtesy call: ' + error.message);
+            });
         });
     }
 
