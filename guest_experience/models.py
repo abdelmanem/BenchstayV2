@@ -29,6 +29,13 @@ class ArrivalRecord(models.Model):
     nights = models.IntegerField(null=True, blank=True)
     status = models.CharField(max_length=50, blank=True)
 
+    # Courtesy call tracking
+    in_house_since = models.DateTimeField(null=True, blank=True)
+    first_courtesy_due_at = models.DateTimeField(null=True, blank=True)
+    first_courtesy_done_at = models.DateTimeField(null=True, blank=True)
+    second_courtesy_due_at = models.DateTimeField(null=True, blank=True)
+    second_courtesy_done_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="arrival_records_created")

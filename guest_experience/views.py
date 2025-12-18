@@ -512,11 +512,52 @@ def mark_in_house(request):
     if not cleaned_ids:
         return JsonResponse({"updated": 0})
 
-    updated = ArrivalRecord.objects.filter(
-        confirmation_number__in=cleaned_ids
-    ).update(status="In-House", updated_by=request.user, updated_at=timezone.now())
+    now = timezone.now()
+    updated = 0
+    qs = ArrivalRecord.objects.filter(confirmation_number__in=cleaned_ids)
+    for record in qs:
+        # Only set in-house timing if actually transitioning to In-House
+        if record.status.lower() not in ["in-house", "in house"]:
+            record.status = "In-House"
+            record.in_house_since = now
+
+            # First courtesy call: 20 minutes after status change
+            record.first_courtesy_due_at = now + timedelta(minutes=20)
+
+            # Second courtesy call: next day if stay > 1 night and before departure
+            second_due = None
+            if record.nights and record.nights > 1:
+                candidate = now + timedelta(days=1)
+                if record.departure_date:
+                    # Only schedule if still before departure date
+                    if candidate.date() <= record.departure_date:
+                        second_due = candidate
+                else:
+                    second_due = candidate
+            record.second_courtesy_due_at = second_due
+
+        record.updated_by = request.user
+        record.updated_at = now
+        record.save()
+        updated += 1
 
     return JsonResponse({"updated": updated})
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def courtesy_calls(request):
+    """
+    Page to track courtesy calls for in-house guests.
+    """
+    today = timezone.localdate()
+    context = {
+        "section": "guest_experience",
+        "subsection": "courtesy_calls",
+        "page_title": "Guest Experience - Courtesy Calls",
+        "today": today,
+    }
+    return render(request, "guest_experience/courtesy_calls.html", context)
 
 
 @login_required
@@ -579,6 +620,99 @@ def departures_api(request):
         }
     ]
     return JsonResponse({"results": sample})
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def courtesy_calls_api(request):
+    """
+    API endpoint for courtesy call tracking.
+    Shows in-house guests and their courtesy call due/completed state.
+    """
+    now = timezone.now()
+
+    qs = ArrivalRecord.objects.filter(
+        models.Q(status__iexact="In-House") | models.Q(status__iexact="in house")
+    ).order_by("room")
+
+    data = []
+    for a in qs:
+        # First courtesy status
+        first_status = "Not Scheduled"
+        if a.first_courtesy_due_at:
+            if a.first_courtesy_done_at:
+                first_status = "Completed"
+            elif a.first_courtesy_due_at <= now:
+                first_status = "Overdue"
+            else:
+                first_status = "Pending"
+
+        # Second courtesy status
+        second_status = "Not Scheduled"
+        if a.second_courtesy_due_at:
+            if a.second_courtesy_done_at:
+                second_status = "Completed"
+            elif a.second_courtesy_due_at <= now:
+                second_status = "Overdue"
+            else:
+                second_status = "Pending"
+
+        data.append(
+            {
+                "room": a.room,
+                "guest_name": a.guest_name,
+                "confirmation_number": a.confirmation_number,
+                "phone": a.phone,
+                "country": a.country,
+                "arrival_date": a.arrival_date.isoformat() if a.arrival_date else None,
+                "departure_date": a.departure_date.isoformat() if a.departure_date else None,
+                "nights": a.nights,
+                "in_house_since": a.in_house_since.isoformat() if a.in_house_since else None,
+                "first_courtesy_due_at": a.first_courtesy_due_at.isoformat() if a.first_courtesy_due_at else None,
+                "first_courtesy_done_at": a.first_courtesy_done_at.isoformat() if a.first_courtesy_done_at else None,
+                "first_courtesy_status": first_status,
+                "second_courtesy_due_at": a.second_courtesy_due_at.isoformat() if a.second_courtesy_due_at else None,
+                "second_courtesy_done_at": a.second_courtesy_done_at.isoformat() if a.second_courtesy_done_at else None,
+                "second_courtesy_status": second_status,
+            }
+        )
+
+    return JsonResponse({"results": data})
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+@require_POST
+def mark_courtesy_done(request):
+    """
+    Mark a courtesy call as completed.
+    Expects JSON: {"confirmation_number": "...", "which": "first"|"second"}
+    """
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    confirmation_number = str(payload.get("confirmation_number") or "").strip()
+    which = str(payload.get("which") or "").strip().lower()
+    if not confirmation_number or which not in {"first", "second"}:
+        return JsonResponse({"error": "Invalid parameters"}, status=400)
+
+    try:
+        record = ArrivalRecord.objects.get(confirmation_number=confirmation_number)
+    except ArrivalRecord.DoesNotExist:
+        return JsonResponse({"error": "Record not found"}, status=404)
+
+    now = timezone.now()
+    if which == "first":
+        record.first_courtesy_done_at = now
+    else:
+        record.second_courtesy_done_at = now
+    record.updated_by = request.user
+    record.updated_at = now
+    record.save()
+
+    return JsonResponse({"success": True})
 
 
 @login_required

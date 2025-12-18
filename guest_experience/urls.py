@@ -12,11 +12,14 @@ urlpatterns = [
     path("arrivals/delete/", views.delete_arrivals, name="delete_arrivals"),
     path("arrivals/mark-in-house/", views.mark_in_house, name="mark_in_house"),
     path("in-house/", views.in_house, name="in_house"),
+    path("courtesy-calls/", views.courtesy_calls, name="courtesy_calls"),
     path("departures/", views.departures, name="departures"),
     # API endpoints
     path("api/arrivals/", views.arrivals_api, name="arrivals_api"),
     path("api/in-house/", views.in_house_api, name="in_house_api"),
     path("api/departures/", views.departures_api, name="departures_api"),
+    path("api/courtesy-calls/", views.courtesy_calls_api, name="courtesy_calls_api"),
+    path("api/courtesy-calls/mark-done/", views.mark_courtesy_done, name="mark_courtesy_done"),
     path("api/dashboard/", views.dashboard_api, name="dashboard_api"),
 ]
 
