@@ -5,6 +5,7 @@ app_name = "guest_experience"
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
+    path("dashboard/", views.dashboard, name="dashboard_detail"),
     path("arrivals/", views.arrivals, name="arrivals"),
     path("arrivals/upload/", views.upload_arrivals, name="upload_arrivals"),
     path("arrivals/edit/<str:confirmation_number>/", views.edit_arrival, name="edit_arrival"),
@@ -16,6 +17,7 @@ urlpatterns = [
     path("api/arrivals/", views.arrivals_api, name="arrivals_api"),
     path("api/in-house/", views.in_house_api, name="in_house_api"),
     path("api/departures/", views.departures_api, name="departures_api"),
+    path("api/dashboard/", views.dashboard_api, name="dashboard_api"),
 ]
 
 

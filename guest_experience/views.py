@@ -4,8 +4,11 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.db.models import Count, Q
+from django.db.models.functions import TruncDate
 import json
 import pandas as pd
+from datetime import datetime, timedelta
 from .models import ArrivalRecord
 from django.db import models
 
@@ -14,9 +17,40 @@ from django.db import models
 @permission_required("accounts.view_hotel_management", raise_exception=True)
 def dashboard(request):
     """
-    Simple redirect so that /guest-experience/ opens the Arrivals view.
+    Guest Experience - Arrivals Dashboard with charts and metrics.
     """
-    return redirect("guest_experience:arrivals")
+    today = timezone.localdate()
+    
+    # Get filter parameters
+    start_date = request.GET.get('start_date', (today - timedelta(days=30)).isoformat())
+    end_date = request.GET.get('end_date', today.isoformat())
+    status_filter = request.GET.get('status', '')
+    country_filter = request.GET.get('country', '')
+    travel_agent_filter = request.GET.get('travel_agent', '')
+    search_query = request.GET.get('search', '')
+    
+    try:
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        start_date_obj = today - timedelta(days=30)
+        end_date_obj = today
+        start_date = start_date_obj.isoformat()
+        end_date = end_date_obj.isoformat()
+    
+    context = {
+        "section": "guest_experience",
+        "subsection": "dashboard",
+        "page_title": "Guest Experience - Arrivals Dashboard",
+        "today": today,
+        "start_date": start_date,
+        "end_date": end_date,
+        "status_filter": status_filter,
+        "country_filter": country_filter,
+        "travel_agent_filter": travel_agent_filter,
+        "search_query": search_query,
+    }
+    return render(request, "guest_experience/dashboard.html", context)
 
 
 @login_required
@@ -525,3 +559,116 @@ def departures_api(request):
         }
     ]
     return JsonResponse({"results": sample})
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def dashboard_api(request):
+    """
+    API endpoint for dashboard data including metrics and chart data.
+    """
+    today = timezone.localdate()
+    
+    # Get filter parameters
+    start_date_str = request.GET.get('start_date', (today - timedelta(days=30)).isoformat())
+    end_date_str = request.GET.get('end_date', today.isoformat())
+    status_filter = request.GET.get('status', '')
+    country_filter = request.GET.get('country', '')
+    travel_agent_filter = request.GET.get('travel_agent', '')
+    search_query = request.GET.get('search', '')
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        start_date = today - timedelta(days=30)
+        end_date = today
+    
+    # Base queryset
+    qs = ArrivalRecord.objects.filter(
+        arrival_date__gte=start_date,
+        arrival_date__lte=end_date
+    )
+    
+    # Apply filters
+    if status_filter:
+        qs = qs.filter(status__iexact=status_filter)
+    
+    if country_filter:
+        qs = qs.filter(country__icontains=country_filter)
+    
+    if travel_agent_filter:
+        qs = qs.filter(travel_agent_name__icontains=travel_agent_filter)
+    
+    if search_query:
+        qs = qs.filter(
+            Q(guest_name__icontains=search_query) |
+            Q(confirmation_number__icontains=search_query) |
+            Q(room__icontains=search_query) |
+            Q(phone__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(travel_agent_name__icontains=search_query)
+        )
+    
+    # Calculate metrics
+    total_arrivals = qs.count()
+    
+    # Status breakdown
+    status_breakdown = qs.values('status').annotate(count=Count('id')).order_by('-count')
+    status_data = {item['status'] or 'Unknown': item['count'] for item in status_breakdown}
+    
+    # Country breakdown (top 10)
+    country_breakdown = qs.exclude(country__isnull=True).exclude(country='').values('country').annotate(
+        count=Count('id')
+    ).order_by('-count')[:10]
+    country_data = {item['country']: item['count'] for item in country_breakdown}
+    
+    # Daily arrivals trend
+    daily_trend = qs.annotate(date=TruncDate('arrival_date')).values('date').annotate(
+        count=Count('id')
+    ).order_by('date')
+    daily_trend_data = {
+        'labels': [item['date'].isoformat() if item['date'] else '' for item in daily_trend],
+        'data': [item['count'] for item in daily_trend]
+    }
+    
+    # Nationality breakdown (top 10)
+    nationality_breakdown = qs.exclude(nationality__isnull=True).exclude(nationality='').values('nationality').annotate(
+        count=Count('id')
+    ).order_by('-count')[:10]
+    nationality_data = {item['nationality']: item['count'] for item in nationality_breakdown}
+    
+    # Travel agent breakdown (top 10)
+    agent_breakdown = qs.exclude(travel_agent_name__isnull=True).exclude(travel_agent_name='').values('travel_agent_name').annotate(
+        count=Count('id')
+    ).order_by('-count')[:10]
+    agent_data = {item['travel_agent_name']: item['count'] for item in agent_breakdown}
+    
+    # Expected vs In-House vs Departed
+    expected_count = qs.filter(status__iexact='Expected').count()
+    in_house_count = qs.filter(
+        models.Q(status__iexact='In-House') | models.Q(status__iexact='in house')
+    ).count()
+    departed_count = qs.filter(status__iexact='Departed').count()
+    
+    # Average nights
+    avg_nights = qs.exclude(nights__isnull=True).aggregate(
+        avg_nights=models.Avg('nights')
+    )['avg_nights'] or 0
+    
+    return JsonResponse({
+        'metrics': {
+            'total_arrivals': total_arrivals,
+            'expected': expected_count,
+            'in_house': in_house_count,
+            'departed': departed_count,
+            'avg_nights': round(avg_nights, 1) if avg_nights else 0,
+        },
+        'charts': {
+            'status_breakdown': status_data,
+            'country_breakdown': country_data,
+            'nationality_breakdown': nationality_data,
+            'agent_breakdown': agent_data,
+            'daily_trend': daily_trend_data,
+        }
+    })
