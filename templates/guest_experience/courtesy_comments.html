@@ -1,0 +1,369 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}Guest Experience - Courtesy Call Comments{% endblock %}
+
+{% block content %}
+<div class="dashboard-header mb-4">
+    <div class="hotel-info d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="mb-1">Courtesy Call Comments</h1>
+            <p class="mb-0 text-white-50">Review guest feedback and issues collected from courtesy calls.</p>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form id="commentsFilters" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Call Date From</label>
+                <input type="date" id="comments_from" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Call Date To</label>
+                <input type="date" id="comments_to" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Which Call</label>
+                <select id="comments_which" class="form-select">
+                    <option value="">Both</option>
+                    <option value="first">First</option>
+                    <option value="second">Second</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Outcome</label>
+                <select id="comments_outcome" class="form-select">
+                    <option value="">All</option>
+                    <option value="Very Satisfied">Very Satisfied</option>
+                    <option value="Satisfied">Satisfied</option>
+                    <option value="Neutral">Neutral</option>
+                    <option value="Issue Reported">Issue Reported</option>
+                    <option value="Could Not Reach Guest">Could Not Reach Guest</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Search</label>
+                <input type="text" id="comments_search" class="form-control" placeholder="Search room, guest, notes, user">
+            </div>
+            <div class="col-md-12">
+                <button type="button" class="btn btn-primary" id="comments_apply">
+                    <i class="fas fa-filter me-2"></i>Apply Filters
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="comments_reset">
+                    <i class="fas fa-redo me-2"></i>Reset
+                </button>
+                <button type="button" class="btn btn-outline-success float-end" id="comments_export">
+                    <i class="fas fa-file-export me-2"></i>Export CSV
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h5 class="card-title mb-0">Courtesy Call Comments</h5>
+            <small class="text-muted">Each row is a completed courtesy call with captured feedback.</small>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <div class="d-flex flex-column">
+                <label class="small text-muted mb-1">&nbsp;</label>
+                <div id="comments_count" class="small text-muted">0 calls</div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th>Guest</th>
+                        <th>Phone</th>
+                        <th>Country</th>
+                        <th>Call</th>
+                        <th>Call Date</th>
+                        <th>Outcome</th>
+                        <th>Notes</th>
+                        <th>By</th>
+                    </tr>
+                </thead>
+                <tbody id="comments_body">
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted">
+                            Loading comments...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tbody = document.getElementById('comments_body');
+    const countLabel = document.getElementById('comments_count');
+
+    const fromInput = document.getElementById('comments_from');
+    const toInput = document.getElementById('comments_to');
+    const whichSelect = document.getElementById('comments_which');
+    const outcomeSelect = document.getElementById('comments_outcome');
+    const searchInput = document.getElementById('comments_search');
+
+    const applyBtn = document.getElementById('comments_apply');
+    const resetBtn = document.getElementById('comments_reset');
+    const exportBtn = document.getElementById('comments_export');
+
+    let allCalls = [];      // flattened list of completed calls with notes
+
+    function formatDateTime(isoString) {
+        if (!isoString) return '-';
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return isoString;
+        return d.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        }) + ' ' + d.toLocaleTimeString(undefined, {
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    }
+
+    function rebuildCalls(rawRows) {
+        const calls = [];
+        rawRows.forEach(item => {
+            // First call
+            if (item.first_courtesy_done_at && (item.first_courtesy_outcome || item.first_courtesy_notes)) {
+                calls.push({
+                    room: item.room,
+                    guest_name: item.guest_name,
+                    phone: item.phone,
+                    country: item.country,
+                    which: 'First',
+                    call_date: item.first_courtesy_done_at,
+                    outcome: item.first_courtesy_outcome || '',
+                    notes: item.first_courtesy_notes || '',
+                    by: item.first_courtesy_by || '',
+                });
+            }
+            // Second call
+            if (item.second_courtesy_done_at && (item.second_courtesy_outcome || item.second_courtesy_notes)) {
+                calls.push({
+                    room: item.room,
+                    guest_name: item.guest_name,
+                    phone: item.phone,
+                    country: item.country,
+                    which: 'Second',
+                    call_date: item.second_courtesy_done_at,
+                    outcome: item.second_courtesy_outcome || '',
+                    notes: item.second_courtesy_notes || '',
+                    by: item.second_courtesy_by || '',
+                });
+            }
+        });
+        return calls;
+    }
+
+    function applyFiltersAndRender() {
+        const fromVal = fromInput.value;
+        const toVal = toInput.value;
+        const which = whichSelect.value;
+        const outcome = outcomeSelect.value;
+        const q = (searchInput.value || '').toLowerCase().trim();
+
+        let filtered = allCalls.filter(call => {
+            if (which && call.which.toLowerCase() !== which) return false;
+            if (outcome && call.outcome !== outcome) return false;
+
+            if (fromVal || toVal) {
+                if (!call.call_date) return false;
+                const d = new Date(call.call_date);
+                if (isNaN(d.getTime())) return false;
+                const dateStr = d.toISOString().slice(0, 10);
+                if (fromVal && dateStr < fromVal) return false;
+                if (toVal && dateStr > toVal) return false;
+            }
+
+            if (q) {
+                const haystack = [
+                    call.room,
+                    call.guest_name,
+                    call.phone,
+                    call.country,
+                    call.outcome,
+                    call.notes,
+                    call.by,
+                    call.which,
+                ].map(v => (v || '').toString().toLowerCase()).join(' ');
+                if (!haystack.includes(q)) return false;
+            }
+
+            return true;
+        });
+
+        // Update count
+        if (countLabel) {
+            countLabel.textContent = `${filtered.length} calls`;
+        }
+
+        // Render table
+        tbody.innerHTML = '';
+        if (!filtered.length) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No comments match the selected filters.</td></tr>';
+            return;
+        }
+
+        filtered.forEach(call => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${call.room || '-'}</td>
+                <td>${call.guest_name || '-'}</td>
+                <td>${call.phone || '-'}</td>
+                <td>${call.country || '-'}</td>
+                <td>${call.which}</td>
+                <td>${formatDateTime(call.call_date)}</td>
+                <td>${call.outcome || '-'}</td>
+                <td>${call.notes || '-'}</td>
+                <td>${call.by || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function exportToCsv() {
+        const rows = [];
+        // Header
+        rows.push([
+            'Room',
+            'Guest',
+            'Phone',
+            'Country',
+            'Call',
+            'Call Date',
+            'Outcome',
+            'Notes',
+            'By',
+        ]);
+
+        // Reuse current filtered data
+        const fromVal = fromInput.value;
+        const toVal = toInput.value;
+        const which = whichSelect.value;
+        const outcome = outcomeSelect.value;
+        const q = (searchInput.value || '').toLowerCase().trim();
+
+        let filtered = allCalls.filter(call => {
+            if (which && call.which.toLowerCase() !== which) return false;
+            if (outcome && call.outcome !== outcome) return false;
+
+            if (fromVal || toVal) {
+                if (!call.call_date) return false;
+                const d = new Date(call.call_date);
+                if (isNaN(d.getTime())) return false;
+                const dateStr = d.toISOString().slice(0, 10);
+                if (fromVal && dateStr < fromVal) return false;
+                if (toVal && dateStr > toVal) return false;
+            }
+
+            if (q) {
+                const haystack = [
+                    call.room,
+                    call.guest_name,
+                    call.phone,
+                    call.country,
+                    call.outcome,
+                    call.notes,
+                    call.by,
+                    call.which,
+                ].map(v => (v || '').toString().toLowerCase()).join(' ');
+                if (!haystack.includes(q)) return false;
+            }
+
+            return true;
+        });
+
+        filtered.forEach(call => {
+            rows.push([
+                call.room || '',
+                call.guest_name || '',
+                call.phone || '',
+                call.country || '',
+                call.which || '',
+                formatDateTime(call.call_date) || '',
+                call.outcome || '',
+                call.notes || '',
+                call.by || '',
+            ]);
+        });
+
+        const csvContent = rows.map(r =>
+            r.map(value => {
+                const v = (value || '').toString().replace(/"/g, '""');
+                return `"${v}"`;
+            }).join(',')
+        ).join('\r\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const timestamp = new Date().toISOString().slice(0,19).replace(/[:T]/g, '-');
+        link.download = `courtesy_call_comments_${timestamp}.csv`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    function loadData() {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">Loading comments...</td></tr>';
+        fetch("{% url 'guest_experience:courtesy_calls_api' %}")
+            .then(response => response.json())
+            .then(data => {
+                const raw = data.results || [];
+                allCalls = rebuildCalls(raw);
+                applyFiltersAndRender();
+            })
+            .catch(error => {
+                console.error('Error loading courtesy comments:', error);
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-danger">Failed to load comments.</td></tr>';
+            });
+    }
+
+    if (applyBtn) {
+        applyBtn.addEventListener('click', () => {
+            applyFiltersAndRender();
+        });
+    }
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            fromInput.value = '';
+            toInput.value = '';
+            whichSelect.value = '';
+            outcomeSelect.value = '';
+            searchInput.value = '';
+            applyFiltersAndRender();
+        });
+    }
+
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            exportToCsv();
+        });
+    }
+
+    loadData();
+});
+</script>
+{% endblock %}
+
+
