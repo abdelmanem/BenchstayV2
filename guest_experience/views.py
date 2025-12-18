@@ -563,6 +563,23 @@ def courtesy_calls(request):
 
 @login_required
 @permission_required("accounts.view_hotel_management", raise_exception=True)
+def courtesy_calls_dashboard(request):
+    """
+    Courtesy Calls dashboard with filters and summary metrics.
+    Uses courtesy_calls_api data on the frontend.
+    """
+    today = timezone.localdate()
+    context = {
+        "section": "guest_experience",
+        "subsection": "courtesy_calls",
+        "page_title": "Guest Experience - Courtesy Calls Dashboard",
+        "today": today,
+    }
+    return render(request, "guest_experience/courtesy_calls_dashboard.html", context)
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
 def in_house_api(request):
     """
     API endpoint for in-house guests.

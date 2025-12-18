@@ -13,6 +13,7 @@ urlpatterns = [
     path("arrivals/mark-in-house/", views.mark_in_house, name="mark_in_house"),
     path("in-house/", views.in_house, name="in_house"),
     path("courtesy-calls/", views.courtesy_calls, name="courtesy_calls"),
+    path("courtesy-calls/dashboard/", views.courtesy_calls_dashboard, name="courtesy_calls_dashboard"),
     path("departures/", views.departures, name="departures"),
     # API endpoints
     path("api/arrivals/", views.arrivals_api, name="arrivals_api"),
