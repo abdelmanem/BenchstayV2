@@ -37,6 +37,25 @@ def dashboard(request):
         end_date_obj = today
         start_date = start_date_obj.isoformat()
         end_date = end_date_obj.isoformat()
+
+    # Build base queryset for dropdown options (from current date range)
+    base_qs = ArrivalRecord.objects.filter(
+        arrival_date__gte=start_date_obj,
+        arrival_date__lte=end_date_obj,
+    )
+    # Optionally respect current status/country filters when building dropdown
+    if status_filter:
+        base_qs = base_qs.filter(status__iexact=status_filter)
+    if country_filter:
+        base_qs = base_qs.filter(country__icontains=country_filter)
+
+    travel_agents = (
+        base_qs.exclude(travel_agent_name__isnull=True)
+        .exclude(travel_agent_name="")
+        .values_list("travel_agent_name", flat=True)
+        .order_by("travel_agent_name")
+        .distinct()
+    )
     
     context = {
         "section": "guest_experience",
@@ -49,6 +68,7 @@ def dashboard(request):
         "country_filter": country_filter,
         "travel_agent_filter": travel_agent_filter,
         "search_query": search_query,
+        "travel_agents": travel_agents,
     }
     return render(request, "guest_experience/dashboard.html", context)
 

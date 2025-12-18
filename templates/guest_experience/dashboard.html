@@ -4,7 +4,6 @@
 
 {% block extra_css %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <style>
     .chart-container {
         position: relative;
@@ -83,7 +82,12 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">Travel Agent</label>
-                <input type="text" name="travel_agent" id="travel_agent_filter" value="{{ travel_agent_filter }}" class="form-control" placeholder="Filter by agent">
+                <select name="travel_agent" id="travel_agent_filter" class="form-select">
+                    <option value="">All Agents</option>
+                    {% for agent in travel_agents %}
+                    <option value="{{ agent }}" {% if travel_agent_filter == agent %}selected{% endif %}>{{ agent }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="col-md-2">
                 <label class="form-label">Search</label>
@@ -368,6 +372,7 @@ function updateStatusChart(data) {
     chartInstances.status = new Chart(ctx, {
         type: 'doughnut',
         data: {
+            // Include counts in legend labels
             labels: labels.map((label, index) => `${label} (${values[index]})`),
             datasets: [{
                 data: values,
@@ -383,17 +388,6 @@ function updateStatusChart(data) {
                 legend: {
                     position: 'bottom'
                 },
-                datalabels: {
-                    display: true,
-                    color: '#fff',
-                    font: {
-                        weight: 'bold',
-                        size: 14
-                    },
-                    formatter: (value) => {
-                        return value;
-                    }
-                },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -404,8 +398,7 @@ function updateStatusChart(data) {
                     }
                 }
             }
-        },
-        plugins: [ChartDataLabels]
+        }
     });
 }
 
@@ -447,18 +440,6 @@ function updateCountryChart(data) {
                 legend: {
                     display: false
                 },
-                datalabels: {
-                    anchor: 'end',
-                    align: 'right',
-                    color: '#1f2937',
-                    font: {
-                        weight: 'bold',
-                        size: 12
-                    },
-                    formatter: (value) => {
-                        return value;
-                    }
-                },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -467,12 +448,12 @@ function updateCountryChart(data) {
                     }
                 }
             }
-        },
-        plugins: [ChartDataLabels]
+        }
     });
 }
 
 function updateNationalityChart(data) {
+    data = data || {};
     const ctx = document.getElementById('nationalityChart').getContext('2d');
     
     if (chartInstances.nationality) {
@@ -516,6 +497,7 @@ function updateNationalityChart(data) {
 }
 
 function updateAgentChart(data) {
+    data = data || {};
     const ctx = document.getElementById('agentChart').getContext('2d');
     
     if (chartInstances.agent) {
