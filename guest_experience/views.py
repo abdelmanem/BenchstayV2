@@ -547,6 +547,90 @@ def mark_in_house(request):
 
 @login_required
 @permission_required("accounts.view_hotel_management", raise_exception=True)
+@require_POST
+def mark_departed(request):
+    """
+    Mark a guest as departed from In-House status.
+    Expects JSON body: {
+        "confirmation_number": "ABC123",
+        "departure_method": "Checkout at front desk",
+        "departure_notes": "Guest was satisfied",
+        "message_sent_to_guest": true
+    }
+    """
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    confirmation_number = str(payload.get("confirmation_number") or "").strip()
+    departure_method = str(payload.get("departure_method") or "").strip()
+    departure_notes = str(payload.get("departure_notes") or "").strip()
+    message_sent_to_guest = bool(payload.get("message_sent_to_guest", False))
+
+    if not confirmation_number:
+        return JsonResponse({"error": "confirmation_number is required"}, status=400)
+    if not departure_method:
+        return JsonResponse({"error": "departure_method is required"}, status=400)
+
+    try:
+        record = ArrivalRecord.objects.get(confirmation_number=confirmation_number)
+    except ArrivalRecord.DoesNotExist:
+        return JsonResponse({"error": "Record not found"}, status=404)
+
+    now = timezone.now()
+    record.status = "Departed"
+    record.departed_at = now
+    record.departed_by = request.user
+    record.departure_method = departure_method
+    record.departure_notes = departure_notes
+    record.message_sent_to_guest = message_sent_to_guest
+    record.updated_by = request.user
+    record.updated_at = now
+    record.save()
+
+    return JsonResponse({"success": True})
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+@require_POST
+def update_room(request):
+    """
+    Update the room number for an in-house guest.
+    Expects JSON body: {
+        "confirmation_number": "ABC123",
+        "room": "205"
+    }
+    """
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    confirmation_number = str(payload.get("confirmation_number") or "").strip()
+    new_room = str(payload.get("room") or "").strip()
+
+    if not confirmation_number:
+        return JsonResponse({"error": "confirmation_number is required"}, status=400)
+    if not new_room:
+        return JsonResponse({"error": "room is required"}, status=400)
+
+    try:
+        record = ArrivalRecord.objects.get(confirmation_number=confirmation_number)
+    except ArrivalRecord.DoesNotExist:
+        return JsonResponse({"error": "Record not found"}, status=404)
+
+    record.room = new_room or None
+    record.updated_by = request.user
+    record.updated_at = timezone.now()
+    record.save()
+
+    return JsonResponse({"success": True, "room": record.room})
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
 def courtesy_calls(request):
     """
     Page to track courtesy calls for in-house guests.
@@ -611,8 +695,11 @@ def in_house_api(request):
         return JsonResponse({"error": "Invalid date format, expected YYYY-MM-DD."}, status=400)
 
     # In-house: status In-House (case-insensitive, handles both "In-House" and "in house")
+    # Exclude records with "Departed" status
     qs = ArrivalRecord.objects.filter(
         models.Q(status__iexact="in-house") | models.Q(status__iexact="in house")
+    ).exclude(
+        models.Q(status__iexact="departed")
     )
     qs = qs.filter(
         arrival_date__lte=target_date
@@ -645,17 +732,49 @@ def in_house_api(request):
 def departures_api(request):
     """
     API endpoint for departures.
+    Returns records with "Departed" status.
     """
-    sample = [
-        {
-            "room": "207",
-            "guest_name": "Leaving Guest",
-            "checkout_time": "11:00",
-            "balance": 0.0,
-            "status": "Due Out",
-        }
-    ]
-    return JsonResponse({"results": sample})
+    date_param = request.GET.get("date")
+    try:
+        if date_param:
+            target_date = timezone.datetime.strptime(date_param, "%Y-%m-%d").date()
+        else:
+            target_date = timezone.localdate()
+    except ValueError:
+        return JsonResponse({"error": "Invalid date format, expected YYYY-MM-DD."}, status=400)
+
+    # Get records with "Departed" status
+    qs = ArrivalRecord.objects.filter(
+        models.Q(status__iexact="departed")
+    ).order_by("-departed_at", "room")
+
+    # Optionally filter by departure date if provided
+    if date_param:
+        qs = qs.filter(departed_at__date=target_date)
+
+    data = []
+    for a in qs:
+        data.append({
+            "room": a.room,
+            "guest_name": a.guest_name,
+            "confirmation_number": a.confirmation_number,
+            "phone": a.phone,
+            "email": a.email,
+            "country": a.country,
+            "nationality": a.nationality,
+            "travel_agent_name": a.travel_agent_name,
+            "arrival_date": a.arrival_date.isoformat() if a.arrival_date else None,
+            "departure_date": a.departure_date.isoformat() if a.departure_date else None,
+            "nights": a.nights,
+            "status": a.status,
+            "departed_at": a.departed_at.isoformat() if a.departed_at else None,
+            "departed_by": a.departed_by.username if a.departed_by else None,
+            "departure_method": a.departure_method,
+            "departure_notes": a.departure_notes,
+            "message_sent_to_guest": a.message_sent_to_guest,
+        })
+
+    return JsonResponse({"results": data})
 
 
 @login_required

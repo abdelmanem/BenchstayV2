@@ -68,16 +68,93 @@
                         <th role="button" data-sort-key="status">Status</th>
                         <th role="button" data-sort-key="in_house_since">In-House Since</th>
                         <th role="button" data-sort-key="in_house_by">In-House By</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="inhouse-body">
                     <tr>
-                        <td colspan="12" class="text-center py-4 text-muted">
+                        <td colspan="13" class="text-center py-4 text-muted">
                             Loading in-house guests...
                         </td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Change Room Modal -->
+<div class="modal fade" id="changeRoomModal" tabindex="-1" aria-labelledby="changeRoomModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="changeRoomModalLabel">Change Guest Room</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="changeRoomForm">
+                    <input type="hidden" id="change_room_confirmation" name="confirmation_number">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Guest:</strong> <span id="change_room_guest_name"></span></label>
+                        <br>
+                        <label class="form-label"><strong>Current Room:</strong> <span id="change_room_current_room"></span></label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="new_room_number" class="form-label">New Room Number <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="new_room_number" name="new_room_number" required placeholder="Enter new room number">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmChangeRoomBtn">
+                    <i class="fas fa-door-open me-2"></i>Update Room
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Departure Modal -->
+<div class="modal fade" id="departureModal" tabindex="-1" aria-labelledby="departureModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="departureModalLabel">Mark Guest as Departed</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="departureForm">
+                    <input type="hidden" id="departure_confirmation" name="confirmation_number">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Guest:</strong> <span id="departure_guest_name"></span></label>
+                        <br>
+                        <label class="form-label"><strong>Room:</strong> <span id="departure_room"></span></label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="departure_method" class="form-label">How was the actual departure made? <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="departure_method" name="departure_method" required placeholder="e.g., Checkout at front desk, Express checkout, Early checkout, etc.">
+                    </div>
+                    <div class="mb-3">
+                        <label for="departure_notes" class="form-label">Comment about the stay</label>
+                        <textarea class="form-control" id="departure_notes" name="departure_notes" rows="4" placeholder="Enter any comments or feedback about the guest's stay..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="message_sent_to_guest" name="message_sent_to_guest">
+                            <label class="form-check-label" for="message_sent_to_guest">
+                                Message sent to guest
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="confirmDepartureBtn">
+                    <i class="fas fa-sign-out-alt me-2"></i>Mark as Departed
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -187,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (!pageItems.length) {
-            tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-muted">No in-house guests found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-muted">No in-house guests found.</td></tr>';
             return;
         }
 
@@ -206,13 +283,31 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td>${item.status || '-'}</td>
                 <td>${formatDateTime(item.in_house_since)}</td>
                 <td>${item.in_house_by || '-'}</td>
+                <td>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-sm btn-primary change-room-btn" 
+                                data-confirmation="${item.confirmation_number}"
+                                data-room="${item.room || ''}"
+                                data-guest="${item.guest_name || ''}"
+                                title="Change Room">
+                            <i class="fas fa-door-open"></i> Change Room
+                        </button>
+                        <button class="btn btn-sm btn-warning mark-departed-btn" 
+                                data-confirmation="${item.confirmation_number}"
+                                data-room="${item.room || ''}"
+                                data-guest="${item.guest_name || ''}"
+                                title="Mark as Departed">
+                            <i class="fas fa-sign-out-alt"></i> Departures
+                        </button>
+                    </div>
+                </td>
             `;
             tbody.appendChild(tr);
         });
     }
 
     function loadInHouse() {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">Loading in-house guests...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-muted">Loading in-house guests...</td></tr>';
         let dateVal = dateInput.value;
         if (!dateVal) {
             const today = new Date();
@@ -233,7 +328,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 renderTable();
             })
             .catch(() => {
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-danger">Failed to load in-house guests.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-danger">Failed to load in-house guests.</td></tr>';
             });
     }
 
@@ -271,6 +366,165 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     loadInHouse();
+
+    // Handle Change Room button clicks
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.change-room-btn')) {
+            const btn = e.target.closest('.change-room-btn');
+            const confirmation = btn.getAttribute('data-confirmation');
+            const room = btn.getAttribute('data-room');
+            const guest = btn.getAttribute('data-guest');
+            
+            document.getElementById('change_room_confirmation').value = confirmation;
+            document.getElementById('change_room_current_room').textContent = room || '-';
+            document.getElementById('change_room_guest_name').textContent = guest || '-';
+            document.getElementById('new_room_number').value = '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('changeRoomModal'));
+            modal.show();
+        }
+    });
+
+    // Handle change room form submission
+    document.getElementById('confirmChangeRoomBtn').addEventListener('click', function() {
+        const form = document.getElementById('changeRoomForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const confirmation = document.getElementById('change_room_confirmation').value;
+        const newRoom = document.getElementById('new_room_number').value.trim();
+
+        if (!newRoom) {
+            alert('Please enter a room number');
+            return;
+        }
+
+        // Get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const csrftoken = getCookie('csrftoken');
+
+        fetch("{% url 'guest_experience:update_room' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                confirmation_number: confirmation,
+                room: newRoom
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('changeRoomModal'));
+                modal.hide();
+                loadInHouse(); // Reload the table
+            } else {
+                alert('Error: ' + (data.error || 'Failed to update room number'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating room number. Please try again.');
+        });
+    });
+
+    // Handle Departure button clicks
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.mark-departed-btn')) {
+            const btn = e.target.closest('.mark-departed-btn');
+            const confirmation = btn.getAttribute('data-confirmation');
+            const room = btn.getAttribute('data-room');
+            const guest = btn.getAttribute('data-guest');
+            
+            document.getElementById('departure_confirmation').value = confirmation;
+            document.getElementById('departure_room').textContent = room || '-';
+            document.getElementById('departure_guest_name').textContent = guest || '-';
+            document.getElementById('departure_method').value = '';
+            document.getElementById('departure_notes').value = '';
+            document.getElementById('message_sent_to_guest').checked = false;
+            
+            const modal = new bootstrap.Modal(document.getElementById('departureModal'));
+            modal.show();
+        }
+    });
+
+    // Handle departure form submission
+    document.getElementById('confirmDepartureBtn').addEventListener('click', function() {
+        const form = document.getElementById('departureForm');
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const confirmation = document.getElementById('departure_confirmation').value;
+        const departureMethod = document.getElementById('departure_method').value;
+        const departureNotes = document.getElementById('departure_notes').value;
+        const messageSent = document.getElementById('message_sent_to_guest').checked;
+
+        // Get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const csrftoken = getCookie('csrftoken');
+
+        fetch("{% url 'guest_experience:mark_departed' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                confirmation_number: confirmation,
+                departure_method: departureMethod,
+                departure_notes: departureNotes,
+                message_sent_to_guest: messageSent
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('departureModal'));
+                modal.hide();
+                loadInHouse(); // Reload the table
+            } else {
+                alert('Error: ' + (data.error || 'Failed to mark as departed'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error marking guest as departed. Please try again.');
+        });
+    });
 });
 </script>
 {% endblock %}

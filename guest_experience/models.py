@@ -43,6 +43,13 @@ class ArrivalRecord(models.Model):
     second_courtesy_outcome = models.CharField(max_length=100, blank=True)
     second_courtesy_notes = models.TextField(blank=True)
 
+    # Departure tracking
+    departed_at = models.DateTimeField(null=True, blank=True)
+    departed_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="arrival_records_departed")
+    departure_method = models.CharField(max_length=255, blank=True)
+    departure_notes = models.TextField(blank=True)
+    message_sent_to_guest = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="arrival_records_created")

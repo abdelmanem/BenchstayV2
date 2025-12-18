@@ -325,6 +325,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function loadData() {
         tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">Loading comments...</td></tr>';
+        
+        // Set default date to today if not set
+        if (!fromInput.value) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            fromInput.value = `${yyyy}-${mm}-${dd}`;
+        }
+        if (!toInput.value) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            toInput.value = `${yyyy}-${mm}-${dd}`;
+        }
+        
         fetch("{% url 'guest_experience:courtesy_calls_api' %}")
             .then(response => response.json())
             .then(data => {
