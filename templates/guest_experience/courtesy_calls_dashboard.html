@@ -1,0 +1,363 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}Guest Experience - Courtesy Calls Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .metric-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .metric-label {
+        font-size: 0.9rem;
+        color: #6b7280;
+        margin-bottom: 8px;
+    }
+    .metric-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #1f2937;
+    }
+    .metric-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Dashboard Header -->
+<div class="dashboard-header mb-4">
+    <div class="hotel-info d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="mb-1">Courtesy Calls Dashboard</h1>
+            <p class="mb-0 text-white-50">Overview and filters for in-house guests courtesy calls.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'guest_experience:courtesy_calls' %}" class="btn btn-light btn-sm">
+                <i class="fas fa-list me-1"></i>Courtesy Calls List
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form id="courtesyDashboardFilters" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">In-House From</label>
+                <input type="date" id="filter_inhouse_from" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">In-House To</label>
+                <input type="date" id="filter_inhouse_to" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">First Status</label>
+                <select id="filter_first_status" class="form-select">
+                    <option value="">All</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Overdue">Overdue</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Not Scheduled">Not Scheduled</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Second Status</label>
+                <select id="filter_second_status" class="form-select">
+                    <option value="">All</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Overdue">Overdue</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Not Scheduled">Not Scheduled</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Search</label>
+                <input type="text" id="filter_search" class="form-control" placeholder="Search room, guest, user">
+            </div>
+            <div class="col-md-12">
+                <button type="button" class="btn btn-primary" id="applyCourtesyFilters">
+                    <i class="fas fa-filter me-2"></i>Apply Filters
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="resetCourtesyFilters">
+                    <i class="fas fa-redo me-2"></i>Reset
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                    <i class="fas fa-bed metric-icon text-primary"></i>
+                </div>
+                <div>
+                    <div class="metric-label">In-House Guests</div>
+                    <div class="metric-value" id="metric_total_inhouse">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                    <i class="fas fa-phone metric-icon text-success"></i>
+                </div>
+                <div>
+                    <div class="metric-label">First Courtesy Pending/Overdue</div>
+                    <div class="metric-value" id="metric_first_pending">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                    <i class="fas fa-phone-volume metric-icon text-warning"></i>
+                </div>
+                <div>
+                    <div class="metric-label">Second Courtesy Pending/Overdue</div>
+                    <div class="metric-value" id="metric_second_pending">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="metric-card">
+            <div class="d-flex align-items-center">
+                <div class="flex-shrink-0 me-3">
+                    <i class="fas fa-check-circle metric-icon text-info"></i>
+                </div>
+                <div>
+                    <div class="metric-label">Total Completed Calls</div>
+                    <div class="metric-value" id="metric_completed">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Courtesy Calls Table -->
+<div class="card">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h5 class="card-title mb-0">Courtesy Calls Overview</h5>
+            <small class="text-muted">Filtered view of courtesy calls with user and timing info.</small>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <div class="d-flex flex-column">
+                <label class="small text-muted mb-1">&nbsp;</label>
+                <div id="courtesyDashboardCount" class="small text-muted">0 guests</div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th>Guest</th>
+                        <th>Phone</th>
+                        <th>Country</th>
+                        <th>In-House Since</th>
+                        <th>In-House By</th>
+                        <th>First Courtesy</th>
+                        <th>First Status</th>
+                        <th>First By</th>
+                        <th>Second Courtesy</th>
+                        <th>Second Status</th>
+                        <th>Second By</th>
+                    </tr>
+                </thead>
+                <tbody id="courtesyDashboardBody">
+                    <tr>
+                        <td colspan="12" class="text-center py-4 text-muted">
+                            Loading courtesy calls...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tbody = document.getElementById('courtesyDashboardBody');
+    const countLabel = document.getElementById('courtesyDashboardCount');
+
+    const inhouseFromInput = document.getElementById('filter_inhouse_from');
+    const inhouseToInput = document.getElementById('filter_inhouse_to');
+    const firstStatusSelect = document.getElementById('filter_first_status');
+    const secondStatusSelect = document.getElementById('filter_second_status');
+    const searchInput = document.getElementById('filter_search');
+
+    const applyBtn = document.getElementById('applyCourtesyFilters');
+    const resetBtn = document.getElementById('resetCourtesyFilters');
+
+    const metricTotal = document.getElementById('metric_total_inhouse');
+    const metricFirstPending = document.getElementById('metric_first_pending');
+    const metricSecondPending = document.getElementById('metric_second_pending');
+    const metricCompleted = document.getElementById('metric_completed');
+
+    let allRows = [];
+
+    function formatDateTime(isoString) {
+        if (!isoString) return '-';
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return isoString;
+        return d.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        }) + ' ' + d.toLocaleTimeString(undefined, {
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    }
+
+    function applyFiltersAndRender() {
+        const fromVal = inhouseFromInput.value;
+        const toVal = inhouseToInput.value;
+        const firstStatus = firstStatusSelect.value;
+        const secondStatus = secondStatusSelect.value;
+        const q = (searchInput.value || '').toLowerCase().trim();
+
+        let filtered = allRows.filter(item => {
+            // Date range on in_house_since (date-only)
+            if (fromVal || toVal) {
+                if (!item.in_house_since) return false;
+                const d = new Date(item.in_house_since);
+                if (isNaN(d.getTime())) return false;
+                const dateStr = d.toISOString().slice(0, 10);
+                if (fromVal && dateStr < fromVal) return false;
+                if (toVal && dateStr > toVal) return false;
+            }
+
+            if (firstStatus && item.first_courtesy_status !== firstStatus) return false;
+            if (secondStatus && item.second_courtesy_status !== secondStatus) return false;
+
+            if (q) {
+                const haystack = [
+                    item.room,
+                    item.guest_name,
+                    item.phone,
+                    item.country,
+                    item.in_house_by,
+                    item.first_courtesy_by,
+                    item.second_courtesy_by,
+                ].map(v => (v || '').toString().toLowerCase()).join(' ');
+                if (!haystack.includes(q)) return false;
+            }
+
+            return true;
+        });
+
+        // Metrics
+        const total = filtered.length;
+        const firstPending = filtered.filter(i => i.first_courtesy_status === 'Pending' || i.first_courtesy_status === 'Overdue').length;
+        const secondPending = filtered.filter(i => i.second_courtesy_status === 'Pending' || i.second_courtesy_status === 'Overdue').length;
+        const completed = filtered.filter(i => i.first_courtesy_status === 'Completed' || i.second_courtesy_status === 'Completed').length;
+
+        metricTotal.textContent = total;
+        metricFirstPending.textContent = firstPending;
+        metricSecondPending.textContent = secondPending;
+        metricCompleted.textContent = completed;
+
+        if (countLabel) {
+            countLabel.textContent = `${total} guests`;
+        }
+
+        tbody.innerHTML = '';
+        if (!filtered.length) {
+            tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-muted">No courtesy calls match the selected filters.</td></tr>';
+            return;
+        }
+
+        filtered.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.room || '-'}</td>
+                <td>${item.guest_name || '-'}</td>
+                <td>${item.phone || '-'}</td>
+                <td>${item.country || '-'}</td>
+                <td>${formatDateTime(item.in_house_since)}</td>
+                <td>${item.in_house_by || '-'}</td>
+                <td>${formatDateTime(item.first_courtesy_due_at)}</td>
+                <td>${item.first_courtesy_status || '-'}</td>
+                <td>${item.first_courtesy_by || '-'}</td>
+                <td>${formatDateTime(item.second_courtesy_due_at)}</td>
+                <td>${item.second_courtesy_status || '-'}</td>
+                <td>${item.second_courtesy_by || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function loadData() {
+        tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-muted">Loading courtesy calls...</td></tr>';
+        fetch("{% url 'guest_experience:courtesy_calls_api' %}")
+            .then(response => response.json())
+            .then(data => {
+                allRows = data.results || [];
+                applyFiltersAndRender();
+            })
+            .catch(error => {
+                console.error('Error loading courtesy calls dashboard data:', error);
+                tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-danger">Failed to load courtesy calls data.</td></tr>';
+            });
+    }
+
+    // Set default date filters to today's date on load
+    (function initDefaultDates() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+        if (inhouseFromInput) inhouseFromInput.value = todayStr;
+        if (inhouseToInput) inhouseToInput.value = todayStr;
+    })();
+
+    if (applyBtn) {
+        applyBtn.addEventListener('click', () => {
+            applyFiltersAndRender();
+        });
+    }
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            inhouseFromInput.value = '';
+            inhouseToInput.value = '';
+            firstStatusSelect.value = '';
+            secondStatusSelect.value = '';
+            searchInput.value = '';
+            applyFiltersAndRender();
+        });
+    }
+
+    loadData();
+});
+</script>
+{% endblock %}
+
+
