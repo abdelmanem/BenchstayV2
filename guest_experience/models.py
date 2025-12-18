@@ -31,10 +31,13 @@ class ArrivalRecord(models.Model):
 
     # Courtesy call tracking
     in_house_since = models.DateTimeField(null=True, blank=True)
+    in_house_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="arrival_records_in_house")
     first_courtesy_due_at = models.DateTimeField(null=True, blank=True)
     first_courtesy_done_at = models.DateTimeField(null=True, blank=True)
+    first_courtesy_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="arrival_records_first_courtesy")
     second_courtesy_due_at = models.DateTimeField(null=True, blank=True)
     second_courtesy_done_at = models.DateTimeField(null=True, blank=True)
+    second_courtesy_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="arrival_records_second_courtesy")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

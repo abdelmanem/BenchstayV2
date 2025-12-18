@@ -66,11 +66,13 @@
                         <th role="button" data-sort-key="departure_date">Departure</th>
                         <th role="button" data-sort-key="nights">Nights</th>
                         <th role="button" data-sort-key="status">Status</th>
+                        <th role="button" data-sort-key="in_house_since">In-House Since</th>
+                        <th role="button" data-sort-key="in_house_by">In-House By</th>
                     </tr>
                 </thead>
                 <tbody id="inhouse-body">
                     <tr>
-                        <td colspan="10" class="text-center py-4 text-muted">
+                        <td colspan="12" class="text-center py-4 text-muted">
                             Loading in-house guests...
                         </td>
                     </tr>
@@ -96,6 +98,31 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentSortDir = 'asc';
     let currentPage = 1;
 
+    function formatDate(isoString) {
+        if (!isoString) return '-';
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return isoString;
+        return d.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        });
+    }
+
+    function formatDateTime(isoString) {
+        if (!isoString) return '-';
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return isoString;
+        return d.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        }) + ' ' + d.toLocaleTimeString(undefined, {
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    }
+
     function renderTable() {
         const q = (searchInput.value || '').toLowerCase().trim();
         tbody.innerHTML = '';
@@ -109,6 +136,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 item.phone,
                 item.country,
                 item.travel_agent_name,
+                item.in_house_by,
             ].map(v => (v || '').toString().toLowerCase()).join(' ');
             return haystack.includes(q);
         });
@@ -159,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (!pageItems.length) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No in-house guests found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-muted">No in-house guests found.</td></tr>';
             return;
         }
 
@@ -172,10 +200,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td>${item.phone || '-'}</td>
                 <td>${item.country || '-'}</td>
                 <td>${item.travel_agent_name || '-'}</td>
-                <td>${item.arrival_date || '-'}</td>
-                <td>${item.departure_date || '-'}</td>
+                <td>${formatDate(item.arrival_date)}</td>
+                <td>${formatDate(item.departure_date)}</td>
                 <td>${item.nights != null ? item.nights : '-'}</td>
                 <td>${item.status || '-'}</td>
+                <td>${formatDateTime(item.in_house_since)}</td>
+                <td>${item.in_house_by || '-'}</td>
             `;
             tbody.appendChild(tr);
         });

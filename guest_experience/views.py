@@ -517,9 +517,10 @@ def mark_in_house(request):
     qs = ArrivalRecord.objects.filter(confirmation_number__in=cleaned_ids)
     for record in qs:
         # Only set in-house timing if actually transitioning to In-House
-        if record.status.lower() not in ["in-house", "in house"]:
+        if (record.status or "").lower() not in ["in-house", "in house"]:
             record.status = "In-House"
             record.in_house_since = now
+            record.in_house_by = request.user
 
             # First courtesy call: 20 minutes after status change
             record.first_courtesy_due_at = now + timedelta(minutes=20)
@@ -598,6 +599,8 @@ def in_house_api(request):
             "departure_date": a.departure_date.isoformat() if a.departure_date else None,
             "nights": a.nights,
             "status": a.status,
+            "in_house_since": a.in_house_since.isoformat() if a.in_house_since else None,
+            "in_house_by": a.in_house_by.username if a.in_house_by else None,
         }
         for a in qs
     ]
@@ -668,11 +671,14 @@ def courtesy_calls_api(request):
                 "departure_date": a.departure_date.isoformat() if a.departure_date else None,
                 "nights": a.nights,
                 "in_house_since": a.in_house_since.isoformat() if a.in_house_since else None,
+                "in_house_by": a.in_house_by.username if a.in_house_by else None,
                 "first_courtesy_due_at": a.first_courtesy_due_at.isoformat() if a.first_courtesy_due_at else None,
                 "first_courtesy_done_at": a.first_courtesy_done_at.isoformat() if a.first_courtesy_done_at else None,
+                "first_courtesy_by": a.first_courtesy_by.username if a.first_courtesy_by else None,
                 "first_courtesy_status": first_status,
                 "second_courtesy_due_at": a.second_courtesy_due_at.isoformat() if a.second_courtesy_due_at else None,
                 "second_courtesy_done_at": a.second_courtesy_done_at.isoformat() if a.second_courtesy_done_at else None,
+                "second_courtesy_by": a.second_courtesy_by.username if a.second_courtesy_by else None,
                 "second_courtesy_status": second_status,
             }
         )
@@ -706,8 +712,10 @@ def mark_courtesy_done(request):
     now = timezone.now()
     if which == "first":
         record.first_courtesy_done_at = now
+        record.first_courtesy_by = request.user
     else:
         record.second_courtesy_done_at = now
+        record.second_courtesy_by = request.user
     record.updated_by = request.user
     record.updated_at = now
     record.save()

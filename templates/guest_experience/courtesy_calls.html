@@ -16,7 +16,8 @@
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div>
             <h5 class="card-title mb-0">In-House Guests Courtesy Calls</h5>
-            <small class="text-muted">Shows all in-house guests with courtesy call schedule.</small>
+            <small class="text-muted d-block">First courtesy call: within 15–30 minutes after the guest is marked In-House. Second courtesy call: next day for stays &gt; 1 night, before departure.</small>
+            <small class="text-muted">Use the “First Courtesy” and “Second Courtesy” times as your target call windows, then click “Mark Done” after each call.</small>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-3">
             <div class="d-flex flex-column">
@@ -42,17 +43,20 @@
                         <th>Departure</th>
                         <th>Nights</th>
                         <th>In-House Since</th>
+                        <th>In-House By</th>
                         <th>First Courtesy</th>
                         <th>First Status</th>
+                        <th>First By</th>
                         <th>Action</th>
                         <th>Second Courtesy</th>
                         <th>Second Status</th>
+                        <th>Second By</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="courtesy-body">
                     <tr>
-                        <td colspan="14" class="text-center py-4 text-muted">
+                        <td colspan="16" class="text-center py-4 text-muted">
                             Loading courtesy calls...
                         </td>
                     </tr>
@@ -70,6 +74,31 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('courtesy-search-input');
     const countLabel = document.getElementById('courtesy-count');
     let allRows = [];
+
+    function formatDate(isoString) {
+        if (!isoString) return '-';
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return isoString;
+        return d.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        });
+    }
+
+    function formatDateTime(isoString) {
+        if (!isoString) return '-';
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return isoString;
+        return d.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        }) + ' ' + d.toLocaleTimeString(undefined, {
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    }
 
     function getCookie(name) {
         let cookieValue = null;
@@ -106,7 +135,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (!filtered.length) {
-            tbody.innerHTML = '<tr><td colspan="14" class="text-center py-4 text-muted">No in-house guests found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="16" class="text-center py-4 text-muted">No in-house guests found.</td></tr>';
             return;
         }
 
@@ -117,20 +146,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td>${item.guest_name || '-'}</td>
                 <td>${item.phone || '-'}</td>
                 <td>${item.country || '-'}</td>
-                <td>${item.arrival_date || '-'}</td>
-                <td>${item.departure_date || '-'}</td>
+                <td>${formatDate(item.arrival_date)}</td>
+                <td>${formatDate(item.departure_date)}</td>
                 <td>${item.nights != null ? item.nights : '-'}</td>
-                <td>${item.in_house_since || '-'}</td>
-                <td>${item.first_courtesy_due_at || '-'}</td>
+                <td>${formatDateTime(item.in_house_since)}</td>
+                <td>${item.in_house_by || '-'}</td>
+                <td>${formatDateTime(item.first_courtesy_due_at)}</td>
                 <td>${item.first_courtesy_status || '-'}</td>
+                <td>${item.first_courtesy_by || '-'}</td>
                 <td>
                     ${item.first_courtesy_status === 'Pending' || item.first_courtesy_status === 'Overdue'
                         ? `<button class="btn btn-sm btn-outline-primary courtesy-done-btn" data-which="first" data-id="${item.confirmation_number}">Mark Done</button>`
                         : ''
                     }
                 </td>
-                <td>${item.second_courtesy_due_at || '-'}</td>
+                <td>${formatDateTime(item.second_courtesy_due_at)}</td>
                 <td>${item.second_courtesy_status || '-'}</td>
+                <td>${item.second_courtesy_by || '-'}</td>
                 <td>
                     ${item.second_courtesy_status === 'Pending' || item.second_courtesy_status === 'Overdue'
                         ? `<button class="btn btn-sm btn-outline-primary courtesy-done-btn" data-which="second" data-id="${item.confirmation_number}">Mark Done</button>`
