@@ -4,6 +4,7 @@
 
 {% block extra_css %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <style>
     .chart-container {
         position: relative;
@@ -367,7 +368,7 @@ function updateStatusChart(data) {
     chartInstances.status = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: labels,
+            labels: labels.map((label, index) => `${label} (${values[index]})`),
             datasets: [{
                 data: values,
                 backgroundColor: colors.slice(0, labels.length),
@@ -381,9 +382,30 @@ function updateStatusChart(data) {
             plugins: {
                 legend: {
                     position: 'bottom'
+                },
+                datalabels: {
+                    display: true,
+                    color: '#fff',
+                    font: {
+                        weight: 'bold',
+                        size: 14
+                    },
+                    formatter: (value) => {
+                        return value;
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            return label.split(' (')[0] + ': ' + value;
+                        }
+                    }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 }
 
@@ -424,9 +446,29 @@ function updateCountryChart(data) {
             plugins: {
                 legend: {
                     display: false
+                },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'right',
+                    color: '#1f2937',
+                    font: {
+                        weight: 'bold',
+                        size: 12
+                    },
+                    formatter: (value) => {
+                        return value;
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Arrivals: ' + context.parsed.x;
+                        }
+                    }
                 }
             }
-        }
+        },
+        plugins: [ChartDataLabels]
     });
 }
 
