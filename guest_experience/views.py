@@ -735,6 +735,8 @@ def departures_api(request):
     Returns records with "Departed" status.
     """
     date_param = request.GET.get("date")
+    search_query = request.GET.get("search", "").strip()
+    
     try:
         if date_param:
             target_date = timezone.datetime.strptime(date_param, "%Y-%m-%d").date()
@@ -746,14 +748,33 @@ def departures_api(request):
     # Get records with "Departed" status
     qs = ArrivalRecord.objects.filter(
         models.Q(status__iexact="departed")
-    ).order_by("-departed_at", "room")
+    )
 
-    # Optionally filter by departure date if provided
+    # Filter by departure date if provided
     if date_param:
         qs = qs.filter(departed_at__date=target_date)
 
+    # Apply search filter
+    if search_query:
+        qs = qs.filter(
+            models.Q(room__icontains=search_query) |
+            models.Q(guest_name__icontains=search_query) |
+            models.Q(confirmation_number__icontains=search_query) |
+            models.Q(phone__icontains=search_query) |
+            models.Q(country__icontains=search_query) |
+            models.Q(travel_agent_name__icontains=search_query) |
+            models.Q(departure_method__icontains=search_query)
+        )
+
+    qs = qs.order_by("-departed_at", "room")
+
     data = []
     for a in qs:
+        # Format checkout time from departed_at
+        checkout_time = ""
+        if a.departed_at:
+            checkout_time = a.departed_at.strftime("%H:%M")
+        
         data.append({
             "room": a.room,
             "guest_name": a.guest_name,
@@ -768,9 +789,10 @@ def departures_api(request):
             "nights": a.nights,
             "status": a.status,
             "departed_at": a.departed_at.isoformat() if a.departed_at else None,
+            "checkout_time": checkout_time,
             "departed_by": a.departed_by.username if a.departed_by else None,
-            "departure_method": a.departure_method,
-            "departure_notes": a.departure_notes,
+            "departure_method": a.departure_method or "",
+            "departure_notes": a.departure_notes or "",
             "message_sent_to_guest": a.message_sent_to_guest,
         })
 

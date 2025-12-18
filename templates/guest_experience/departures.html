@@ -2,36 +2,78 @@
 
 {% block title %}Guest Experience - Departures{% endblock %}
 
+{% block extra_css %}
+<style>
+    .performance-table tbody tr:hover {
+        background-color: #e0f2ff !important;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="dashboard-header mb-4">
     <div class="hotel-info d-flex align-items-center justify-content-between">
         <div>
             <h1 class="mb-1">Departures</h1>
-            <p class="mb-0 text-white-50">Follow guests due to depart and their checkout status.</p>
+            <p class="mb-0 text-white-50">View all departed guests and their checkout information.</p>
         </div>
     </div>
 </div>
 
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="card-title mb-0">Departures Overview</h5>
-        <span class="text-muted small">Date: {{ today }}</span>
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h5 class="card-title mb-0">Departures Overview</h5>
+            <small class="text-muted">Showing departures for selected date</small>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <div class="d-flex flex-column">
+                <label class="small text-muted mb-1" for="departures-date-filter">Departure Date</label>
+                <input type="date" id="departures-date-filter" class="form-control form-control-sm" value="{{ today }}">
+            </div>
+            <div class="d-flex flex-column">
+                <label class="small text-muted mb-1" for="departures-search-input">Search</label>
+                <input type="text" id="departures-search-input" class="form-control form-control-sm" placeholder="Search room, guest, country, agent">
+            </div>
+            <div class="d-flex flex-column">
+                <label class="small text-muted mb-1" for="departures-page-size">Rows per page</label>
+                <select id="departures-page-size" class="form-select form-select-sm">
+                    <option value="all" selected>All</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <div class="d-flex flex-column">
+                <label class="small text-muted mb-1">&nbsp;</label>
+                <div id="departures-count" class="small text-muted">0 rows</div>
+            </div>
+        </div>
     </div>
     <div class="card-body">
         <div class="table-responsive">
             <table class="table performance-table mb-0">
                 <thead>
                     <tr>
-                        <th>Room</th>
-                        <th>Guest Name</th>
-                        <th>Checkout Time</th>
-                        <th>Balance</th>
-                        <th>Status</th>
+                        <th role="button" data-sort-key="room">Room</th>
+                        <th role="button" data-sort-key="guest_name">Guest Name</th>
+                        <th role="button" data-sort-key="confirmation_number">Confirmation #</th>
+                        <th role="button" data-sort-key="phone">Phone</th>
+                        <th role="button" data-sort-key="country">Country</th>
+                        <th role="button" data-sort-key="travel_agent_name">Travel Agent</th>
+                        <th role="button" data-sort-key="arrival_date">Arrival</th>
+                        <th role="button" data-sort-key="departure_date">Departure</th>
+                        <th role="button" data-sort-key="nights">Nights</th>
+                        <th role="button" data-sort-key="checkout_time">Checkout Time</th>
+                        <th role="button" data-sort-key="status">Status</th>
+                        <th role="button" data-sort-key="departure_method">How Made Departures</th>
+                        <th role="button" data-sort-key="message_sent_to_guest">Message Sent</th>
                     </tr>
                 </thead>
                 <tbody id="departures-body">
                     <tr>
-                        <td colspan="5" class="text-center py-4 text-muted">
+                        <td colspan="13" class="text-center py-4 text-muted">
                             Loading departures...
                         </td>
                     </tr>
@@ -45,33 +87,212 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    fetch("{% url 'guest_experience:departures_api' %}")
-        .then(response => response.json())
-        .then(data => {
-            const tbody = document.getElementById('departures-body');
-            tbody.innerHTML = '';
-            if (!data.results || data.results.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No departures found.</td></tr>';
-                return;
-            }
-            data.results.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${item.room || '-'}</td>
-                    <td>${item.guest_name || '-'}</td>
-                    <td>${item.checkout_time || '-'}</td>
-                    <td>${item.balance ?? '-'}</td>
-                    <td>${item.status || '-'}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        })
-        .catch(() => {
-            const tbody = document.getElementById('departures-body');
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Failed to load departures.</td></tr>';
+    const tbody = document.getElementById('departures-body');
+    const dateInput = document.getElementById('departures-date-filter');
+    const searchInput = document.getElementById('departures-search-input');
+    const pageSizeSelect = document.getElementById('departures-page-size');
+    const countLabel = document.getElementById('departures-count');
+    const headerCells = document.querySelectorAll('thead th[data-sort-key]');
+
+    let allDepartures = [];
+    let currentSortKey = 'checkout_time';
+    let currentSortDir = 'desc';
+    let currentPage = 1;
+
+    function formatDate(isoString) {
+        if (!isoString) return '-';
+        const d = new Date(isoString);
+        if (isNaN(d.getTime())) return isoString;
+        return d.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
         });
+    }
+
+    function formatTime(timeString) {
+        if (!timeString) return '-';
+        return timeString;
+    }
+
+    function renderTable() {
+        tbody.innerHTML = '';
+
+        // Server-side search is already applied, so we just use allDepartures
+        let filtered = allDepartures;
+
+        if (currentSortKey) {
+            filtered = filtered.slice().sort((a, b) => {
+                const av = a[currentSortKey];
+                const bv = b[currentSortKey];
+
+                if (av == null && bv == null) return 0;
+                if (av == null) return currentSortDir === 'asc' ? 1 : -1;
+                if (bv == null) return currentSortDir === 'asc' ? -1 : 1;
+
+                // Handle boolean (message_sent_to_guest)
+                if (currentSortKey === 'message_sent_to_guest') {
+                    const aBool = Boolean(av);
+                    const bBool = Boolean(bv);
+                    if (aBool === bBool) return 0;
+                    return currentSortDir === 'asc' ? (aBool ? 1 : -1) : (aBool ? -1 : 1);
+                }
+
+                // Handle time strings (checkout_time)
+                if (currentSortKey === 'checkout_time') {
+                    const aTime = av || '';
+                    const bTime = bv || '';
+                    if (aTime < bTime) return currentSortDir === 'asc' ? -1 : 1;
+                    if (aTime > bTime) return currentSortDir === 'asc' ? 1 : -1;
+                    return 0;
+                }
+
+                // Handle numeric (nights)
+                if (currentSortKey === 'nights') {
+                    const an = Number(av) || 0;
+                    const bn = Number(bv) || 0;
+                    return currentSortDir === 'asc' ? an - bn : bn - an;
+                }
+
+                // Handle date strings (arrival_date, departure_date)
+                if (currentSortKey === 'arrival_date' || currentSortKey === 'departure_date') {
+                    const aDate = av ? new Date(av) : null;
+                    const bDate = bv ? new Date(bv) : null;
+                    if (!aDate && !bDate) return 0;
+                    if (!aDate) return currentSortDir === 'asc' ? 1 : -1;
+                    if (!bDate) return currentSortDir === 'asc' ? -1 : 1;
+                    return currentSortDir === 'asc' ? aDate - bDate : bDate - aDate;
+                }
+
+                const as = av.toString().toLowerCase();
+                const bs = bv.toString().toLowerCase();
+                if (as < bs) return currentSortDir === 'asc' ? -1 : 1;
+                if (as > bs) return currentSortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        const total = filtered.length;
+        const pageSizeVal = pageSizeSelect ? pageSizeSelect.value : 'all';
+        let pageSize = pageSizeVal === 'all' ? total || 1 : parseInt(pageSizeVal, 10) || total || 1;
+
+        const totalPages = pageSizeVal === 'all' ? 1 : Math.max(1, Math.ceil(total / pageSize));
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const startIndex = pageSizeVal === 'all' ? 0 : (currentPage - 1) * pageSize;
+        const endIndex = pageSizeVal === 'all' ? total : Math.min(startIndex + pageSize, total);
+        const pageItems = filtered.slice(startIndex, endIndex);
+
+        if (countLabel) {
+            if (!total) {
+                countLabel.textContent = '0 rows';
+            } else if (pageSizeVal === 'all') {
+                countLabel.textContent = `${total} rows`;
+            } else {
+                countLabel.textContent = `Showing ${startIndex + 1}–${endIndex} of ${total}`;
+            }
+        }
+
+        if (!pageItems.length) {
+            tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-muted">No departures found.</td></tr>';
+            return;
+        }
+
+        pageItems.forEach(item => {
+            const tr = document.createElement('tr');
+            const messageSent = item.message_sent_to_guest ? 
+                '<span class="badge bg-success">Yes</span>' : 
+                '<span class="badge bg-secondary">No</span>';
+            
+            tr.innerHTML = `
+                <td>${item.room || '-'}</td>
+                <td>${item.guest_name || '-'}</td>
+                <td>${item.confirmation_number || '-'}</td>
+                <td>${item.phone || '-'}</td>
+                <td>${item.country || '-'}</td>
+                <td>${item.travel_agent_name || '-'}</td>
+                <td>${formatDate(item.arrival_date)}</td>
+                <td>${formatDate(item.departure_date)}</td>
+                <td>${item.nights != null ? item.nights : '-'}</td>
+                <td>${formatTime(item.checkout_time)}</td>
+                <td>${item.status || '-'}</td>
+                <td>${item.departure_method || '-'}</td>
+                <td>${messageSent}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function loadDepartures() {
+        tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-muted">Loading departures...</td></tr>';
+        let dateVal = dateInput.value;
+        if (!dateVal) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            dateVal = `${yyyy}-${mm}-${dd}`;
+            if (dateInput) {
+                dateInput.value = dateVal;
+            }
+        }
+        
+        const params = new URLSearchParams();
+        if (dateVal) params.append('date', dateVal);
+        if (searchInput.value) params.append('search', searchInput.value);
+        
+        fetch("{% url 'guest_experience:departures_api' %}?" + params.toString())
+            .then(response => response.json())
+            .then(data => {
+                allDepartures = data.results || [];
+                currentPage = 1;
+                renderTable();
+            })
+            .catch(() => {
+                tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-danger">Failed to load departures.</td></tr>';
+            });
+    }
+
+    if (dateInput) {
+        dateInput.addEventListener('change', () => {
+            currentPage = 1;
+            loadDepartures();
+        });
+    }
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            // Debounce search - wait 500ms after user stops typing
+            searchTimeout = setTimeout(() => {
+                currentPage = 1;
+                loadDepartures();
+            }, 500);
+        });
+    }
+    if (pageSizeSelect) {
+        pageSizeSelect.addEventListener('change', () => {
+            currentPage = 1;
+            renderTable();
+        });
+    }
+    headerCells.forEach(th => {
+        th.addEventListener('click', () => {
+            const key = th.getAttribute('data-sort-key');
+            if (!key) return;
+            if (currentSortKey === key) {
+                currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortKey = key;
+                currentSortDir = 'asc';
+            }
+            currentPage = 1;
+            renderTable();
+        });
+    });
+
+    loadDepartures();
 });
 </script>
 {% endblock %}
-
-
