@@ -1,0 +1,212 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}Guest Experience - Courtesy Calls{% endblock %}
+
+{% block content %}
+<div class="dashboard-header mb-4">
+    <div class="hotel-info d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="mb-1">Courtesy Calls</h1>
+            <p class="mb-0 text-white-50">Track courtesy calls for in-house guests.</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h5 class="card-title mb-0">In-House Guests Courtesy Calls</h5>
+            <small class="text-muted">Shows all in-house guests with courtesy call schedule.</small>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <div class="d-flex flex-column">
+                <label class="small text-muted mb-1" for="courtesy-search-input">Search</label>
+                <input type="text" id="courtesy-search-input" class="form-control form-control-sm" placeholder="Search room, guest, country, phone">
+            </div>
+            <div class="d-flex flex-column">
+                <label class="small text-muted mb-1">&nbsp;</label>
+                <div id="courtesy-count" class="small text-muted">0 guests</div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th>Guest</th>
+                        <th>Phone</th>
+                        <th>Country</th>
+                        <th>Arrival</th>
+                        <th>Departure</th>
+                        <th>Nights</th>
+                        <th>In-House Since</th>
+                        <th>First Courtesy</th>
+                        <th>First Status</th>
+                        <th>Action</th>
+                        <th>Second Courtesy</th>
+                        <th>Second Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="courtesy-body">
+                    <tr>
+                        <td colspan="14" class="text-center py-4 text-muted">
+                            Loading courtesy calls...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tbody = document.getElementById('courtesy-body');
+    const searchInput = document.getElementById('courtesy-search-input');
+    const countLabel = document.getElementById('courtesy-count');
+    let allRows = [];
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function renderTable() {
+        const q = (searchInput.value || '').toLowerCase().trim();
+        tbody.innerHTML = '';
+
+        let filtered = allRows.filter(item => {
+            if (!q) return true;
+            const haystack = [
+                item.room,
+                item.guest_name,
+                item.phone,
+                item.country,
+            ].map(v => (v || '').toString().toLowerCase()).join(' ');
+            return haystack.includes(q);
+        });
+
+        if (countLabel) {
+            countLabel.textContent = `${filtered.length} guests`;
+        }
+
+        if (!filtered.length) {
+            tbody.innerHTML = '<tr><td colspan="14" class="text-center py-4 text-muted">No in-house guests found.</td></tr>';
+            return;
+        }
+
+        filtered.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${item.room || '-'}</td>
+                <td>${item.guest_name || '-'}</td>
+                <td>${item.phone || '-'}</td>
+                <td>${item.country || '-'}</td>
+                <td>${item.arrival_date || '-'}</td>
+                <td>${item.departure_date || '-'}</td>
+                <td>${item.nights != null ? item.nights : '-'}</td>
+                <td>${item.in_house_since || '-'}</td>
+                <td>${item.first_courtesy_due_at || '-'}</td>
+                <td>${item.first_courtesy_status || '-'}</td>
+                <td>
+                    ${item.first_courtesy_status === 'Pending' || item.first_courtesy_status === 'Overdue'
+                        ? `<button class="btn btn-sm btn-outline-primary courtesy-done-btn" data-which="first" data-id="${item.confirmation_number}">Mark Done</button>`
+                        : ''
+                    }
+                </td>
+                <td>${item.second_courtesy_due_at || '-'}</td>
+                <td>${item.second_courtesy_status || '-'}</td>
+                <td>
+                    ${item.second_courtesy_status === 'Pending' || item.second_courtesy_status === 'Overdue'
+                        ? `<button class="btn btn-sm btn-outline-primary courtesy-done-btn" data-which="second" data-id="${item.confirmation_number}">Mark Done</button>`
+                        : ''
+                    }
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // Attach handlers for Mark Done buttons
+        tbody.querySelectorAll('.courtesy-done-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const which = btn.getAttribute('data-which');
+                const cid = btn.getAttribute('data-id');
+                if (!which || !cid) return;
+
+                const csrftoken = getCookie('csrftoken');
+                if (!csrftoken) {
+                    alert('CSRF token not found. Please refresh the page.');
+                    return;
+                }
+
+                fetch("{% url 'guest_experience:mark_courtesy_done' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        confirmation_number: cid,
+                        which: which
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.error || 'Failed to update courtesy call');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(() => {
+                    loadCourtesyCalls();
+                })
+                .catch(error => {
+                    console.error('Courtesy update error:', error);
+                    alert('Failed to update courtesy call: ' + error.message);
+                });
+            });
+        });
+    }
+
+    function loadCourtesyCalls() {
+        tbody.innerHTML = '<tr><td colspan="14" class="text-center py-4 text-muted">Loading courtesy calls...</td></tr>';
+        fetch("{% url 'guest_experience:courtesy_calls_api' %}")
+            .then(response => response.json())
+            .then(data => {
+                allRows = data.results || [];
+                renderTable();
+            })
+            .catch(error => {
+                console.error('Error loading courtesy calls:', error);
+                tbody.innerHTML = '<tr><td colspan="14" class="text-center py-4 text-danger">Failed to load courtesy calls.</td></tr>';
+            });
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            renderTable();
+        });
+    }
+
+    loadCourtesyCalls();
+});
+</script>
+{% endblock %}
+
+
