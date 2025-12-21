@@ -1455,56 +1455,123 @@ def report_overdue_actions(request):
     """Report 6: Overdue Actions & Service Lapses"""
     now = timezone.now()
     
-    # Get overdue first courtesy calls
-    overdue_first = ArrivalRecord.objects.filter(
+    # Get filters
+    property_filter = request.GET.get('property', '')
+    search_filter = request.GET.get('search', '')
+    min_overdue_hours = request.GET.get('min_overdue_hours', '')
+    
+    # Build base queryset for overdue first courtesy calls
+    overdue_first_qs = ArrivalRecord.objects.filter(
         first_courtesy_due_at__lt=now,
         first_courtesy_done_at__isnull=True
     ).exclude(status__iexact='Departed')
     
-    # Get overdue second courtesy calls
-    overdue_second = ArrivalRecord.objects.filter(
+    # Build base queryset for overdue second courtesy calls
+    overdue_second_qs = ArrivalRecord.objects.filter(
         second_courtesy_due_at__lt=now,
         second_courtesy_done_at__isnull=True
     ).exclude(status__iexact='Departed')
     
-    # Get overdue departures (departure date passed but not marked as departed)
-    overdue_departures = ArrivalRecord.objects.filter(
+    # Build base queryset for overdue departures
+    overdue_departures_qs = ArrivalRecord.objects.filter(
         departure_date__lt=now.date()
     ).filter(
         Q(status__iexact='In-House') | Q(status__iexact='in house')
     )
     
+    # Apply property filter
+    if property_filter:
+        overdue_first_qs = overdue_first_qs.filter(property_name__icontains=property_filter)
+        overdue_second_qs = overdue_second_qs.filter(property_name__icontains=property_filter)
+        overdue_departures_qs = overdue_departures_qs.filter(property_name__icontains=property_filter)
+    
+    # Apply search filter (room, guest name)
+    if search_filter:
+        overdue_first_qs = overdue_first_qs.filter(
+            Q(room__icontains=search_filter) |
+            Q(guest_name__icontains=search_filter) |
+            Q(confirmation_number__icontains=search_filter)
+        )
+        overdue_second_qs = overdue_second_qs.filter(
+            Q(room__icontains=search_filter) |
+            Q(guest_name__icontains=search_filter) |
+            Q(confirmation_number__icontains=search_filter)
+        )
+        overdue_departures_qs = overdue_departures_qs.filter(
+            Q(room__icontains=search_filter) |
+            Q(guest_name__icontains=search_filter) |
+            Q(confirmation_number__icontains=search_filter)
+        )
+    
     # Calculate how overdue
     overdue_first_list = []
-    for record in overdue_first:
+    for record in overdue_first_qs:
         if record.first_courtesy_due_at:
             delta = now - record.first_courtesy_due_at
+            overdue_hours = delta.total_seconds() / 3600
+            
+            # Apply minimum overdue hours filter
+            if min_overdue_hours:
+                try:
+                    min_hours = float(min_overdue_hours)
+                    if overdue_hours < min_hours:
+                        continue
+                except (ValueError, TypeError):
+                    pass
+            
             overdue_first_list.append({
                 'record': record,
                 'overdue_minutes': delta.total_seconds() / 60,
-                'overdue_hours': delta.total_seconds() / 3600,
+                'overdue_hours': overdue_hours,
                 'overdue_days': delta.days,
             })
     
     overdue_second_list = []
-    for record in overdue_second:
+    for record in overdue_second_qs:
         if record.second_courtesy_due_at:
             delta = now - record.second_courtesy_due_at
+            overdue_hours = delta.total_seconds() / 3600
+            
+            # Apply minimum overdue hours filter
+            if min_overdue_hours:
+                try:
+                    min_hours = float(min_overdue_hours)
+                    if overdue_hours < min_hours:
+                        continue
+                except (ValueError, TypeError):
+                    pass
+            
             overdue_second_list.append({
                 'record': record,
                 'overdue_minutes': delta.total_seconds() / 60,
-                'overdue_hours': delta.total_seconds() / 3600,
+                'overdue_hours': overdue_hours,
                 'overdue_days': delta.days,
             })
     
     overdue_departures_list = []
-    for record in overdue_departures:
+    for record in overdue_departures_qs:
         if record.departure_date:
             delta = now.date() - record.departure_date
+            overdue_hours = delta.days * 24  # Convert days to hours
+            
+            # Apply minimum overdue hours filter
+            if min_overdue_hours:
+                try:
+                    min_hours = float(min_overdue_hours)
+                    if overdue_hours < min_hours:
+                        continue
+                except (ValueError, TypeError):
+                    pass
+            
             overdue_departures_list.append({
                 'record': record,
                 'overdue_days': delta.days,
             })
+    
+    # Get unique properties for filter dropdown
+    properties = ArrivalRecord.objects.exclude(property_name__isnull=True).exclude(
+        property_name=''
+    ).values_list('property_name', flat=True).distinct().order_by('property_name')
     
     context = {
         "section": "guest_experience",
@@ -1513,6 +1580,10 @@ def report_overdue_actions(request):
         "overdue_first": overdue_first_list,
         "overdue_second": overdue_second_list,
         "overdue_departures": overdue_departures_list,
+        "property_filter": property_filter,
+        "search_filter": search_filter,
+        "min_overdue_hours": min_overdue_hours,
+        "properties": properties,
     }
     return render(request, "guest_experience/reports/overdue_actions.html", context)
 
@@ -2274,21 +2345,49 @@ def export_overdue_actions(request):
     
     now = timezone.now()
     
-    overdue_first = ArrivalRecord.objects.filter(
+    # Get filters
+    property_filter = request.GET.get('property', '')
+    search_filter = request.GET.get('search', '')
+    min_overdue_hours = request.GET.get('min_overdue_hours', '')
+    
+    overdue_first_qs = ArrivalRecord.objects.filter(
         first_courtesy_due_at__lt=now,
         first_courtesy_done_at__isnull=True
     ).exclude(status__iexact='Departed')
     
-    overdue_second = ArrivalRecord.objects.filter(
+    overdue_second_qs = ArrivalRecord.objects.filter(
         second_courtesy_due_at__lt=now,
         second_courtesy_done_at__isnull=True
     ).exclude(status__iexact='Departed')
     
-    overdue_departures = ArrivalRecord.objects.filter(
+    overdue_departures_qs = ArrivalRecord.objects.filter(
         departure_date__lt=now.date()
     ).filter(
         Q(status__iexact='In-House') | Q(status__iexact='in house')
     )
+    
+    # Apply filters
+    if property_filter:
+        overdue_first_qs = overdue_first_qs.filter(property_name__icontains=property_filter)
+        overdue_second_qs = overdue_second_qs.filter(property_name__icontains=property_filter)
+        overdue_departures_qs = overdue_departures_qs.filter(property_name__icontains=property_filter)
+    
+    if search_filter:
+        overdue_first_qs = overdue_first_qs.filter(
+            Q(room__icontains=search_filter) |
+            Q(guest_name__icontains=search_filter) |
+            Q(confirmation_number__icontains=search_filter)
+        )
+        overdue_second_qs = overdue_second_qs.filter(
+            Q(room__icontains=search_filter) |
+            Q(guest_name__icontains=search_filter) |
+            Q(confirmation_number__icontains=search_filter)
+        )
+        overdue_departures_qs = overdue_departures_qs.filter(
+            Q(room__icontains=search_filter) |
+            Q(guest_name__icontains=search_filter) |
+            Q(confirmation_number__icontains=search_filter)
+        )
     
     wb, ws, header_fill, header_font, border = _create_excel_workbook()
     ws.title = "Overdue First Calls"
@@ -2304,9 +2403,20 @@ def export_overdue_actions(request):
     
     row_idx = 2
     # Iterate directly over queryset - Django will evaluate it
-    for record in overdue_first:
+    for record in overdue_first_qs:
         if record.first_courtesy_due_at:
             delta = now - record.first_courtesy_due_at
+            overdue_hours = delta.total_seconds() / 3600
+            
+            # Apply minimum overdue hours filter
+            if min_overdue_hours:
+                try:
+                    min_hours = float(min_overdue_hours)
+                    if overdue_hours < min_hours:
+                        continue
+                except (ValueError, TypeError):
+                    pass
+            
             ws.cell(row=row_idx, column=1, value=record.room or '')
             ws.cell(row=row_idx, column=2, value=record.guest_name or '')
             ws.cell(row=row_idx, column=3, value=record.first_courtesy_due_at.strftime('%Y-%m-%d %H:%M'))
@@ -2326,9 +2436,20 @@ def export_overdue_actions(request):
     
     row_idx = 2
     # Iterate directly over queryset - Django will evaluate it
-    for record in overdue_second:
+    for record in overdue_second_qs:
         if record.second_courtesy_due_at:
             delta = now - record.second_courtesy_due_at
+            overdue_hours = delta.total_seconds() / 3600
+            
+            # Apply minimum overdue hours filter
+            if min_overdue_hours:
+                try:
+                    min_hours = float(min_overdue_hours)
+                    if overdue_hours < min_hours:
+                        continue
+                except (ValueError, TypeError):
+                    pass
+            
             ws2.cell(row=row_idx, column=1, value=record.room or '')
             ws2.cell(row=row_idx, column=2, value=record.guest_name or '')
             ws2.cell(row=row_idx, column=3, value=record.second_courtesy_due_at.strftime('%Y-%m-%d %H:%M'))
@@ -2349,9 +2470,20 @@ def export_overdue_actions(request):
     
     row_idx = 2
     # Iterate directly over queryset - Django will evaluate it
-    for record in overdue_departures:
+    for record in overdue_departures_qs:
         if record.departure_date:
             delta = now.date() - record.departure_date
+            overdue_hours = delta.days * 24  # Convert days to hours
+            
+            # Apply minimum overdue hours filter
+            if min_overdue_hours:
+                try:
+                    min_hours = float(min_overdue_hours)
+                    if overdue_hours < min_hours:
+                        continue
+                except (ValueError, TypeError):
+                    pass
+            
             ws3.cell(row=row_idx, column=1, value=record.room or '')
             ws3.cell(row=row_idx, column=2, value=record.guest_name or '')
             ws3.cell(row=row_idx, column=3, value=record.departure_date.strftime('%Y-%m-%d'))
