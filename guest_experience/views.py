@@ -1024,3 +1024,685 @@ def dashboard_api(request):
             'daily_trend': daily_trend_data,
         }
     })
+
+
+# ==================== REPORTS ====================
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def reports_index(request):
+    """Reports landing page."""
+    context = {
+        "section": "guest_experience",
+        "subsection": "reports",
+        "page_title": "Guest Experience - Reports",
+    }
+    return render(request, "guest_experience/reports_index.html", context)
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def report_arrivals_departures(request):
+    """Report 1: Arrivals & Departures Report"""
+    today = timezone.localdate()
+    
+    # Get filters
+    start_date_str = request.GET.get('start_date', (today - timedelta(days=7)).isoformat())
+    end_date_str = request.GET.get('end_date', (today + timedelta(days=7)).isoformat())
+    property_filter = request.GET.get('property', '')
+    status_filter = request.GET.get('status', '')
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        start_date = today - timedelta(days=7)
+        end_date = today + timedelta(days=7)
+    
+    # Build queryset
+    qs = ArrivalRecord.objects.filter(
+        Q(arrival_date__gte=start_date, arrival_date__lte=end_date) |
+        Q(departure_date__gte=start_date, departure_date__lte=end_date)
+    )
+    
+    if property_filter:
+        qs = qs.filter(property_name__icontains=property_filter)
+    if status_filter:
+        qs = qs.filter(status__iexact=status_filter)
+    
+    records = qs.order_by('arrival_date', 'room')
+    
+    # Get unique properties for filter dropdown
+    properties = ArrivalRecord.objects.exclude(property_name__isnull=True).exclude(
+        property_name=''
+    ).values_list('property_name', flat=True).distinct().order_by('property_name')
+    
+    context = {
+        "section": "guest_experience",
+        "subsection": "reports",
+        "page_title": "Arrivals & Departures Report",
+        "records": records,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "property_filter": property_filter,
+        "status_filter": status_filter,
+        "properties": properties,
+    }
+    return render(request, "guest_experience/reports/arrivals_departures.html", context)
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def report_courtesy_call_completion(request):
+    """Report 2: Courtesy Call Completion Report"""
+    today = timezone.localdate()
+    now = timezone.now()
+    
+    # Get filters
+    start_date_str = request.GET.get('start_date', (today - timedelta(days=30)).isoformat())
+    end_date_str = request.GET.get('end_date', today.isoformat())
+    property_filter = request.GET.get('property', '')
+    courtesy_by_filter = request.GET.get('courtesy_by', '')
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        start_date = today - timedelta(days=30)
+        end_date = today
+    
+    # Build queryset - guests who arrived in date range
+    qs = ArrivalRecord.objects.filter(
+        arrival_date__gte=start_date,
+        arrival_date__lte=end_date
+    )
+    
+    if property_filter:
+        qs = qs.filter(property_name__icontains=property_filter)
+    if courtesy_by_filter:
+        qs = qs.filter(
+            Q(first_courtesy_by__username__icontains=courtesy_by_filter) |
+            Q(second_courtesy_by__username__icontains=courtesy_by_filter)
+        )
+    
+    records = []
+    for record in qs:
+        # Calculate metrics
+        first_completed = record.first_courtesy_done_at is not None
+        second_completed = record.second_courtesy_done_at is not None
+        first_time_taken_minutes = None
+        first_time_taken_hours = None
+        if first_completed and record.first_courtesy_due_at:
+            delta = record.first_courtesy_done_at - record.first_courtesy_due_at
+            first_time_taken_minutes = delta.total_seconds() / 60  # minutes
+            first_time_taken_hours = first_time_taken_minutes / 60  # hours
+        
+        records.append({
+            'record': record,
+            'first_completed': first_completed,
+            'second_completed': second_completed,
+            'first_time_taken_minutes': first_time_taken_minutes,
+            'first_time_taken_hours': first_time_taken_hours,
+        })
+    
+    # Calculate percentages
+    total_with_first_due = qs.exclude(first_courtesy_due_at__isnull=True).count()
+    first_completed_count = qs.exclude(first_courtesy_done_at__isnull=True).count()
+    total_with_second_due = qs.exclude(second_courtesy_due_at__isnull=True).count()
+    second_completed_count = qs.exclude(second_courtesy_done_at__isnull=True).count()
+    
+    first_percentage = (first_completed_count / total_with_first_due * 100) if total_with_first_due > 0 else 0
+    second_percentage = (second_completed_count / total_with_second_due * 100) if total_with_second_due > 0 else 0
+    
+    # Get unique properties and users for filters
+    properties = ArrivalRecord.objects.exclude(property_name__isnull=True).exclude(
+        property_name=''
+    ).values_list('property_name', flat=True).distinct().order_by('property_name')
+    
+    from django.contrib.auth.models import User
+    users = User.objects.filter(
+        Q(arrival_records_first_courtesy__isnull=False) |
+        Q(arrival_records_second_courtesy__isnull=False)
+    ).distinct().order_by('username')
+    
+    context = {
+        "section": "guest_experience",
+        "subsection": "reports",
+        "page_title": "Courtesy Call Completion Report",
+        "records": records,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "property_filter": property_filter,
+        "courtesy_by_filter": courtesy_by_filter,
+        "properties": properties,
+        "users": users,
+        "first_percentage": round(first_percentage, 1),
+        "second_percentage": round(second_percentage, 1),
+        "first_completed_count": first_completed_count,
+        "second_completed_count": second_completed_count,
+        "total_with_first_due": total_with_first_due,
+    }
+    return render(request, "guest_experience/reports/courtesy_call_completion.html", context)
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def report_in_house_guests(request):
+    """Report 3: In-House Guests Report"""
+    today = timezone.localdate()
+    
+    # Get filters
+    property_filter = request.GET.get('property', '')
+    start_date_str = request.GET.get('in_house_since_start', '')
+    end_date_str = request.GET.get('in_house_since_end', '')
+    
+    # Build queryset - currently in-house
+    qs = ArrivalRecord.objects.filter(
+        Q(status__iexact='In-House') | Q(status__iexact='in house')
+    ).exclude(status__iexact='Departed')
+    
+    if property_filter:
+        qs = qs.filter(property_name__icontains=property_filter)
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            qs = qs.filter(in_house_since__date__gte=start_date)
+        except (ValueError, TypeError):
+            pass
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            qs = qs.filter(in_house_since__date__lte=end_date)
+        except (ValueError, TypeError):
+            pass
+    
+    records = qs.order_by('room')
+    
+    # Calculate nights in-house
+    for record in records:
+        if record.in_house_since:
+            delta = timezone.now() - record.in_house_since
+            record.nights_in_house = delta.days
+        else:
+            record.nights_in_house = None
+    
+    properties = ArrivalRecord.objects.exclude(property_name__isnull=True).exclude(
+        property_name=''
+    ).values_list('property_name', flat=True).distinct().order_by('property_name')
+    
+    context = {
+        "section": "guest_experience",
+        "subsection": "reports",
+        "page_title": "In-House Guests Report",
+        "records": records,
+        "property_filter": property_filter,
+        "in_house_since_start": start_date_str,
+        "in_house_since_end": end_date_str,
+        "properties": properties,
+    }
+    return render(request, "guest_experience/reports/in_house_guests.html", context)
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def report_departure_outcomes(request):
+    """Report 4: Departure Outcomes Report"""
+    today = timezone.localdate()
+    
+    # Get filters
+    start_date_str = request.GET.get('start_date', (today - timedelta(days=30)).isoformat())
+    end_date_str = request.GET.get('end_date', today.isoformat())
+    property_filter = request.GET.get('property', '')
+    departure_method_filter = request.GET.get('departure_method', '')
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        start_date = today - timedelta(days=30)
+        end_date = today
+    
+    # Build queryset - departed guests
+    qs = ArrivalRecord.objects.filter(
+        status__iexact='Departed',
+        departed_at__date__gte=start_date,
+        departed_at__date__lte=end_date
+    )
+    
+    if property_filter:
+        qs = qs.filter(property_name__icontains=property_filter)
+    if departure_method_filter:
+        qs = qs.filter(departure_method__icontains=departure_method_filter)
+    
+    records = qs.order_by('-departed_at')
+    
+    properties = ArrivalRecord.objects.exclude(property_name__isnull=True).exclude(
+        property_name=''
+    ).values_list('property_name', flat=True).distinct().order_by('property_name')
+    
+    departure_methods = ArrivalRecord.objects.exclude(
+        departure_method__isnull=True
+    ).exclude(departure_method='').values_list(
+        'departure_method', flat=True
+    ).distinct().order_by('departure_method')
+    
+    context = {
+        "section": "guest_experience",
+        "subsection": "reports",
+        "page_title": "Departure Outcomes Report",
+        "records": records,
+        "start_date": start_date.isoformat(),
+        "end_date": end_date.isoformat(),
+        "property_filter": property_filter,
+        "departure_method_filter": departure_method_filter,
+        "properties": properties,
+        "departure_methods": departure_methods,
+    }
+    return render(request, "guest_experience/reports/departure_outcomes.html", context)
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def report_agent_performance(request):
+    """Report 5: Agent Performance Report"""
+    from django.contrib.auth.models import User
+    
+    # Get all users who have handled records
+    users = User.objects.filter(
+        Q(arrival_records_created__isnull=False) |
+        Q(arrival_records_updated__isnull=False) |
+        Q(arrival_records_in_house__isnull=False) |
+        Q(arrival_records_first_courtesy__isnull=False) |
+        Q(arrival_records_second_courtesy__isnull=False) |
+        Q(arrival_records_departed__isnull=False)
+    ).distinct().order_by('username')
+    
+    performance_data = []
+    for user in users:
+        created_count = ArrivalRecord.objects.filter(created_by=user).count()
+        updated_count = ArrivalRecord.objects.filter(updated_by=user).count()
+        in_house_count = ArrivalRecord.objects.filter(in_house_by=user).count()
+        first_courtesy_count = ArrivalRecord.objects.filter(first_courtesy_by=user).count()
+        second_courtesy_count = ArrivalRecord.objects.filter(second_courtesy_by=user).count()
+        departed_count = ArrivalRecord.objects.filter(departed_by=user).count()
+        
+        total_actions = created_count + updated_count + in_house_count + first_courtesy_count + second_courtesy_count + departed_count
+        
+        performance_data.append({
+            'user': user,
+            'created_count': created_count,
+            'updated_count': updated_count,
+            'in_house_count': in_house_count,
+            'first_courtesy_count': first_courtesy_count,
+            'second_courtesy_count': second_courtesy_count,
+            'departed_count': departed_count,
+            'total_actions': total_actions,
+        })
+    
+    # Sort by total actions descending
+    performance_data.sort(key=lambda x: x['total_actions'], reverse=True)
+    
+    context = {
+        "section": "guest_experience",
+        "subsection": "reports",
+        "page_title": "Agent Performance Report",
+        "performance_data": performance_data,
+    }
+    return render(request, "guest_experience/reports/agent_performance.html", context)
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def report_overdue_actions(request):
+    """Report 6: Overdue Actions & Service Lapses"""
+    now = timezone.now()
+    
+    # Get overdue first courtesy calls
+    overdue_first = ArrivalRecord.objects.filter(
+        first_courtesy_due_at__lt=now,
+        first_courtesy_done_at__isnull=True
+    ).exclude(status__iexact='Departed')
+    
+    # Get overdue second courtesy calls
+    overdue_second = ArrivalRecord.objects.filter(
+        second_courtesy_due_at__lt=now,
+        second_courtesy_done_at__isnull=True
+    ).exclude(status__iexact='Departed')
+    
+    # Get overdue departures (departure date passed but not marked as departed)
+    overdue_departures = ArrivalRecord.objects.filter(
+        departure_date__lt=now.date(),
+        status__iexact='In-House'
+    )
+    
+    # Calculate how overdue
+    overdue_first_list = []
+    for record in overdue_first:
+        if record.first_courtesy_due_at:
+            delta = now - record.first_courtesy_due_at
+            overdue_first_list.append({
+                'record': record,
+                'overdue_minutes': delta.total_seconds() / 60,
+                'overdue_hours': delta.total_seconds() / 3600,
+                'overdue_days': delta.days,
+            })
+    
+    overdue_second_list = []
+    for record in overdue_second:
+        if record.second_courtesy_due_at:
+            delta = now - record.second_courtesy_due_at
+            overdue_second_list.append({
+                'record': record,
+                'overdue_minutes': delta.total_seconds() / 60,
+                'overdue_hours': delta.total_seconds() / 3600,
+                'overdue_days': delta.days,
+            })
+    
+    overdue_departures_list = []
+    for record in overdue_departures:
+        if record.departure_date:
+            delta = now.date() - record.departure_date
+            overdue_departures_list.append({
+                'record': record,
+                'overdue_days': delta.days,
+            })
+    
+    context = {
+        "section": "guest_experience",
+        "subsection": "reports",
+        "page_title": "Overdue Actions & Service Lapses",
+        "overdue_first": overdue_first_list,
+        "overdue_second": overdue_second_list,
+        "overdue_departures": overdue_departures_list,
+    }
+    return render(request, "guest_experience/reports/overdue_actions.html", context)
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def report_guest_feedback(request):
+    """Report 7: Guest Feedback/Notes Analysis"""
+    # Get all records with notes
+    records_with_first_notes = ArrivalRecord.objects.exclude(
+        first_courtesy_notes__isnull=True
+    ).exclude(first_courtesy_notes='')
+    
+    records_with_second_notes = ArrivalRecord.objects.exclude(
+        second_courtesy_notes__isnull=True
+    ).exclude(second_courtesy_notes='')
+    
+    records_with_departure_notes = ArrivalRecord.objects.exclude(
+        departure_notes__isnull=True
+    ).exclude(departure_notes='')
+    
+    # Combine all notes for analysis
+    all_notes = []
+    for record in records_with_first_notes:
+        if record.first_courtesy_notes:
+            all_notes.append({
+                'record': record,
+                'note_type': 'First Courtesy',
+                'notes': record.first_courtesy_notes,
+                'outcome': record.first_courtesy_outcome,
+                'date': record.first_courtesy_done_at,
+            })
+    
+    for record in records_with_second_notes:
+        if record.second_courtesy_notes:
+            all_notes.append({
+                'record': record,
+                'note_type': 'Second Courtesy',
+                'notes': record.second_courtesy_notes,
+                'outcome': record.second_courtesy_outcome,
+                'date': record.second_courtesy_done_at,
+            })
+    
+    for record in records_with_departure_notes:
+        if record.departure_notes:
+            all_notes.append({
+                'record': record,
+                'note_type': 'Departure',
+                'notes': record.departure_notes,
+                'outcome': None,
+                'date': record.departed_at,
+            })
+    
+    # Sort by date descending
+    all_notes.sort(key=lambda x: x['date'] if x['date'] else timezone.now(), reverse=True)
+    
+    context = {
+        "section": "guest_experience",
+        "subsection": "reports",
+        "page_title": "Guest Feedback/Notes Analysis",
+        "all_notes": all_notes,
+        "first_notes_count": records_with_first_notes.count(),
+        "second_notes_count": records_with_second_notes.count(),
+        "departure_notes_count": records_with_departure_notes.count(),
+    }
+    return render(request, "guest_experience/reports/guest_feedback.html", context)
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def report_nationality_country_breakdown(request):
+    """Report 8: Nationality, Country & Market Source Breakdown"""
+    # Get filters
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    
+    qs = ArrivalRecord.objects.all()
+    
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            qs = qs.filter(arrival_date__gte=start_date)
+        except (ValueError, TypeError):
+            pass
+    
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            qs = qs.filter(arrival_date__lte=end_date)
+        except (ValueError, TypeError):
+            pass
+    
+    # Nationality breakdown
+    nationality_breakdown = qs.exclude(nationality__isnull=True).exclude(
+        nationality=''
+    ).values('nationality').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    # Country breakdown
+    country_breakdown = qs.exclude(country__isnull=True).exclude(
+        country=''
+    ).values('country').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    # Travel agent breakdown
+    agent_breakdown = qs.exclude(travel_agent_name__isnull=True).exclude(
+        travel_agent_name=''
+    ).values('travel_agent_name').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    context = {
+        "section": "guest_experience",
+        "subsection": "reports",
+        "page_title": "Nationality, Country & Market Source Breakdown",
+        "nationality_breakdown": nationality_breakdown,
+        "country_breakdown": country_breakdown,
+        "agent_breakdown": agent_breakdown,
+        "start_date": start_date_str,
+        "end_date": end_date_str,
+    }
+    return render(request, "guest_experience/reports/nationality_country_breakdown.html", context)
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def report_length_of_stay(request):
+    """Report 9: Length of Stay Analysis"""
+    # Get filters
+    property_filter = request.GET.get('property', '')
+    nationality_filter = request.GET.get('nationality', '')
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    
+    qs = ArrivalRecord.objects.exclude(nights__isnull=True)
+    
+    if property_filter:
+        qs = qs.filter(property_name__icontains=property_filter)
+    if nationality_filter:
+        qs = qs.filter(nationality__icontains=nationality_filter)
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            qs = qs.filter(arrival_date__gte=start_date)
+        except (ValueError, TypeError):
+            pass
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            qs = qs.filter(arrival_date__lte=end_date)
+        except (ValueError, TypeError):
+            pass
+    
+    # Calculate statistics
+    from django.db.models import Avg, Min, Max, Count
+    
+    overall_stats = qs.aggregate(
+        avg_nights=Avg('nights'),
+        min_nights=Min('nights'),
+        max_nights=Max('nights'),
+        total_guests=Count('id')
+    )
+    
+    # By property
+    by_property = qs.exclude(property_name__isnull=True).exclude(
+        property_name=''
+    ).values('property_name').annotate(
+        avg_nights=Avg('nights'),
+        min_nights=Min('nights'),
+        max_nights=Max('nights'),
+        count=Count('id')
+    ).order_by('-count')
+    
+    # By nationality
+    by_nationality = qs.exclude(nationality__isnull=True).exclude(
+        nationality=''
+    ).values('nationality').annotate(
+        avg_nights=Avg('nights'),
+        min_nights=Min('nights'),
+        max_nights=Max('nights'),
+        count=Count('id')
+    ).order_by('-count')
+    
+    # Distribution (1 night, 2 nights, etc.)
+    distribution_raw = qs.values('nights').annotate(
+        count=Count('id')
+    ).order_by('nights')
+    
+    # Calculate percentages for distribution
+    total_guests = overall_stats['total_guests'] or 1
+    distribution = []
+    for item in distribution_raw:
+        percentage = (item['count'] / total_guests * 100) if total_guests > 0 else 0
+        distribution.append({
+            'nights': item['nights'],
+            'count': item['count'],
+            'percentage': round(percentage, 1),
+        })
+    
+    properties = ArrivalRecord.objects.exclude(property_name__isnull=True).exclude(
+        property_name=''
+    ).values_list('property_name', flat=True).distinct().order_by('property_name')
+    
+    nationalities = ArrivalRecord.objects.exclude(nationality__isnull=True).exclude(
+        nationality=''
+    ).values_list('nationality', flat=True).distinct().order_by('nationality')
+    
+    context = {
+        "section": "guest_experience",
+        "subsection": "reports",
+        "page_title": "Length of Stay Analysis",
+        "overall_stats": overall_stats,
+        "by_property": by_property,
+        "by_nationality": by_nationality,
+        "distribution": distribution,
+        "property_filter": property_filter,
+        "nationality_filter": nationality_filter,
+        "start_date": start_date_str,
+        "end_date": end_date_str,
+        "properties": properties,
+        "nationalities": nationalities,
+    }
+    return render(request, "guest_experience/reports/length_of_stay.html", context)
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def report_contact_completeness(request):
+    """Report 10: Contact Data Completeness"""
+    # Get all records
+    all_records = ArrivalRecord.objects.all()
+    
+    # Records with missing phone
+    missing_phone = all_records.filter(
+        Q(phone__isnull=True) | Q(phone='')
+    )
+    
+    # Records with missing email
+    missing_email = all_records.filter(
+        Q(email__isnull=True) | Q(email='')
+    )
+    
+    # Records with both missing
+    missing_both = all_records.filter(
+        (Q(phone__isnull=True) | Q(phone='')) &
+        (Q(email__isnull=True) | Q(email=''))
+    )
+    
+    # Records with both present
+    has_both = all_records.exclude(
+        Q(phone__isnull=True) | Q(phone='')
+    ).exclude(
+        Q(email__isnull=True) | Q(email='')
+    )
+    
+    # Validate email format (basic check)
+    import re
+    email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+    
+    invalid_email = []
+    for record in all_records.exclude(email__isnull=True).exclude(email=''):
+        if not email_pattern.match(record.email):
+            invalid_email.append(record)
+    
+    total_count = all_records.count()
+    missing_phone_count = missing_phone.count()
+    missing_email_count = missing_email.count()
+    missing_both_count = missing_both.count()
+    has_both_count = has_both.count()
+    invalid_email_count = len(invalid_email)
+    
+    context = {
+        "section": "guest_experience",
+        "subsection": "reports",
+        "page_title": "Contact Data Completeness",
+        "total_count": total_count,
+        "missing_phone": missing_phone.order_by('arrival_date'),
+        "missing_email": missing_email.order_by('arrival_date'),
+        "missing_both": missing_both.order_by('arrival_date'),
+        "has_both": has_both.order_by('arrival_date'),
+        "invalid_email": invalid_email,
+        "missing_phone_count": missing_phone_count,
+        "missing_email_count": missing_email_count,
+        "missing_both_count": missing_both_count,
+        "has_both_count": has_both_count,
+        "invalid_email_count": invalid_email_count,
+        "phone_completeness": round((total_count - missing_phone_count) / total_count * 100, 1) if total_count > 0 else 0,
+        "email_completeness": round((total_count - missing_email_count) / total_count * 100, 1) if total_count > 0 else 0,
+    }
+    return render(request, "guest_experience/reports/contact_completeness.html", context)

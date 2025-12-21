@@ -25,6 +25,18 @@ urlpatterns = [
     path("api/courtesy-calls/", views.courtesy_calls_api, name="courtesy_calls_api"),
     path("api/courtesy-calls/mark-done/", views.mark_courtesy_done, name="mark_courtesy_done"),
     path("api/dashboard/", views.dashboard_api, name="dashboard_api"),
+    # Reports
+    path("reports/", views.reports_index, name="reports_index"),
+    path("reports/arrivals-departures/", views.report_arrivals_departures, name="report_arrivals_departures"),
+    path("reports/courtesy-call-completion/", views.report_courtesy_call_completion, name="report_courtesy_call_completion"),
+    path("reports/in-house-guests/", views.report_in_house_guests, name="report_in_house_guests"),
+    path("reports/departure-outcomes/", views.report_departure_outcomes, name="report_departure_outcomes"),
+    path("reports/agent-performance/", views.report_agent_performance, name="report_agent_performance"),
+    path("reports/overdue-actions/", views.report_overdue_actions, name="report_overdue_actions"),
+    path("reports/guest-feedback/", views.report_guest_feedback, name="report_guest_feedback"),
+    path("reports/nationality-country-breakdown/", views.report_nationality_country_breakdown, name="report_nationality_country_breakdown"),
+    path("reports/length-of-stay/", views.report_length_of_stay, name="report_length_of_stay"),
+    path("reports/contact-completeness/", views.report_contact_completeness, name="report_contact_completeness"),
 ]
 
 
