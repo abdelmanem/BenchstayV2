@@ -1,0 +1,177 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}Overdue Actions & Service Lapses{% endblock %}
+
+{% block content %}
+<div class="dashboard-header mb-4">
+    <div class="hotel-info d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="mb-1">Overdue Actions & Service Lapses</h1>
+            <p class="mb-0 text-white-50">Guests where courtesy calls or departure haven't happened on time.</p>
+        </div>
+        <a href="{% url 'guest_experience:reports_index' %}" class="btn btn-light">
+            <i class="fas fa-arrow-left me-1"></i>Back to Reports
+        </a>
+    </div>
+</div>
+
+{% if overdue_first or overdue_second or overdue_departures %}
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-warning">
+            <div class="card-body">
+                <h5 class="card-title text-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Overdue First Calls
+                </h5>
+                <h2 class="text-warning">{{ overdue_first|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-danger">
+            <div class="card-body">
+                <h5 class="card-title text-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i>Overdue Second Calls
+                </h5>
+                <h2 class="text-danger">{{ overdue_second|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-info">
+            <div class="card-body">
+                <h5 class="card-title text-info">
+                    <i class="fas fa-clock me-2"></i>Overdue Departures
+                </h5>
+                <h2 class="text-info">{{ overdue_departures|length }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if overdue_first %}
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="card-title mb-0">Overdue First Courtesy Calls</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th>Guest Name</th>
+                        <th>Due At</th>
+                        <th>Overdue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in overdue_first %}
+                    <tr>
+                        <td>{{ item.record.room|default:"-" }}</td>
+                        <td>{{ item.record.guest_name|default:"-" }}</td>
+                        <td>{{ item.record.first_courtesy_due_at|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            {% if item.overdue_days > 0 %}
+                                {{ item.overdue_days }} day{{ item.overdue_days|pluralize }}
+                            {% elif item.overdue_hours > 0 %}
+                                {{ item.overdue_hours|floatformat:0 }} hour{{ item.overdue_hours|pluralize }}
+                            {% else %}
+                                {{ item.overdue_minutes|floatformat:0 }} minute{{ item.overdue_minutes|pluralize }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if overdue_second %}
+<div class="card mb-4">
+    <div class="card-header bg-danger text-white">
+        <h5 class="card-title mb-0">Overdue Second Courtesy Calls</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th>Guest Name</th>
+                        <th>Due At</th>
+                        <th>Overdue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in overdue_second %}
+                    <tr>
+                        <td>{{ item.record.room|default:"-" }}</td>
+                        <td>{{ item.record.guest_name|default:"-" }}</td>
+                        <td>{{ item.record.second_courtesy_due_at|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            {% if item.overdue_days > 0 %}
+                                {{ item.overdue_days }} day{{ item.overdue_days|pluralize }}
+                            {% elif item.overdue_hours > 0 %}
+                                {{ item.overdue_hours|floatformat:0 }} hour{{ item.overdue_hours|pluralize }}
+                            {% else %}
+                                {{ item.overdue_minutes|floatformat:0 }} minute{{ item.overdue_minutes|pluralize }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if overdue_departures %}
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="card-title mb-0">Overdue Departures</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th>Guest Name</th>
+                        <th>Departure Date</th>
+                        <th>Overdue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in overdue_departures %}
+                    <tr>
+                        <td>{{ item.record.room|default:"-" }}</td>
+                        <td>{{ item.record.guest_name|default:"-" }}</td>
+                        <td>{{ item.record.departure_date|date:"Y-m-d" }}</td>
+                        <td>
+                            {{ item.overdue_days }} day{{ item.overdue_days|pluralize }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not overdue_first and not overdue_second and not overdue_departures %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+        <h4>No Overdue Actions</h4>
+        <p class="text-muted">All actions are up to date!</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
