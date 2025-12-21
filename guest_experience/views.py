@@ -1380,8 +1380,9 @@ def report_overdue_actions(request):
     
     # Get overdue departures (departure date passed but not marked as departed)
     overdue_departures = ArrivalRecord.objects.filter(
-        departure_date__lt=now.date(),
-        status__iexact='In-House'
+        departure_date__lt=now.date()
+    ).filter(
+        Q(status__iexact='In-House') | Q(status__iexact='in house')
     )
     
     # Calculate how overdue
@@ -2127,8 +2128,9 @@ def export_overdue_actions(request):
     ).exclude(status__iexact='Departed')
     
     overdue_departures = ArrivalRecord.objects.filter(
-        departure_date__lt=now.date(),
-        status__iexact='In-House'
+        departure_date__lt=now.date()
+    ).filter(
+        Q(status__iexact='In-House') | Q(status__iexact='in house')
     )
     
     wb, ws, header_fill, header_font, border = _create_excel_workbook()
@@ -2144,9 +2146,8 @@ def export_overdue_actions(request):
         cell.alignment = Alignment(horizontal='center', vertical='center')
     
     row_idx = 2
-    # Convert queryset to list to ensure evaluation
-    overdue_first_list = list(overdue_first)
-    for record in overdue_first_list:
+    # Iterate directly over queryset - Django will evaluate it
+    for record in overdue_first:
         if record.first_courtesy_due_at:
             delta = now - record.first_courtesy_due_at
             ws.cell(row=row_idx, column=1, value=record.room or '')
@@ -2167,9 +2168,8 @@ def export_overdue_actions(request):
         cell.alignment = Alignment(horizontal='center', vertical='center')
     
     row_idx = 2
-    # Convert queryset to list to ensure evaluation
-    overdue_second_list = list(overdue_second)
-    for record in overdue_second_list:
+    # Iterate directly over queryset - Django will evaluate it
+    for record in overdue_second:
         if record.second_courtesy_due_at:
             delta = now - record.second_courtesy_due_at
             ws2.cell(row=row_idx, column=1, value=record.room or '')
@@ -2191,9 +2191,8 @@ def export_overdue_actions(request):
         cell.alignment = Alignment(horizontal='center', vertical='center')
     
     row_idx = 2
-    # Convert queryset to list to ensure evaluation
-    overdue_departures_list = list(overdue_departures)
-    for record in overdue_departures_list:
+    # Iterate directly over queryset - Django will evaluate it
+    for record in overdue_departures:
         if record.departure_date:
             delta = now.date() - record.departure_date
             ws3.cell(row=row_idx, column=1, value=record.room or '')
@@ -2606,9 +2605,8 @@ def export_contact_completeness(request):
         cell.alignment = Alignment(horizontal='center', vertical='center')
     
     row_idx = 2
-    # Convert queryset to list to ensure evaluation
-    missing_phone_list = list(missing_phone.order_by('arrival_date'))
-    for record in missing_phone_list:
+    # Iterate directly over queryset - Django will evaluate it
+    for record in missing_phone.order_by('arrival_date'):
         ws.cell(row=row_idx, column=1, value=record.room or '')
         ws.cell(row=row_idx, column=2, value=record.guest_name or '')
         ws.cell(row=row_idx, column=3, value=record.arrival_date.strftime('%Y-%m-%d') if record.arrival_date else '')
@@ -2624,9 +2622,8 @@ def export_contact_completeness(request):
         cell.alignment = Alignment(horizontal='center', vertical='center')
     
     row_idx = 2
-    # Convert queryset to list to ensure evaluation
-    missing_email_list = list(missing_email.order_by('arrival_date'))
-    for record in missing_email_list:
+    # Iterate directly over queryset - Django will evaluate it
+    for record in missing_email.order_by('arrival_date'):
         ws2.cell(row=row_idx, column=1, value=record.room or '')
         ws2.cell(row=row_idx, column=2, value=record.guest_name or '')
         ws2.cell(row=row_idx, column=3, value=record.arrival_date.strftime('%Y-%m-%d') if record.arrival_date else '')
@@ -2643,9 +2640,8 @@ def export_contact_completeness(request):
         cell.alignment = Alignment(horizontal='center', vertical='center')
     
     row_idx = 2
-    # Convert queryset to list to ensure evaluation
-    missing_both_list = list(missing_both.order_by('arrival_date'))
-    for record in missing_both_list:
+    # Iterate directly over queryset - Django will evaluate it
+    for record in missing_both.order_by('arrival_date'):
         ws3.cell(row=row_idx, column=1, value=record.room or '')
         ws3.cell(row=row_idx, column=2, value=record.guest_name or '')
         ws3.cell(row=row_idx, column=3, value=record.arrival_date.strftime('%Y-%m-%d') if record.arrival_date else '')
