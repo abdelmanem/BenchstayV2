@@ -1,0 +1,194 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}Contact Data Completeness{% endblock %}
+
+{% block content %}
+<div class="dashboard-header mb-4">
+    <div class="hotel-info d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="mb-1">Contact Data Completeness</h1>
+            <p class="mb-0 text-white-50">Highlight missing or invalid phone/email fields.</p>
+        </div>
+        <a href="{% url 'guest_experience:reports_index' %}" class="btn btn-light">
+            <i class="fas fa-arrow-left me-1"></i>Back to Reports
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Phone Completeness</h5>
+                <h2 class="text-primary">{{ phone_completeness }}%</h2>
+                <p class="mb-0">{{ missing_phone_count }} missing out of {{ total_count }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Email Completeness</h5>
+                <h2 class="text-success">{{ email_completeness }}%</h2>
+                <p class="mb-0">{{ missing_email_count }} missing out of {{ total_count }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-warning">
+            <div class="card-body">
+                <h5 class="card-title text-warning">Missing Both</h5>
+                <h2 class="text-warning">{{ missing_both_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-success">
+            <div class="card-body">
+                <h5 class="card-title text-success">Has Both</h5>
+                <h2 class="text-success">{{ has_both_count }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-danger">
+            <div class="card-body">
+                <h5 class="card-title text-danger">Invalid Email</h5>
+                <h2 class="text-danger">{{ invalid_email_count }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if missing_phone %}
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="card-title mb-0">Missing Phone Numbers</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th>Guest Name</th>
+                        <th>Arrival Date</th>
+                        <th>Email</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in missing_phone %}
+                    <tr>
+                        <td>{{ record.room|default:"-" }}</td>
+                        <td>{{ record.guest_name|default:"-" }}</td>
+                        <td>{{ record.arrival_date|date:"Y-m-d"|default:"-" }}</td>
+                        <td>{{ record.email|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if missing_email %}
+<div class="card mb-4">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="card-title mb-0">Missing Email Addresses</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th>Guest Name</th>
+                        <th>Arrival Date</th>
+                        <th>Phone</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in missing_email %}
+                    <tr>
+                        <td>{{ record.room|default:"-" }}</td>
+                        <td>{{ record.guest_name|default:"-" }}</td>
+                        <td>{{ record.arrival_date|date:"Y-m-d"|default:"-" }}</td>
+                        <td>{{ record.phone|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if missing_both %}
+<div class="card mb-4">
+    <div class="card-header bg-danger text-white">
+        <h5 class="card-title mb-0">Missing Both Phone and Email</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th>Guest Name</th>
+                        <th>Arrival Date</th>
+                        <th>Confirmation #</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in missing_both %}
+                    <tr>
+                        <td>{{ record.room|default:"-" }}</td>
+                        <td>{{ record.guest_name|default:"-" }}</td>
+                        <td>{{ record.arrival_date|date:"Y-m-d"|default:"-" }}</td>
+                        <td>{{ record.confirmation_number|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if invalid_email %}
+<div class="card mb-4">
+    <div class="card-header bg-danger text-white">
+        <h5 class="card-title mb-0">Invalid Email Addresses</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th>Guest Name</th>
+                        <th>Invalid Email</th>
+                        <th>Phone</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in invalid_email %}
+                    <tr>
+                        <td>{{ record.room|default:"-" }}</td>
+                        <td>{{ record.guest_name|default:"-" }}</td>
+                        <td><code>{{ record.email }}</code></td>
+                        <td>{{ record.phone|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
