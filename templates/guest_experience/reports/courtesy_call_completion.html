@@ -1,0 +1,160 @@
+{% extends 'dashboard_base.html' %}
+
+{% block title %}Courtesy Call Completion Report{% endblock %}
+
+{% block content %}
+<div class="dashboard-header mb-4">
+    <div class="hotel-info d-flex align-items-center justify-content-between">
+        <div>
+            <h1 class="mb-1">Courtesy Call Completion Report</h1>
+            <p class="mb-0 text-white-50">Track if/when courtesy calls are being made with completion metrics.</p>
+        </div>
+        <a href="{% url 'guest_experience:reports_index' %}" class="btn btn-light">
+            <i class="fas fa-arrow-left me-1"></i>Back to Reports
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">First Courtesy Call</h5>
+                <h2 class="text-primary">{{ first_completed_count }} / {{ total_with_first_due }}</h2>
+                <p class="mb-0">Completion Rate: <strong>{{ first_percentage }}%</strong></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Second Courtesy Call</h5>
+                <h2 class="text-success">{{ second_completed_count }}</h2>
+                <p class="mb-0">Completion Rate: <strong>{{ second_percentage }}%</strong></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Filters</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">End Date</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Property</label>
+                <select name="property" class="form-select">
+                    <option value="">All Properties</option>
+                    {% for prop in properties %}
+                    <option value="{{ prop }}" {% if property_filter == prop %}selected{% endif %}>{{ prop }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Courtesy By</label>
+                <select name="courtesy_by" class="form-select">
+                    <option value="">All Users</option>
+                    {% for user in users %}
+                    <option value="{{ user.username }}" {% if courtesy_by_filter == user.username %}selected{% endif %}>{{ user.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter me-1"></i>Apply Filters
+                </button>
+                <a href="{% url 'guest_experience:report_courtesy_call_completion' %}" class="btn btn-secondary">
+                    <i class="fas fa-redo me-1"></i>Reset
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Courtesy Call Details</h5>
+        <span class="badge bg-primary">{{ records|length }} records</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Room</th>
+                        <th>Guest Name</th>
+                        <th>First Call</th>
+                        <th>Time Taken</th>
+                        <th>First Outcome</th>
+                        <th>Second Call</th>
+                        <th>Second Outcome</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in records %}
+                    <tr>
+                        <td>{{ item.record.room|default:"-" }}</td>
+                        <td>{{ item.record.guest_name|default:"-" }}</td>
+                        <td>
+                            {% if item.first_completed %}
+                                <span class="badge bg-success">Completed</span>
+                            {% elif item.record.first_courtesy_due_at %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Not Scheduled</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.first_time_taken_minutes %}
+                                {% if item.first_time_taken_minutes < 60 %}
+                                    {{ item.first_time_taken_minutes|floatformat:0 }} min
+                                {% else %}
+                                    {{ item.first_time_taken_hours|floatformat:1 }} hrs
+                                {% endif %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>{{ item.record.first_courtesy_outcome|default:"-" }}</td>
+                        <td>
+                            {% if item.second_completed %}
+                                <span class="badge bg-success">Completed</span>
+                            {% elif item.record.second_courtesy_due_at %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Not Scheduled</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.record.second_courtesy_outcome|default:"-" }}</td>
+                        <td>
+                            {% if item.record.first_courtesy_notes %}
+                                <small>{{ item.record.first_courtesy_notes|truncatewords:5 }}</small>
+                            {% elif item.record.second_courtesy_notes %}
+                                <small>{{ item.record.second_courtesy_notes|truncatewords:5 }}</small>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted">No records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
