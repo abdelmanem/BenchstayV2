@@ -1454,27 +1454,49 @@ def report_agent_performance(request):
 def report_overdue_actions(request):
     """Report 6: Overdue Actions & Service Lapses"""
     now = timezone.now()
+    today = timezone.localdate()
     
     # Get filters
     property_filter = request.GET.get('property', '')
     search_filter = request.GET.get('search', '')
     min_overdue_hours = request.GET.get('min_overdue_hours', '')
+    start_date = request.GET.get('start_date', (today - timedelta(days=30)).isoformat())
+    end_date = request.GET.get('end_date', today.isoformat())
+    
+    # Parse dates
+    try:
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        start_date_obj = today - timedelta(days=30)
+        end_date_obj = today
+        start_date = start_date_obj.isoformat()
+        end_date = end_date_obj.isoformat()
+    
+    # Convert end date to next day for inclusive filtering
+    end_date_obj_inclusive = end_date_obj + timedelta(days=1)
     
     # Build base queryset for overdue first courtesy calls
     overdue_first_qs = ArrivalRecord.objects.filter(
         first_courtesy_due_at__lt=now,
-        first_courtesy_done_at__isnull=True
+        first_courtesy_done_at__isnull=True,
+        arrival_date__gte=start_date_obj,
+        arrival_date__lte=end_date_obj
     ).exclude(status__iexact='Departed')
     
     # Build base queryset for overdue second courtesy calls
     overdue_second_qs = ArrivalRecord.objects.filter(
         second_courtesy_due_at__lt=now,
-        second_courtesy_done_at__isnull=True
+        second_courtesy_done_at__isnull=True,
+        arrival_date__gte=start_date_obj,
+        arrival_date__lte=end_date_obj
     ).exclude(status__iexact='Departed')
     
     # Build base queryset for overdue departures
     overdue_departures_qs = ArrivalRecord.objects.filter(
-        departure_date__lt=now.date()
+        departure_date__lt=now.date(),
+        departure_date__gte=start_date_obj,
+        departure_date__lte=end_date_obj
     ).filter(
         Q(status__iexact='In-House') | Q(status__iexact='in house')
     )
@@ -1583,6 +1605,8 @@ def report_overdue_actions(request):
         "property_filter": property_filter,
         "search_filter": search_filter,
         "min_overdue_hours": min_overdue_hours,
+        "start_date": start_date,
+        "end_date": end_date,
         "properties": properties,
     }
     return render(request, "guest_experience/reports/overdue_actions.html", context)
@@ -1592,16 +1616,41 @@ def report_overdue_actions(request):
 @permission_required("accounts.view_hotel_management", raise_exception=True)
 def report_guest_feedback(request):
     """Report 7: Guest Feedback/Notes Analysis"""
-    # Get all records with notes
-    records_with_first_notes = ArrivalRecord.objects.exclude(
+    today = timezone.localdate()
+    
+    # Get date filters
+    start_date = request.GET.get('start_date', (today - timedelta(days=30)).isoformat())
+    end_date = request.GET.get('end_date', today.isoformat())
+    
+    # Parse dates
+    try:
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        start_date_obj = today - timedelta(days=30)
+        end_date_obj = today
+        start_date = start_date_obj.isoformat()
+        end_date = end_date_obj.isoformat()
+    
+    # Get all records with notes filtered by date
+    records_with_first_notes = ArrivalRecord.objects.filter(
+        arrival_date__gte=start_date_obj,
+        arrival_date__lte=end_date_obj
+    ).exclude(
         first_courtesy_notes__isnull=True
     ).exclude(first_courtesy_notes='')
     
-    records_with_second_notes = ArrivalRecord.objects.exclude(
+    records_with_second_notes = ArrivalRecord.objects.filter(
+        arrival_date__gte=start_date_obj,
+        arrival_date__lte=end_date_obj
+    ).exclude(
         second_courtesy_notes__isnull=True
     ).exclude(second_courtesy_notes='')
     
-    records_with_departure_notes = ArrivalRecord.objects.exclude(
+    records_with_departure_notes = ArrivalRecord.objects.filter(
+        arrival_date__gte=start_date_obj,
+        arrival_date__lte=end_date_obj
+    ).exclude(
         departure_notes__isnull=True
     ).exclude(departure_notes='')
     
@@ -1648,6 +1697,8 @@ def report_guest_feedback(request):
         "first_notes_count": records_with_first_notes.count(),
         "second_notes_count": records_with_second_notes.count(),
         "departure_notes_count": records_with_departure_notes.count(),
+        "start_date": start_date,
+        "end_date": end_date,
     }
     return render(request, "guest_experience/reports/guest_feedback.html", context)
 
@@ -2344,24 +2395,41 @@ def export_overdue_actions(request):
         return HttpResponse("Excel export requires openpyxl. Please install it.", status=500)
     
     now = timezone.now()
+    today = timezone.localdate()
     
     # Get filters
     property_filter = request.GET.get('property', '')
     search_filter = request.GET.get('search', '')
     min_overdue_hours = request.GET.get('min_overdue_hours', '')
+    start_date = request.GET.get('start_date', (today - timedelta(days=30)).isoformat())
+    end_date = request.GET.get('end_date', today.isoformat())
+    
+    # Parse dates
+    try:
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        start_date_obj = today - timedelta(days=30)
+        end_date_obj = today
     
     overdue_first_qs = ArrivalRecord.objects.filter(
         first_courtesy_due_at__lt=now,
-        first_courtesy_done_at__isnull=True
+        first_courtesy_done_at__isnull=True,
+        arrival_date__gte=start_date_obj,
+        arrival_date__lte=end_date_obj
     ).exclude(status__iexact='Departed')
     
     overdue_second_qs = ArrivalRecord.objects.filter(
         second_courtesy_due_at__lt=now,
-        second_courtesy_done_at__isnull=True
+        second_courtesy_done_at__isnull=True,
+        arrival_date__gte=start_date_obj,
+        arrival_date__lte=end_date_obj
     ).exclude(status__iexact='Departed')
     
     overdue_departures_qs = ArrivalRecord.objects.filter(
-        departure_date__lt=now.date()
+        departure_date__lt=now.date(),
+        departure_date__gte=start_date_obj,
+        departure_date__lte=end_date_obj
     ).filter(
         Q(status__iexact='In-House') | Q(status__iexact='in house')
     )
@@ -2513,15 +2581,38 @@ def export_guest_feedback(request):
     if not OPENPYXL_AVAILABLE:
         return HttpResponse("Excel export requires openpyxl. Please install it.", status=500)
     
-    records_with_first_notes = ArrivalRecord.objects.exclude(
+    today = timezone.localdate()
+    
+    # Get date filters
+    start_date = request.GET.get('start_date', (today - timedelta(days=30)).isoformat())
+    end_date = request.GET.get('end_date', today.isoformat())
+    
+    # Parse dates
+    try:
+        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
+        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        start_date_obj = today - timedelta(days=30)
+        end_date_obj = today
+    
+    records_with_first_notes = ArrivalRecord.objects.filter(
+        arrival_date__gte=start_date_obj,
+        arrival_date__lte=end_date_obj
+    ).exclude(
         first_courtesy_notes__isnull=True
     ).exclude(first_courtesy_notes='')
     
-    records_with_second_notes = ArrivalRecord.objects.exclude(
+    records_with_second_notes = ArrivalRecord.objects.filter(
+        arrival_date__gte=start_date_obj,
+        arrival_date__lte=end_date_obj
+    ).exclude(
         second_courtesy_notes__isnull=True
     ).exclude(second_courtesy_notes='')
     
-    records_with_departure_notes = ArrivalRecord.objects.exclude(
+    records_with_departure_notes = ArrivalRecord.objects.filter(
+        arrival_date__gte=start_date_obj,
+        arrival_date__lte=end_date_obj
+    ).exclude(
         departure_notes__isnull=True
     ).exclude(departure_notes='')
     

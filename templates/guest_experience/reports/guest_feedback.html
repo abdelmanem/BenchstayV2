@@ -15,6 +15,32 @@
     </div>
 </div>
 
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Filters</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">End Date</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-filter me-1"></i>Apply Filters
+                </button>
+                <a href="{% url 'guest_experience:report_guest_feedback' %}" class="btn btn-secondary">
+                    <i class="fas fa-redo me-1"></i>Reset
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="row mb-4">
     <div class="col-md-4">
         <div class="card">
@@ -47,7 +73,7 @@
         <h5 class="card-title mb-0">All Guest Notes</h5>
         <div class="d-flex align-items-center gap-2">
             <span class="badge bg-primary">{{ all_notes|length }} notes</span>
-            <a href="{% url 'guest_experience:export_guest_feedback' %}" class="btn btn-sm btn-success">
+            <a href="{% url 'guest_experience:export_guest_feedback' %}?start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-sm btn-success">
                 <i class="fas fa-file-excel me-1"></i>Export to Excel
             </a>
         </div>
