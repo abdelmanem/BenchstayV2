@@ -15,12 +15,56 @@
     </div>
 </div>
 
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Filters</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Start Date</label>
+                <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">End Date</label>
+                <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Property</label>
+                <select name="property" class="form-select">
+                    <option value="">All Properties</option>
+                    {% for prop in properties %}
+                    <option value="{{ prop }}" {% if property_filter == prop %}selected{% endif %}>{{ prop }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Agent</label>
+                <select name="user" class="form-select">
+                    <option value="">All Agents</option>
+                    {% for user in all_users %}
+                    <option value="{{ user.username }}" {% if user_filter == user.username %}selected{% endif %}>{{ user.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-filter me-1"></i>Apply Filters
+                </button>
+                <a href="{% url 'guest_experience:report_agent_performance' %}" class="btn btn-secondary">
+                    <i class="fas fa-redo me-1"></i>Reset
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0">Agent Performance</h5>
         <div class="d-flex align-items-center gap-2">
             <span class="badge bg-primary">{{ performance_data|length }} agents</span>
-            <a href="{% url 'guest_experience:export_agent_performance' %}" class="btn btn-sm btn-success">
+            <a href="{% url 'guest_experience:export_agent_performance' %}?start_date={{ start_date }}&end_date={{ end_date }}&property={{ property_filter }}&user={{ user_filter }}" class="btn btn-sm btn-success">
                 <i class="fas fa-file-excel me-1"></i>Export to Excel
             </a>
         </div>

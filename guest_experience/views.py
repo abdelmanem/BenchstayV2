@@ -1315,9 +1315,117 @@ def report_departure_outcomes(request):
 def report_agent_performance(request):
     """Report 5: Agent Performance Report"""
     from django.contrib.auth.models import User
+    today = timezone.localdate()
     
-    # Get all users who have handled records
-    users = User.objects.filter(
+    # Get filters
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    property_filter = request.GET.get('property', '')
+    user_filter = request.GET.get('user', '')
+    
+    # Get all users who have handled records (with optional user filter)
+    users_query = User.objects.filter(
+        Q(arrival_records_created__isnull=False) |
+        Q(arrival_records_updated__isnull=False) |
+        Q(arrival_records_in_house__isnull=False) |
+        Q(arrival_records_first_courtesy__isnull=False) |
+        Q(arrival_records_second_courtesy__isnull=False) |
+        Q(arrival_records_departed__isnull=False)
+    )
+    
+    if user_filter:
+        users_query = users_query.filter(username__icontains=user_filter)
+    
+    users = users_query.distinct().order_by('username')
+    
+    performance_data = []
+    for user in users:
+        # Build querysets for each action type
+        created_qs = ArrivalRecord.objects.filter(created_by=user)
+        updated_qs = ArrivalRecord.objects.filter(updated_by=user)
+        in_house_qs = ArrivalRecord.objects.filter(in_house_by=user)
+        first_courtesy_qs = ArrivalRecord.objects.filter(first_courtesy_by=user)
+        second_courtesy_qs = ArrivalRecord.objects.filter(second_courtesy_by=user)
+        departed_qs = ArrivalRecord.objects.filter(departed_by=user)
+        
+        # Apply property filter
+        if property_filter:
+            created_qs = created_qs.filter(property_name__icontains=property_filter)
+            updated_qs = updated_qs.filter(property_name__icontains=property_filter)
+            in_house_qs = in_house_qs.filter(property_name__icontains=property_filter)
+            first_courtesy_qs = first_courtesy_qs.filter(property_name__icontains=property_filter)
+            second_courtesy_qs = second_courtesy_qs.filter(property_name__icontains=property_filter)
+            departed_qs = departed_qs.filter(property_name__icontains=property_filter)
+        
+        # Apply date filters
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                created_qs = created_qs.filter(created_at__date__gte=start_date)
+                updated_qs = updated_qs.filter(updated_at__date__gte=start_date)
+                in_house_qs = in_house_qs.filter(in_house_since__date__gte=start_date)
+                first_courtesy_qs = first_courtesy_qs.filter(first_courtesy_done_at__date__gte=start_date)
+                second_courtesy_qs = second_courtesy_qs.filter(second_courtesy_done_at__date__gte=start_date)
+                departed_qs = departed_qs.filter(departed_at__date__gte=start_date)
+            except (ValueError, TypeError):
+                pass
+        
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                created_qs = created_qs.filter(created_at__date__lte=end_date)
+                updated_qs = updated_qs.filter(updated_at__date__lte=end_date)
+                in_house_qs = in_house_qs.filter(in_house_since__date__lte=end_date)
+                first_courtesy_qs = first_courtesy_qs.filter(first_courtesy_done_at__date__lte=end_date)
+                second_courtesy_qs = second_courtesy_qs.filter(second_courtesy_done_at__date__lte=end_date)
+                departed_qs = departed_qs.filter(departed_at__date__lte=end_date)
+            except (ValueError, TypeError):
+                pass
+        
+        created_count = created_qs.count()
+        updated_count = updated_qs.count()
+        in_house_count = in_house_qs.count()
+        first_courtesy_count = first_courtesy_qs.count()
+        second_courtesy_count = second_courtesy_qs.count()
+        departed_count = departed_qs.count()
+        
+        total_actions = created_count + updated_count + in_house_count + first_courtesy_count + second_courtesy_count + departed_count
+        
+        # Only include users with at least one action (if filters are applied)
+        if not start_date_str and not end_date_str and not property_filter and not user_filter:
+            # No filters - show all users
+            performance_data.append({
+                'user': user,
+                'created_count': created_count,
+                'updated_count': updated_count,
+                'in_house_count': in_house_count,
+                'first_courtesy_count': first_courtesy_count,
+                'second_courtesy_count': second_courtesy_count,
+                'departed_count': departed_count,
+                'total_actions': total_actions,
+            })
+        elif total_actions > 0:
+            # Filters applied - only show users with actions in filtered period
+            performance_data.append({
+                'user': user,
+                'created_count': created_count,
+                'updated_count': updated_count,
+                'in_house_count': in_house_count,
+                'first_courtesy_count': first_courtesy_count,
+                'second_courtesy_count': second_courtesy_count,
+                'departed_count': departed_count,
+                'total_actions': total_actions,
+            })
+    
+    # Sort by total actions descending
+    performance_data.sort(key=lambda x: x['total_actions'], reverse=True)
+    
+    # Get unique properties and users for filter dropdowns
+    properties = ArrivalRecord.objects.exclude(property_name__isnull=True).exclude(
+        property_name=''
+    ).values_list('property_name', flat=True).distinct().order_by('property_name')
+    
+    all_users = User.objects.filter(
         Q(arrival_records_created__isnull=False) |
         Q(arrival_records_updated__isnull=False) |
         Q(arrival_records_in_house__isnull=False) |
@@ -1326,36 +1434,17 @@ def report_agent_performance(request):
         Q(arrival_records_departed__isnull=False)
     ).distinct().order_by('username')
     
-    performance_data = []
-    for user in users:
-        created_count = ArrivalRecord.objects.filter(created_by=user).count()
-        updated_count = ArrivalRecord.objects.filter(updated_by=user).count()
-        in_house_count = ArrivalRecord.objects.filter(in_house_by=user).count()
-        first_courtesy_count = ArrivalRecord.objects.filter(first_courtesy_by=user).count()
-        second_courtesy_count = ArrivalRecord.objects.filter(second_courtesy_by=user).count()
-        departed_count = ArrivalRecord.objects.filter(departed_by=user).count()
-        
-        total_actions = created_count + updated_count + in_house_count + first_courtesy_count + second_courtesy_count + departed_count
-        
-        performance_data.append({
-            'user': user,
-            'created_count': created_count,
-            'updated_count': updated_count,
-            'in_house_count': in_house_count,
-            'first_courtesy_count': first_courtesy_count,
-            'second_courtesy_count': second_courtesy_count,
-            'departed_count': departed_count,
-            'total_actions': total_actions,
-        })
-    
-    # Sort by total actions descending
-    performance_data.sort(key=lambda x: x['total_actions'], reverse=True)
-    
     context = {
         "section": "guest_experience",
         "subsection": "reports",
         "page_title": "Agent Performance Report",
         "performance_data": performance_data,
+        "start_date": start_date_str,
+        "end_date": end_date_str,
+        "property_filter": property_filter,
+        "user_filter": user_filter,
+        "properties": properties,
+        "all_users": all_users,
     }
     return render(request, "guest_experience/reports/agent_performance.html", context)
 
@@ -2052,14 +2141,26 @@ def export_agent_performance(request):
     
     from django.contrib.auth.models import User
     
-    users = User.objects.filter(
+    # Get filters
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    property_filter = request.GET.get('property', '')
+    user_filter = request.GET.get('user', '')
+    
+    # Get users with optional filter
+    users_query = User.objects.filter(
         Q(arrival_records_created__isnull=False) |
         Q(arrival_records_updated__isnull=False) |
         Q(arrival_records_in_house__isnull=False) |
         Q(arrival_records_first_courtesy__isnull=False) |
         Q(arrival_records_second_courtesy__isnull=False) |
         Q(arrival_records_departed__isnull=False)
-    ).distinct().order_by('username')
+    )
+    
+    if user_filter:
+        users_query = users_query.filter(username__icontains=user_filter)
+    
+    users = users_query.distinct().order_by('username')
     
     wb, ws, header_fill, header_font, border = _create_excel_workbook()
     ws.title = "Agent Performance"
@@ -2075,23 +2176,79 @@ def export_agent_performance(request):
     
     row_idx = 2
     for user in users:
-        created_count = ArrivalRecord.objects.filter(created_by=user).count()
-        updated_count = ArrivalRecord.objects.filter(updated_by=user).count()
-        in_house_count = ArrivalRecord.objects.filter(in_house_by=user).count()
-        first_courtesy_count = ArrivalRecord.objects.filter(first_courtesy_by=user).count()
-        second_courtesy_count = ArrivalRecord.objects.filter(second_courtesy_by=user).count()
-        departed_count = ArrivalRecord.objects.filter(departed_by=user).count()
+        # Build querysets with filters
+        created_qs = ArrivalRecord.objects.filter(created_by=user)
+        updated_qs = ArrivalRecord.objects.filter(updated_by=user)
+        in_house_qs = ArrivalRecord.objects.filter(in_house_by=user)
+        first_courtesy_qs = ArrivalRecord.objects.filter(first_courtesy_by=user)
+        second_courtesy_qs = ArrivalRecord.objects.filter(second_courtesy_by=user)
+        departed_qs = ArrivalRecord.objects.filter(departed_by=user)
+        
+        # Apply property filter
+        if property_filter:
+            created_qs = created_qs.filter(property_name__icontains=property_filter)
+            updated_qs = updated_qs.filter(property_name__icontains=property_filter)
+            in_house_qs = in_house_qs.filter(property_name__icontains=property_filter)
+            first_courtesy_qs = first_courtesy_qs.filter(property_name__icontains=property_filter)
+            second_courtesy_qs = second_courtesy_qs.filter(property_name__icontains=property_filter)
+            departed_qs = departed_qs.filter(property_name__icontains=property_filter)
+        
+        # Apply date filters
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                created_qs = created_qs.filter(created_at__date__gte=start_date)
+                updated_qs = updated_qs.filter(updated_at__date__gte=start_date)
+                in_house_qs = in_house_qs.filter(in_house_since__date__gte=start_date)
+                first_courtesy_qs = first_courtesy_qs.filter(first_courtesy_done_at__date__gte=start_date)
+                second_courtesy_qs = second_courtesy_qs.filter(second_courtesy_done_at__date__gte=start_date)
+                departed_qs = departed_qs.filter(departed_at__date__gte=start_date)
+            except (ValueError, TypeError):
+                pass
+        
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                created_qs = created_qs.filter(created_at__date__lte=end_date)
+                updated_qs = updated_qs.filter(updated_at__date__lte=end_date)
+                in_house_qs = in_house_qs.filter(in_house_since__date__lte=end_date)
+                first_courtesy_qs = first_courtesy_qs.filter(first_courtesy_done_at__date__lte=end_date)
+                second_courtesy_qs = second_courtesy_qs.filter(second_courtesy_done_at__date__lte=end_date)
+                departed_qs = departed_qs.filter(departed_at__date__lte=end_date)
+            except (ValueError, TypeError):
+                pass
+        
+        created_count = created_qs.count()
+        updated_count = updated_qs.count()
+        in_house_count = in_house_qs.count()
+        first_courtesy_count = first_courtesy_qs.count()
+        second_courtesy_count = second_courtesy_qs.count()
+        departed_count = departed_qs.count()
         total_actions = created_count + updated_count + in_house_count + first_courtesy_count + second_courtesy_count + departed_count
         
-        ws.cell(row=row_idx, column=1, value=user.username)
-        ws.cell(row=row_idx, column=2, value=created_count)
-        ws.cell(row=row_idx, column=3, value=updated_count)
-        ws.cell(row=row_idx, column=4, value=in_house_count)
-        ws.cell(row=row_idx, column=5, value=first_courtesy_count)
-        ws.cell(row=row_idx, column=6, value=second_courtesy_count)
-        ws.cell(row=row_idx, column=7, value=departed_count)
-        ws.cell(row=row_idx, column=8, value=total_actions)
-        row_idx += 1
+        # Only include users with actions (if filters are applied)
+        if not start_date_str and not end_date_str and not property_filter and not user_filter:
+            # No filters - show all users
+            ws.cell(row=row_idx, column=1, value=user.username)
+            ws.cell(row=row_idx, column=2, value=created_count)
+            ws.cell(row=row_idx, column=3, value=updated_count)
+            ws.cell(row=row_idx, column=4, value=in_house_count)
+            ws.cell(row=row_idx, column=5, value=first_courtesy_count)
+            ws.cell(row=row_idx, column=6, value=second_courtesy_count)
+            ws.cell(row=row_idx, column=7, value=departed_count)
+            ws.cell(row=row_idx, column=8, value=total_actions)
+            row_idx += 1
+        elif total_actions > 0:
+            # Filters applied - only show users with actions in filtered period
+            ws.cell(row=row_idx, column=1, value=user.username)
+            ws.cell(row=row_idx, column=2, value=created_count)
+            ws.cell(row=row_idx, column=3, value=updated_count)
+            ws.cell(row=row_idx, column=4, value=in_house_count)
+            ws.cell(row=row_idx, column=5, value=first_courtesy_count)
+            ws.cell(row=row_idx, column=6, value=second_courtesy_count)
+            ws.cell(row=row_idx, column=7, value=departed_count)
+            ws.cell(row=row_idx, column=8, value=total_actions)
+            row_idx += 1
     
     for col in range(1, len(headers) + 1):
         ws.column_dimensions[get_column_letter(col)].width = 18
