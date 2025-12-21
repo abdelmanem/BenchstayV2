@@ -1,16 +1,25 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Avg, Min, Max
 from django.db.models.functions import TruncDate
 import json
 import pandas as pd
+import io
 from datetime import datetime, timedelta
 from .models import ArrivalRecord
 from django.db import models
+
+try:
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+    OPENPYXL_AVAILABLE = True
+except ImportError:
+    OPENPYXL_AVAILABLE = False
 
 
 @login_required
@@ -1706,3 +1715,959 @@ def report_contact_completeness(request):
         "email_completeness": round((total_count - missing_email_count) / total_count * 100, 1) if total_count > 0 else 0,
     }
     return render(request, "guest_experience/reports/contact_completeness.html", context)
+
+
+# ==================== EXPORT FUNCTIONS ====================
+
+def _create_excel_workbook():
+    """Helper function to create a styled Excel workbook."""
+    if not OPENPYXL_AVAILABLE:
+        raise ImportError("openpyxl is not installed. Please install it to use Excel export.")
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    
+    # Define styles
+    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    return wb, ws, header_fill, header_font, border
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def export_arrivals_departures(request):
+    """Export Arrivals & Departures Report to Excel"""
+    if not OPENPYXL_AVAILABLE:
+        return HttpResponse("Excel export requires openpyxl. Please install it.", status=500)
+    
+    today = timezone.localdate()
+    start_date_str = request.GET.get('start_date', (today - timedelta(days=7)).isoformat())
+    end_date_str = request.GET.get('end_date', (today + timedelta(days=7)).isoformat())
+    property_filter = request.GET.get('property', '')
+    status_filter = request.GET.get('status', '')
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        start_date = today - timedelta(days=7)
+        end_date = today + timedelta(days=7)
+    
+    qs = ArrivalRecord.objects.filter(
+        Q(arrival_date__gte=start_date, arrival_date__lte=end_date) |
+        Q(departure_date__gte=start_date, departure_date__lte=end_date)
+    )
+    
+    if property_filter:
+        qs = qs.filter(property_name__icontains=property_filter)
+    if status_filter:
+        qs = qs.filter(status__iexact=status_filter)
+    
+    records = qs.order_by('arrival_date', 'room')
+    
+    wb, ws, header_fill, header_font, border = _create_excel_workbook()
+    ws.title = "Arrivals & Departures"
+    
+    # Headers
+    headers = ['Property', 'Room', 'Guest Name', 'Arrival Date', 'Departure Date', 'Status']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    # Data
+    for row_idx, record in enumerate(records, 2):
+        ws.cell(row=row_idx, column=1, value=record.property_name or '')
+        ws.cell(row=row_idx, column=2, value=record.room or '')
+        ws.cell(row=row_idx, column=3, value=record.guest_name or '')
+        ws.cell(row=row_idx, column=4, value=record.arrival_date.strftime('%Y-%m-%d') if record.arrival_date else '')
+        ws.cell(row=row_idx, column=5, value=record.departure_date.strftime('%Y-%m-%d') if record.departure_date else '')
+        ws.cell(row=row_idx, column=6, value=record.status or '')
+    
+    # Auto-adjust column widths
+    for col in range(1, len(headers) + 1):
+        ws.column_dimensions[get_column_letter(col)].width = 20
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="arrivals_departures_{start_date}_{end_date}.xlsx"'
+    return response
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def export_courtesy_call_completion(request):
+    """Export Courtesy Call Completion Report to Excel"""
+    if not OPENPYXL_AVAILABLE:
+        return HttpResponse("Excel export requires openpyxl. Please install it.", status=500)
+    
+    today = timezone.localdate()
+    now = timezone.now()
+    start_date_str = request.GET.get('start_date', (today - timedelta(days=30)).isoformat())
+    end_date_str = request.GET.get('end_date', today.isoformat())
+    property_filter = request.GET.get('property', '')
+    courtesy_by_filter = request.GET.get('courtesy_by', '')
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        start_date = today - timedelta(days=30)
+        end_date = today
+    
+    qs = ArrivalRecord.objects.filter(
+        arrival_date__gte=start_date,
+        arrival_date__lte=end_date
+    )
+    
+    if property_filter:
+        qs = qs.filter(property_name__icontains=property_filter)
+    if courtesy_by_filter:
+        qs = qs.filter(
+            Q(first_courtesy_by__username__icontains=courtesy_by_filter) |
+            Q(second_courtesy_by__username__icontains=courtesy_by_filter)
+        )
+    
+    wb, ws, header_fill, header_font, border = _create_excel_workbook()
+    ws.title = "Courtesy Call Completion"
+    
+    headers = ['Room', 'Guest Name', 'First Call Status', 'First Call Time (min)', 'First Call Time (hrs)', 
+               'First Outcome', 'Second Call Status', 'Second Outcome', 'First Notes', 'Second Notes']
+    
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for record in qs:
+        first_completed = record.first_courtesy_done_at is not None
+        second_completed = record.second_courtesy_done_at is not None
+        first_time_minutes = None
+        first_time_hours = None
+        if first_completed and record.first_courtesy_due_at:
+            delta = record.first_courtesy_done_at - record.first_courtesy_due_at
+            first_time_minutes = delta.total_seconds() / 60
+            first_time_hours = first_time_minutes / 60
+        
+        first_status = "Completed" if first_completed else ("Pending" if record.first_courtesy_due_at else "Not Scheduled")
+        second_status = "Completed" if second_completed else ("Pending" if record.second_courtesy_due_at else "Not Scheduled")
+        
+        ws.cell(row=row_idx, column=1, value=record.room or '')
+        ws.cell(row=row_idx, column=2, value=record.guest_name or '')
+        ws.cell(row=row_idx, column=3, value=first_status)
+        ws.cell(row=row_idx, column=4, value=round(first_time_minutes, 1) if first_time_minutes else '')
+        ws.cell(row=row_idx, column=5, value=round(first_time_hours, 1) if first_time_hours else '')
+        ws.cell(row=row_idx, column=6, value=record.first_courtesy_outcome or '')
+        ws.cell(row=row_idx, column=7, value=second_status)
+        ws.cell(row=row_idx, column=8, value=record.second_courtesy_outcome or '')
+        ws.cell(row=row_idx, column=9, value=record.first_courtesy_notes or '')
+        ws.cell(row=row_idx, column=10, value=record.second_courtesy_notes or '')
+        row_idx += 1
+    
+    for col in range(1, len(headers) + 1):
+        ws.column_dimensions[get_column_letter(col)].width = 20
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="courtesy_call_completion_{start_date}_{end_date}.xlsx"'
+    return response
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def export_in_house_guests(request):
+    """Export In-House Guests Report to Excel"""
+    if not OPENPYXL_AVAILABLE:
+        return HttpResponse("Excel export requires openpyxl. Please install it.", status=500)
+    
+    property_filter = request.GET.get('property', '')
+    start_date_str = request.GET.get('in_house_since_start', '')
+    end_date_str = request.GET.get('in_house_since_end', '')
+    
+    qs = ArrivalRecord.objects.filter(
+        Q(status__iexact='In-House') | Q(status__iexact='in house')
+    ).exclude(status__iexact='Departed')
+    
+    if property_filter:
+        qs = qs.filter(property_name__icontains=property_filter)
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            qs = qs.filter(in_house_since__date__gte=start_date)
+        except (ValueError, TypeError):
+            pass
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            qs = qs.filter(in_house_since__date__lte=end_date)
+        except (ValueError, TypeError):
+            pass
+    
+    records = qs.order_by('room')
+    
+    wb, ws, header_fill, header_font, border = _create_excel_workbook()
+    ws.title = "In-House Guests"
+    
+    headers = ['Room', 'Guest Name', 'In-House Since', 'Nights In-House', 'Total Nights', 'Status']
+    
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for record in records:
+        nights_in_house = None
+        if record.in_house_since:
+            delta = timezone.now() - record.in_house_since
+            nights_in_house = delta.days
+        
+        ws.cell(row=row_idx, column=1, value=record.room or '')
+        ws.cell(row=row_idx, column=2, value=record.guest_name or '')
+        ws.cell(row=row_idx, column=3, value=record.in_house_since.strftime('%Y-%m-%d %H:%M') if record.in_house_since else '')
+        ws.cell(row=row_idx, column=4, value=nights_in_house if nights_in_house is not None else '')
+        ws.cell(row=row_idx, column=5, value=record.nights if record.nights else '')
+        ws.cell(row=row_idx, column=6, value=record.status or '')
+        row_idx += 1
+    
+    for col in range(1, len(headers) + 1):
+        ws.column_dimensions[get_column_letter(col)].width = 20
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="in_house_guests.xlsx"'
+    return response
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def export_departure_outcomes(request):
+    """Export Departure Outcomes Report to Excel"""
+    if not OPENPYXL_AVAILABLE:
+        return HttpResponse("Excel export requires openpyxl. Please install it.", status=500)
+    
+    today = timezone.localdate()
+    start_date_str = request.GET.get('start_date', (today - timedelta(days=30)).isoformat())
+    end_date_str = request.GET.get('end_date', today.isoformat())
+    property_filter = request.GET.get('property', '')
+    departure_method_filter = request.GET.get('departure_method', '')
+    
+    try:
+        start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        start_date = today - timedelta(days=30)
+        end_date = today
+    
+    qs = ArrivalRecord.objects.filter(
+        status__iexact='Departed',
+        departed_at__date__gte=start_date,
+        departed_at__date__lte=end_date
+    )
+    
+    if property_filter:
+        qs = qs.filter(property_name__icontains=property_filter)
+    if departure_method_filter:
+        qs = qs.filter(departure_method__icontains=departure_method_filter)
+    
+    records = qs.order_by('-departed_at')
+    
+    wb, ws, header_fill, header_font, border = _create_excel_workbook()
+    ws.title = "Departure Outcomes"
+    
+    headers = ['Departed At', 'Departed By', 'Room', 'Guest Name', 'Departure Method', 'Message Sent', 'Notes']
+    
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for record in records:
+        ws.cell(row=row_idx, column=1, value=record.departed_at.strftime('%Y-%m-%d %H:%M') if record.departed_at else '')
+        ws.cell(row=row_idx, column=2, value=record.departed_by.username if record.departed_by else '')
+        ws.cell(row=row_idx, column=3, value=record.room or '')
+        ws.cell(row=row_idx, column=4, value=record.guest_name or '')
+        ws.cell(row=row_idx, column=5, value=record.departure_method or '')
+        ws.cell(row=row_idx, column=6, value='Yes' if record.message_sent_to_guest else 'No')
+        ws.cell(row=row_idx, column=7, value=record.departure_notes or '')
+        row_idx += 1
+    
+    for col in range(1, len(headers) + 1):
+        ws.column_dimensions[get_column_letter(col)].width = 20
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="departure_outcomes_{start_date}_{end_date}.xlsx"'
+    return response
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def export_agent_performance(request):
+    """Export Agent Performance Report to Excel"""
+    if not OPENPYXL_AVAILABLE:
+        return HttpResponse("Excel export requires openpyxl. Please install it.", status=500)
+    
+    from django.contrib.auth.models import User
+    
+    users = User.objects.filter(
+        Q(arrival_records_created__isnull=False) |
+        Q(arrival_records_updated__isnull=False) |
+        Q(arrival_records_in_house__isnull=False) |
+        Q(arrival_records_first_courtesy__isnull=False) |
+        Q(arrival_records_second_courtesy__isnull=False) |
+        Q(arrival_records_departed__isnull=False)
+    ).distinct().order_by('username')
+    
+    wb, ws, header_fill, header_font, border = _create_excel_workbook()
+    ws.title = "Agent Performance"
+    
+    headers = ['Agent', 'Created', 'Updated', 'Marked In-House', 'First Courtesy', 'Second Courtesy', 'Departed', 'Total Actions']
+    
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for user in users:
+        created_count = ArrivalRecord.objects.filter(created_by=user).count()
+        updated_count = ArrivalRecord.objects.filter(updated_by=user).count()
+        in_house_count = ArrivalRecord.objects.filter(in_house_by=user).count()
+        first_courtesy_count = ArrivalRecord.objects.filter(first_courtesy_by=user).count()
+        second_courtesy_count = ArrivalRecord.objects.filter(second_courtesy_by=user).count()
+        departed_count = ArrivalRecord.objects.filter(departed_by=user).count()
+        total_actions = created_count + updated_count + in_house_count + first_courtesy_count + second_courtesy_count + departed_count
+        
+        ws.cell(row=row_idx, column=1, value=user.username)
+        ws.cell(row=row_idx, column=2, value=created_count)
+        ws.cell(row=row_idx, column=3, value=updated_count)
+        ws.cell(row=row_idx, column=4, value=in_house_count)
+        ws.cell(row=row_idx, column=5, value=first_courtesy_count)
+        ws.cell(row=row_idx, column=6, value=second_courtesy_count)
+        ws.cell(row=row_idx, column=7, value=departed_count)
+        ws.cell(row=row_idx, column=8, value=total_actions)
+        row_idx += 1
+    
+    for col in range(1, len(headers) + 1):
+        ws.column_dimensions[get_column_letter(col)].width = 18
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="agent_performance.xlsx"'
+    return response
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def export_overdue_actions(request):
+    """Export Overdue Actions Report to Excel"""
+    if not OPENPYXL_AVAILABLE:
+        return HttpResponse("Excel export requires openpyxl. Please install it.", status=500)
+    
+    now = timezone.now()
+    
+    overdue_first = ArrivalRecord.objects.filter(
+        first_courtesy_due_at__lt=now,
+        first_courtesy_done_at__isnull=True
+    ).exclude(status__iexact='Departed')
+    
+    overdue_second = ArrivalRecord.objects.filter(
+        second_courtesy_due_at__lt=now,
+        second_courtesy_done_at__isnull=True
+    ).exclude(status__iexact='Departed')
+    
+    overdue_departures = ArrivalRecord.objects.filter(
+        departure_date__lt=now.date(),
+        status__iexact='In-House'
+    )
+    
+    wb, ws, header_fill, header_font, border = _create_excel_workbook()
+    ws.title = "Overdue Actions"
+    
+    # First sheet - Overdue First Calls
+    headers = ['Room', 'Guest Name', 'Due At', 'Overdue (days)', 'Overdue (hours)', 'Overdue (minutes)']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for record in overdue_first:
+        if record.first_courtesy_due_at:
+            delta = now - record.first_courtesy_due_at
+            ws.cell(row=row_idx, column=1, value=record.room or '')
+            ws.cell(row=row_idx, column=2, value=record.guest_name or '')
+            ws.cell(row=row_idx, column=3, value=record.first_courtesy_due_at.strftime('%Y-%m-%d %H:%M'))
+            ws.cell(row=row_idx, column=4, value=delta.days)
+            ws.cell(row=row_idx, column=5, value=round(delta.total_seconds() / 3600, 1))
+            ws.cell(row=row_idx, column=6, value=round(delta.total_seconds() / 60, 1))
+            row_idx += 1
+    
+    # Second sheet - Overdue Second Calls
+    ws2 = wb.create_sheet("Overdue Second Calls")
+    for col, header in enumerate(headers, 1):
+        cell = ws2.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for record in overdue_second:
+        if record.second_courtesy_due_at:
+            delta = now - record.second_courtesy_due_at
+            ws2.cell(row=row_idx, column=1, value=record.room or '')
+            ws2.cell(row=row_idx, column=2, value=record.guest_name or '')
+            ws2.cell(row=row_idx, column=3, value=record.second_courtesy_due_at.strftime('%Y-%m-%d %H:%M'))
+            ws2.cell(row=row_idx, column=4, value=delta.days)
+            ws2.cell(row=row_idx, column=5, value=round(delta.total_seconds() / 3600, 1))
+            ws2.cell(row=row_idx, column=6, value=round(delta.total_seconds() / 60, 1))
+            row_idx += 1
+    
+    # Third sheet - Overdue Departures
+    ws3 = wb.create_sheet("Overdue Departures")
+    headers3 = ['Room', 'Guest Name', 'Departure Date', 'Overdue (days)']
+    for col, header in enumerate(headers3, 1):
+        cell = ws3.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for record in overdue_departures:
+        if record.departure_date:
+            delta = now.date() - record.departure_date
+            ws3.cell(row=row_idx, column=1, value=record.room or '')
+            ws3.cell(row=row_idx, column=2, value=record.guest_name or '')
+            ws3.cell(row=row_idx, column=3, value=record.departure_date.strftime('%Y-%m-%d'))
+            ws3.cell(row=row_idx, column=4, value=delta.days)
+            row_idx += 1
+    
+    for sheet in [ws, ws2, ws3]:
+        for col in range(1, 7):
+            sheet.column_dimensions[get_column_letter(col)].width = 20
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="overdue_actions.xlsx"'
+    return response
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def export_guest_feedback(request):
+    """Export Guest Feedback Report to Excel"""
+    if not OPENPYXL_AVAILABLE:
+        return HttpResponse("Excel export requires openpyxl. Please install it.", status=500)
+    
+    records_with_first_notes = ArrivalRecord.objects.exclude(
+        first_courtesy_notes__isnull=True
+    ).exclude(first_courtesy_notes='')
+    
+    records_with_second_notes = ArrivalRecord.objects.exclude(
+        second_courtesy_notes__isnull=True
+    ).exclude(second_courtesy_notes='')
+    
+    records_with_departure_notes = ArrivalRecord.objects.exclude(
+        departure_notes__isnull=True
+    ).exclude(departure_notes='')
+    
+    wb, ws, header_fill, header_font, border = _create_excel_workbook()
+    ws.title = "Guest Feedback"
+    
+    headers = ['Date', 'Type', 'Room', 'Guest Name', 'Outcome', 'Notes']
+    
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    all_notes = []
+    
+    for record in records_with_first_notes:
+        if record.first_courtesy_notes:
+            all_notes.append({
+                'date': record.first_courtesy_done_at,
+                'type': 'First Courtesy',
+                'room': record.room,
+                'guest': record.guest_name,
+                'outcome': record.first_courtesy_outcome,
+                'notes': record.first_courtesy_notes,
+            })
+    
+    for record in records_with_second_notes:
+        if record.second_courtesy_notes:
+            all_notes.append({
+                'date': record.second_courtesy_done_at,
+                'type': 'Second Courtesy',
+                'room': record.room,
+                'guest': record.guest_name,
+                'outcome': record.second_courtesy_outcome,
+                'notes': record.second_courtesy_notes,
+            })
+    
+    for record in records_with_departure_notes:
+        if record.departure_notes:
+            all_notes.append({
+                'date': record.departed_at,
+                'type': 'Departure',
+                'room': record.room,
+                'guest': record.guest_name,
+                'outcome': None,
+                'notes': record.departure_notes,
+            })
+    
+    all_notes.sort(key=lambda x: x['date'] if x['date'] else timezone.now(), reverse=True)
+    
+    for note in all_notes:
+        ws.cell(row=row_idx, column=1, value=note['date'].strftime('%Y-%m-%d %H:%M') if note['date'] else '')
+        ws.cell(row=row_idx, column=2, value=note['type'])
+        ws.cell(row=row_idx, column=3, value=note['room'] or '')
+        ws.cell(row=row_idx, column=4, value=note['guest'] or '')
+        ws.cell(row=row_idx, column=5, value=note['outcome'] or '')
+        ws.cell(row=row_idx, column=6, value=note['notes'])
+        row_idx += 1
+    
+    for col in range(1, len(headers) + 1):
+        ws.column_dimensions[get_column_letter(col)].width = 25
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="guest_feedback.xlsx"'
+    return response
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def export_nationality_country_breakdown(request):
+    """Export Nationality, Country & Market Source Breakdown to Excel"""
+    if not OPENPYXL_AVAILABLE:
+        return HttpResponse("Excel export requires openpyxl. Please install it.", status=500)
+    
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    
+    qs = ArrivalRecord.objects.all()
+    
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            qs = qs.filter(arrival_date__gte=start_date)
+        except (ValueError, TypeError):
+            pass
+    
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            qs = qs.filter(arrival_date__lte=end_date)
+        except (ValueError, TypeError):
+            pass
+    
+    nationality_breakdown = qs.exclude(nationality__isnull=True).exclude(
+        nationality=''
+    ).values('nationality').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    country_breakdown = qs.exclude(country__isnull=True).exclude(
+        country=''
+    ).values('country').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    agent_breakdown = qs.exclude(travel_agent_name__isnull=True).exclude(
+        travel_agent_name=''
+    ).values('travel_agent_name').annotate(
+        count=Count('id')
+    ).order_by('-count')
+    
+    wb, ws, header_fill, header_font, border = _create_excel_workbook()
+    ws.title = "Nationality Breakdown"
+    
+    headers = ['Nationality', 'Count']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for item in nationality_breakdown:
+        ws.cell(row=row_idx, column=1, value=item['nationality'])
+        ws.cell(row=row_idx, column=2, value=item['count'])
+        row_idx += 1
+    
+    ws2 = wb.create_sheet("Country Breakdown")
+    for col, header in enumerate(headers, 1):
+        cell = ws2.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for item in country_breakdown:
+        ws2.cell(row=row_idx, column=1, value=item['country'])
+        ws2.cell(row=row_idx, column=2, value=item['count'])
+        row_idx += 1
+    
+    ws3 = wb.create_sheet("Travel Agent Breakdown")
+    for col, header in enumerate(headers, 1):
+        cell = ws3.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for item in agent_breakdown:
+        ws3.cell(row=row_idx, column=1, value=item['travel_agent_name'])
+        ws3.cell(row=row_idx, column=2, value=item['count'])
+        row_idx += 1
+    
+    for sheet in [ws, ws2, ws3]:
+        for col in range(1, 3):
+            sheet.column_dimensions[get_column_letter(col)].width = 30
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="nationality_country_breakdown.xlsx"'
+    return response
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def export_length_of_stay(request):
+    """Export Length of Stay Analysis to Excel"""
+    if not OPENPYXL_AVAILABLE:
+        return HttpResponse("Excel export requires openpyxl. Please install it.", status=500)
+    
+    property_filter = request.GET.get('property', '')
+    nationality_filter = request.GET.get('nationality', '')
+    start_date_str = request.GET.get('start_date', '')
+    end_date_str = request.GET.get('end_date', '')
+    
+    qs = ArrivalRecord.objects.exclude(nights__isnull=True)
+    
+    if property_filter:
+        qs = qs.filter(property_name__icontains=property_filter)
+    if nationality_filter:
+        qs = qs.filter(nationality__icontains=nationality_filter)
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            qs = qs.filter(arrival_date__gte=start_date)
+        except (ValueError, TypeError):
+            pass
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            qs = qs.filter(arrival_date__lte=end_date)
+        except (ValueError, TypeError):
+            pass
+    
+    overall_stats = qs.aggregate(
+        avg_nights=Avg('nights'),
+        min_nights=Min('nights'),
+        max_nights=Max('nights'),
+        total_guests=Count('id')
+    )
+    
+    by_property = qs.exclude(property_name__isnull=True).exclude(
+        property_name=''
+    ).values('property_name').annotate(
+        avg_nights=Avg('nights'),
+        min_nights=Min('nights'),
+        max_nights=Max('nights'),
+        count=Count('id')
+    ).order_by('-count')
+    
+    by_nationality = qs.exclude(nationality__isnull=True).exclude(
+        nationality=''
+    ).values('nationality').annotate(
+        avg_nights=Avg('nights'),
+        min_nights=Min('nights'),
+        max_nights=Max('nights'),
+        count=Count('id')
+    ).order_by('-count')
+    
+    distribution_raw = qs.values('nights').annotate(
+        count=Count('id')
+    ).order_by('nights')
+    
+    total_guests = overall_stats['total_guests'] or 1
+    distribution = []
+    for item in distribution_raw:
+        percentage = (item['count'] / total_guests * 100) if total_guests > 0 else 0
+        distribution.append({
+            'nights': item['nights'],
+            'count': item['count'],
+            'percentage': round(percentage, 1),
+        })
+    
+    wb, ws, header_fill, header_font, border = _create_excel_workbook()
+    ws.title = "Overall Statistics"
+    
+    ws.cell(row=1, column=1, value="Metric")
+    ws.cell(row=1, column=2, value="Value")
+    ws.cell(row=1, column=1).fill = header_fill
+    ws.cell(row=1, column=1).font = header_font
+    ws.cell(row=1, column=2).fill = header_fill
+    ws.cell(row=1, column=2).font = header_font
+    
+    ws.cell(row=2, column=1, value="Average Nights")
+    ws.cell(row=2, column=2, value=round(overall_stats['avg_nights'], 1) if overall_stats['avg_nights'] else '')
+    ws.cell(row=3, column=1, value="Minimum Nights")
+    ws.cell(row=3, column=2, value=overall_stats['min_nights'] if overall_stats['min_nights'] else '')
+    ws.cell(row=4, column=1, value="Maximum Nights")
+    ws.cell(row=4, column=2, value=overall_stats['max_nights'] if overall_stats['max_nights'] else '')
+    ws.cell(row=5, column=1, value="Total Guests")
+    ws.cell(row=5, column=2, value=overall_stats['total_guests'] or 0)
+    
+    ws2 = wb.create_sheet("By Property")
+    headers = ['Property', 'Avg Nights', 'Min Nights', 'Max Nights', 'Count']
+    for col, header in enumerate(headers, 1):
+        cell = ws2.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for item in by_property:
+        ws2.cell(row=row_idx, column=1, value=item['property_name'])
+        ws2.cell(row=row_idx, column=2, value=round(item['avg_nights'], 1) if item['avg_nights'] else '')
+        ws2.cell(row=row_idx, column=3, value=item['min_nights'] if item['min_nights'] else '')
+        ws2.cell(row=row_idx, column=4, value=item['max_nights'] if item['max_nights'] else '')
+        ws2.cell(row=row_idx, column=5, value=item['count'])
+        row_idx += 1
+    
+    ws3 = wb.create_sheet("By Nationality")
+    for col, header in enumerate(headers, 1):
+        cell = ws3.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for item in by_nationality:
+        ws3.cell(row=row_idx, column=1, value=item['nationality'])
+        ws3.cell(row=row_idx, column=2, value=round(item['avg_nights'], 1) if item['avg_nights'] else '')
+        ws3.cell(row=row_idx, column=3, value=item['min_nights'] if item['min_nights'] else '')
+        ws3.cell(row=row_idx, column=4, value=item['max_nights'] if item['max_nights'] else '')
+        ws3.cell(row=row_idx, column=5, value=item['count'])
+        row_idx += 1
+    
+    ws4 = wb.create_sheet("Distribution")
+    headers_dist = ['Nights', 'Count', 'Percentage']
+    for col, header in enumerate(headers_dist, 1):
+        cell = ws4.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for item in distribution:
+        ws4.cell(row=row_idx, column=1, value=item['nights'])
+        ws4.cell(row=row_idx, column=2, value=item['count'])
+        ws4.cell(row=row_idx, column=3, value=item['percentage'])
+        row_idx += 1
+    
+    for sheet in [ws, ws2, ws3, ws4]:
+        for col in range(1, 6):
+            sheet.column_dimensions[get_column_letter(col)].width = 20
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="length_of_stay.xlsx"'
+    return response
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def export_contact_completeness(request):
+    """Export Contact Data Completeness Report to Excel"""
+    if not OPENPYXL_AVAILABLE:
+        return HttpResponse("Excel export requires openpyxl. Please install it.", status=500)
+    
+    all_records = ArrivalRecord.objects.all()
+    missing_phone = all_records.filter(Q(phone__isnull=True) | Q(phone=''))
+    missing_email = all_records.filter(Q(email__isnull=True) | Q(email=''))
+    missing_both = all_records.filter(
+        (Q(phone__isnull=True) | Q(phone='')) &
+        (Q(email__isnull=True) | Q(email=''))
+    )
+    
+    import re
+    email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+    invalid_email = []
+    for record in all_records.exclude(email__isnull=True).exclude(email=''):
+        if not email_pattern.match(record.email):
+            invalid_email.append(record)
+    
+    wb, ws, header_fill, header_font, border = _create_excel_workbook()
+    ws.title = "Missing Phone"
+    
+    headers = ['Room', 'Guest Name', 'Arrival Date', 'Email']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for record in missing_phone.order_by('arrival_date'):
+        ws.cell(row=row_idx, column=1, value=record.room or '')
+        ws.cell(row=row_idx, column=2, value=record.guest_name or '')
+        ws.cell(row=row_idx, column=3, value=record.arrival_date.strftime('%Y-%m-%d') if record.arrival_date else '')
+        ws.cell(row=row_idx, column=4, value=record.email or '')
+        row_idx += 1
+    
+    ws2 = wb.create_sheet("Missing Email")
+    for col, header in enumerate(headers, 1):
+        cell = ws2.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for record in missing_email.order_by('arrival_date'):
+        ws2.cell(row=row_idx, column=1, value=record.room or '')
+        ws2.cell(row=row_idx, column=2, value=record.guest_name or '')
+        ws2.cell(row=row_idx, column=3, value=record.arrival_date.strftime('%Y-%m-%d') if record.arrival_date else '')
+        ws2.cell(row=row_idx, column=4, value=record.phone or '')
+        row_idx += 1
+    
+    ws3 = wb.create_sheet("Missing Both")
+    headers3 = ['Room', 'Guest Name', 'Arrival Date', 'Confirmation #']
+    for col, header in enumerate(headers3, 1):
+        cell = ws3.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for record in missing_both.order_by('arrival_date'):
+        ws3.cell(row=row_idx, column=1, value=record.room or '')
+        ws3.cell(row=row_idx, column=2, value=record.guest_name or '')
+        ws3.cell(row=row_idx, column=3, value=record.arrival_date.strftime('%Y-%m-%d') if record.arrival_date else '')
+        ws3.cell(row=row_idx, column=4, value=record.confirmation_number or '')
+        row_idx += 1
+    
+    ws4 = wb.create_sheet("Invalid Email")
+    headers4 = ['Room', 'Guest Name', 'Invalid Email', 'Phone']
+    for col, header in enumerate(headers4, 1):
+        cell = ws4.cell(row=1, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    
+    row_idx = 2
+    for record in invalid_email:
+        ws4.cell(row=row_idx, column=1, value=record.room or '')
+        ws4.cell(row=row_idx, column=2, value=record.guest_name or '')
+        ws4.cell(row=row_idx, column=3, value=record.email)
+        ws4.cell(row=row_idx, column=4, value=record.phone or '')
+        row_idx += 1
+    
+    for sheet in [ws, ws2, ws3, ws4]:
+        for col in range(1, 5):
+            sheet.column_dimensions[get_column_letter(col)].width = 25
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="contact_completeness.xlsx"'
+    return response

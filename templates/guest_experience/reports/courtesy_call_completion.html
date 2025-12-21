@@ -83,7 +83,12 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="card-title mb-0">Courtesy Call Details</h5>
-        <span class="badge bg-primary">{{ records|length }} records</span>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary">{{ records|length }} records</span>
+            <a href="{% url 'guest_experience:export_courtesy_call_completion' %}?start_date={{ start_date }}&end_date={{ end_date }}&property={{ property_filter }}&courtesy_by={{ courtesy_by_filter }}" class="btn btn-sm btn-success">
+                <i class="fas fa-file-excel me-1"></i>Export to Excel
+            </a>
+        </div>
     </div>
     <div class="card-body">
         <div class="table-responsive">

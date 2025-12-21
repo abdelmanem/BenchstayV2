@@ -15,6 +15,15 @@
     </div>
 </div>
 
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Export</h5>
+        <a href="{% url 'guest_experience:export_overdue_actions' %}" class="btn btn-sm btn-success">
+            <i class="fas fa-file-excel me-1"></i>Export to Excel
+        </a>
+    </div>
+</div>
+
 {% if overdue_first or overdue_second or overdue_departures %}
 <div class="row mb-4">
     <div class="col-md-4">

@@ -37,6 +37,17 @@ urlpatterns = [
     path("reports/nationality-country-breakdown/", views.report_nationality_country_breakdown, name="report_nationality_country_breakdown"),
     path("reports/length-of-stay/", views.report_length_of_stay, name="report_length_of_stay"),
     path("reports/contact-completeness/", views.report_contact_completeness, name="report_contact_completeness"),
+    # Export endpoints
+    path("reports/export/arrivals-departures/", views.export_arrivals_departures, name="export_arrivals_departures"),
+    path("reports/export/courtesy-call-completion/", views.export_courtesy_call_completion, name="export_courtesy_call_completion"),
+    path("reports/export/in-house-guests/", views.export_in_house_guests, name="export_in_house_guests"),
+    path("reports/export/departure-outcomes/", views.export_departure_outcomes, name="export_departure_outcomes"),
+    path("reports/export/agent-performance/", views.export_agent_performance, name="export_agent_performance"),
+    path("reports/export/overdue-actions/", views.export_overdue_actions, name="export_overdue_actions"),
+    path("reports/export/guest-feedback/", views.export_guest_feedback, name="export_guest_feedback"),
+    path("reports/export/nationality-country-breakdown/", views.export_nationality_country_breakdown, name="export_nationality_country_breakdown"),
+    path("reports/export/length-of-stay/", views.export_length_of_stay, name="export_length_of_stay"),
+    path("reports/export/contact-completeness/", views.export_contact_completeness, name="export_contact_completeness"),
 ]
 
 
