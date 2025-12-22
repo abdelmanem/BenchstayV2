@@ -60,11 +60,11 @@
         <form method="get" id="dashboardFilters" class="row g-3">
             <div class="col-md-3">
                 <label class="form-label">Start Date</label>
-                <input type="date" name="start_date" id="start_date" value="{{ start_date }}" class="form-control">
+                <input type="date" name="start_date" id="start_date" value="{{ start_date|date:'Y-m-d' }}" class="form-control">
             </div>
             <div class="col-md-3">
                 <label class="form-label">End Date</label>
-                <input type="date" name="end_date" id="end_date" value="{{ end_date }}" class="form-control">
+                <input type="date" name="end_date" id="end_date" value="{{ end_date|date:'Y-m-d' }}" class="form-control">
             </div>
             <div class="col-md-2">
                 <label class="form-label">Status</label>
