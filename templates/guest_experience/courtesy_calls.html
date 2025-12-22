@@ -70,7 +70,7 @@
 <div class="modal fade" id="courtesyOutcomeModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
+            <div class="modal-header bg-light border-bottom">
                 <h5 class="modal-title"><i class="fas fa-phone me-2"></i>Complete Courtesy Call</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -79,20 +79,66 @@
                 <div class="modal-body">
                     <input type="hidden" id="courtesy-confirmation-number">
                     <input type="hidden" id="courtesy-which">
+                    
+                    <!-- Guest Information Card -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <small class="text-muted d-block">Guest Name</small>
+                                        <strong id="courtesy-guest-name" class="fs-5">-</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <small class="text-muted d-block">Room Number</small>
+                                        <strong id="courtesy-guest-room" class="fs-5">-</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <small class="text-muted d-block">Confirmation #</small>
+                                        <strong id="courtesy-guest-confirmation" class="fs-6">-</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <small class="text-muted d-block">Phone</small>
+                                        <strong id="courtesy-guest-phone" class="fs-6">-</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <small class="text-muted d-block">Arrival - Departure</small>
+                                        <strong id="courtesy-guest-dates" class="fs-6">-</strong>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <small class="text-muted d-block">Courtesy Call</small>
+                                        <span id="courtesy-call-type" class="badge bg-info">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Courtesy Call Form -->
                     <div class="mb-3">
-                        <label class="form-label">Call Outcome</label>
+                        <label class="form-label fw-bold">Call Outcome</label>
                         <select class="form-select" id="courtesy-outcome" required>
                             <option value="">Select outcome...</option>
-                            <option value="Very Satisfied">Very Satisfied</option>
-                            <option value="Satisfied">Satisfied</option>
-                            <option value="Neutral">Neutral</option>
-                            <option value="Issue Reported">Issue Reported</option>
-                            <option value="Could Not Reach Guest">Could Not Reach Guest</option>
+                            <option value="Very Satisfied">✓ Very Satisfied</option>
+                            <option value="Satisfied">✓ Satisfied</option>
+                            <option value="Neutral">- Neutral</option>
+                            <option value="Issue Reported">⚠ Issue Reported</option>
+                            <option value="Could Not Reach Guest">✗ Could Not Reach Guest</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Call Notes / Guest Feedback</label>
-                        <textarea class="form-control" id="courtesy-notes" rows="4" placeholder="Summarize how the call went and any guest issues, preferences, or follow-up needed."></textarea>
+                        <label class="form-label fw-bold">Call Notes / Guest Feedback</label>
+                        <textarea class="form-control" id="courtesy-notes" rows="4" placeholder="Summarize how the call went, any guest requests, issues reported, or follow-up needed."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -148,7 +194,19 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function getCookie(name) {
+    function populateGuestInfo(item, which) {
+        document.getElementById('courtesy-guest-name').textContent = item.guest_name || '-';
+        document.getElementById('courtesy-guest-room').textContent = item.room || '-';
+        document.getElementById('courtesy-guest-confirmation').textContent = item.confirmation_number || '-';
+        document.getElementById('courtesy-guest-phone').textContent = item.phone || '-';
+        
+        const arrivalDate = formatDate(item.arrival_date);
+        const departureDate = formatDate(item.departure_date);
+        document.getElementById('courtesy-guest-dates').textContent = `${arrivalDate} → ${departureDate}`;
+        
+        const callTypeBadge = which === 'first' ? 'First Courtesy Call' : 'Second Courtesy Call';
+        document.getElementById('courtesy-call-type').textContent = callTypeBadge;
+    }    function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
@@ -228,10 +286,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 const cid = btn.getAttribute('data-id');
                 if (!which || !cid) return;
 
+                // Find the guest item data
+                const guestItem = allRows.find(item => item.confirmation_number === cid);
+                if (!guestItem) return;
+
                 hiddenConfirmation.value = cid;
                 hiddenWhich.value = which;
                 outcomeSelect.value = '';
                 notesInput.value = '';
+
+                // Populate guest information
+                populateGuestInfo(guestItem, which);
 
                 const modal = new bootstrap.Modal(outcomeModalEl);
                 modal.show();
