@@ -30,7 +30,7 @@
         <div class="d-flex flex-wrap align-items-center gap-3">
             <div class="d-flex flex-column">
                 <label class="small text-muted mb-1" for="inhouse-date-filter">Reference Date</label>
-                <input type="date" id="inhouse-date-filter" class="form-control form-control-sm" value="{{ today }}">
+                <input type="date" id="inhouse-date-filter" class="form-control form-control-sm" value="{{ today|date:'Y-m-d' }}">
             </div>
             <div class="d-flex flex-column">
                 <label class="small text-muted mb-1" for="inhouse-search-input">Search</label>
@@ -385,8 +385,26 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Helper: get CSRF token from cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     // Handle change room form submission
-    document.getElementById('confirmChangeRoomBtn').addEventListener('click', function() {
+    const confirmChangeRoomBtn = document.getElementById('confirmChangeRoomBtn');
+    if (confirmChangeRoomBtn) {
+        confirmChangeRoomBtn.addEventListener('click', function() {
         const form = document.getElementById('changeRoomForm');
         if (!form.checkValidity()) {
             form.reportValidity();
@@ -401,50 +419,41 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        // Get CSRF token
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
+            const csrftoken = getCookie('csrftoken');
 
-        const csrftoken = getCookie('csrftoken');
-
-        fetch("{% url 'guest_experience:update_room' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({
-                confirmation_number: confirmation,
-                room: newRoom
+            fetch("{% url 'guest_experience:update_room' %}", {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    confirmation_number: confirmation,
+                    room: newRoom
+                })
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('changeRoomModal'));
-                modal.hide();
-                loadInHouse(); // Reload the table
-            } else {
-                alert('Error: ' + (data.error || 'Failed to update room number'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error updating room number. Please try again.');
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(t => { throw new Error('Request failed: ' + response.status + ' ' + t); });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('changeRoomModal'));
+                    modal.hide();
+                    loadInHouse(); // Reload the table
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to update room number'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating room number. ' + (error.message || 'Please try again.'));
+            });
         });
-    });
+    }
 
     // Handle Departure button clicks
     document.addEventListener('click', function(e) {
@@ -467,7 +476,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Handle departure form submission
-    document.getElementById('confirmDepartureBtn').addEventListener('click', function() {
+    const confirmDepartureBtn = document.getElementById('confirmDepartureBtn');
+    if (confirmDepartureBtn) {
+        confirmDepartureBtn.addEventListener('click', function() {
         const form = document.getElementById('departureForm');
         if (!form.checkValidity()) {
             form.reportValidity();
@@ -479,52 +490,43 @@ document.addEventListener('DOMContentLoaded', function () {
         const departureNotes = document.getElementById('departure_notes').value;
         const messageSent = document.getElementById('message_sent_to_guest').checked;
 
-        // Get CSRF token
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
+            const csrftoken = getCookie('csrftoken');
 
-        const csrftoken = getCookie('csrftoken');
-
-        fetch("{% url 'guest_experience:mark_departed' %}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrftoken
-            },
-            body: JSON.stringify({
-                confirmation_number: confirmation,
-                departure_method: departureMethod,
-                departure_notes: departureNotes,
-                message_sent_to_guest: messageSent
+            fetch("{% url 'guest_experience:mark_departed' %}", {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    confirmation_number: confirmation,
+                    departure_method: departureMethod,
+                    departure_notes: departureNotes,
+                    message_sent_to_guest: messageSent
+                })
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('departureModal'));
-                modal.hide();
-                loadInHouse(); // Reload the table
-            } else {
-                alert('Error: ' + (data.error || 'Failed to mark as departed'));
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error marking guest as departed. Please try again.');
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(t => { throw new Error('Request failed: ' + response.status + ' ' + t); });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('departureModal'));
+                    modal.hide();
+                    loadInHouse(); // Reload the table
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to mark as departed'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error marking guest as departed. ' + (error.message || 'Please try again.'));
+            });
         });
-    });
+    }
 });
 </script>
 {% endblock %}
