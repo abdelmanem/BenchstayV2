@@ -2,6 +2,17 @@
 
 {% block title %}Arrivals & Departures Report{% endblock %}
 
+{% block extra_css %}
+<style>
+    th.sortable { user-select: none; cursor: pointer; }
+    th.sortable:hover { background-color: #f8f9fa; }
+    .sort-indicator { font-size: 0.75em; color: #999; margin-left: 6px; }
+    .sort-indicator.active { color: #2563eb; font-weight: 700; }
+    .sort-indicator.asc::after { content: ' ▲'; }
+    .sort-indicator.desc::after { content: ' ▼'; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="dashboard-header mb-4">
     <div class="hotel-info d-flex align-items-center justify-content-between">
@@ -84,19 +95,19 @@
             <table class="table table-striped table-hover">
                 <thead>
                     <tr>
-                        <th>Property</th>
-                        <th>Room</th>
-                        <th>Guest Name</th>
-                        <th>Arrival Date</th>
-                        <th>Departure Date</th>
-                        <th>Status</th>
-                        <th>Travel Agent</th>
-                        <th>VIP Code</th>
-                        <th>Rate</th>
-                        <th>Rate Code</th>
-                        <th>Membership Type</th>
-                        <th>Preference</th>
-                        <th>Alert Code</th>
+                        <th class="sortable" data-sort="property" data-type="text">Property <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="room" data-type="text">Room <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="guest_name" data-type="text">Guest Name <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="arrival_date" data-type="date">Arrival Date <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="departure_date" data-type="date">Departure Date <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="status" data-type="text">Status <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="travel_agent" data-type="text">Travel Agent <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="vip_code" data-type="text">VIP Code <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="rate" data-type="number">Rate <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="rate_code" data-type="text">Rate Code <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="membership_type" data-type="text">Membership Type <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="preference" data-type="text">Preference <span class="sort-indicator"></span></th>
+                        <th class="sortable" data-sort="alert_code" data-type="text">Alert Code <span class="sort-indicator"></span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -136,5 +147,92 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.querySelector('.table-responsive table');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    const headers = table.querySelectorAll('th.sortable');
+    let currentIndex = null;
+    let currentOrder = 'asc';
+
+    function parseCell(text, type) {
+        if (text === null || text === undefined) return '';
+        const t = text.trim();
+        if (!t) return '';
+        if (type === 'number') {
+            const n = parseFloat(t.replace(/[^0-9.-]/g, ''));
+            return isNaN(n) ? t.toLowerCase() : n;
+        }
+        if (type === 'date') {
+            // Expect YYYY-MM-DD or ISO formats
+            const d = Date.parse(t);
+            return isNaN(d) ? t.toLowerCase() : d;
+        }
+        return t.toLowerCase();
+    }
+
+    function updateIndicators() {
+        headers.forEach((h, idx) => {
+            const ind = h.querySelector('.sort-indicator');
+            if (!ind) return;
+            ind.classList.remove('active', 'asc', 'desc');
+            if (idx === currentIndex) {
+                ind.classList.add('active', currentOrder);
+            }
+        });
+    }
+
+    function sortTable(index, type, order) {
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        // Filter out placeholder empty row (has single td with colspan)
+        const dataRows = rows.filter(r => r.querySelectorAll('td').length > 1);
+
+        dataRows.sort((a, b) => {
+            const aCell = a.querySelectorAll('td')[index];
+            const bCell = b.querySelectorAll('td')[index];
+            const aVal = parseCell(aCell ? aCell.textContent : '', type);
+            const bVal = parseCell(bCell ? bCell.textContent : '', type);
+
+            if (aVal === '' && bVal === '') return 0;
+            if (aVal === '') return 1;
+            if (bVal === '') return -1;
+
+            if (typeof aVal === 'number' && typeof bVal === 'number') {
+                return order === 'asc' ? aVal - bVal : bVal - aVal;
+            }
+            if (typeof aVal === 'number' || typeof bVal === 'number') {
+                // fallback
+                return order === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal > bVal ? -1 : 1);
+            }
+            // compare as strings or timestamps
+            if (aVal > bVal) return order === 'asc' ? 1 : -1;
+            if (aVal < bVal) return order === 'asc' ? -1 : 1;
+            return 0;
+        });
+
+        // Rebuild tbody: first remove data rows then append in order
+        dataRows.forEach(r => tbody.removeChild(r));
+        dataRows.forEach(r => tbody.appendChild(r));
+        updateIndicators();
+    }
+
+    headers.forEach((h, idx) => {
+        h.addEventListener('click', () => {
+            const type = h.getAttribute('data-type') || 'text';
+            if (currentIndex === idx) {
+                currentOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentIndex = idx;
+                currentOrder = 'asc';
+            }
+            sortTable(idx, type, currentOrder);
+        });
+    });
+});
+</script>
 {% endblock %}
 
