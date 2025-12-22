@@ -547,25 +547,34 @@
                         <a class="nav-link" href="{% url 'hotel_management:home' %}">Dashboard</a>
                     </li>
                     {% endif %}
-                    {% if perms.accounts.view_hotel_management or perms.accounts.view_data_entry %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'hotel_management:data_entry' %}">Data Entry</a>
-                    </li>
-                    {% endif %}
-                    {% if perms.accounts.view_hotel_management %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'hotel_management:budget_goals' %}">Budget & Goals</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'hotel_management:budget_goals_tracker' %}">Goals Tracker</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'hotel_management:hotel_data' %}">Hotels Portal</a>
-                    </li>
-                    {% endif %}
-                    {% if perms.accounts.view_reporting %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'reporting:dashboard' %}">Reports</a>
+                    {% if perms.accounts.view_hotel_management or perms.accounts.view_data_entry or perms.accounts.view_reporting %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="operationsDropdown" role="button" data-bs-toggle="dropdown">Operations</a>
+                        <ul class="dropdown-menu">
+                            {# Data Entry (show to either hotel management or data entry perms) #}
+                            {% if perms.accounts.view_hotel_management or perms.accounts.view_data_entry %}
+                            <li><a class="dropdown-item" href="{% url 'hotel_management:data_entry' %}">Data Entry</a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+
+                            {# Budget & Goals and Goals Tracker (hotel management only) #}
+                            {% if perms.accounts.view_hotel_management %}
+                            <li><a class="dropdown-item" href="{% url 'hotel_management:budget_goals' %}">Budget & Goals</a></li>
+                            <li><a class="dropdown-item" href="{% url 'hotel_management:budget_goals_tracker' %}">Goals Tracker</a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+
+                            {# Hotels Portal (hotel management only) #}
+                            {% if perms.accounts.view_hotel_management %}
+                            <li><a class="dropdown-item" href="{% url 'hotel_management:hotel_data' %}">Hotels Portal</a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+
+                            {# Reports (reporting perm) #}
+                            {% if perms.accounts.view_reporting %}
+                            <li><a class="dropdown-item" href="{% url 'reporting:dashboard' %}">Reports</a></li>
+                            {% endif %}
+                        </ul>
                     </li>
                     {% endif %}
                     {% if perms.accounts.view_hotelkit %}
