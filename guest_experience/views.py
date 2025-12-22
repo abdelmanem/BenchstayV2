@@ -200,8 +200,6 @@ def upload_arrivals(request):
             cn = str(row.get(confirmation_col) or "").strip()
             if cn:
                 confirmation_values.add(cn)
-        if confirmation_values:
-            ArrivalRecord.objects.filter(confirmation_number__in=confirmation_values).delete()
 
     created_or_updated = 0
     today = timezone.localdate()
@@ -267,8 +265,45 @@ def upload_arrivals(request):
         # If no confirmation number, skip to avoid untrackable duplicates
         if not confirmation_number:
             continue
-
-        ArrivalRecord.objects.create(
+        # Check if record already exists
+        existing_record = ArrivalRecord.objects.filter(confirmation_number=confirmation_number).first()
+        
+        if existing_record:
+            # Record exists - check if status is protected (In-House or Departed)
+            current_status = existing_record.status or ""
+            is_protected = current_status.lower() in ['in-house', 'in house', 'departed']
+            
+            # Update all fields except status if it's protected
+            existing_record.property_name = property_name
+            existing_record.first_name = first_name
+            existing_record.last_name = last_name
+            existing_record.room = room or None
+            existing_record.phone = phone
+            existing_record.email = email
+            existing_record.nationality = nationality
+            existing_record.country = country
+            existing_record.arrival_date = arrival_date
+            existing_record.departure_date = departure_date
+            existing_record.travel_agent_name = str(row.get(travel_agent_col) or "").strip() if travel_agent_col else ""
+            existing_record.vip_code = str(row.get(vip_code_col) or "").strip() if vip_code_col else ""
+            existing_record.rate = float(row.get(rate_col)) if rate_col and pd.notna(row.get(rate_col)) else None
+            existing_record.rate_code = str(row.get(rate_code_col) or "").strip() if rate_code_col else ""
+            existing_record.last_room_number = str(row.get(last_room_col) or "").strip() if last_room_col else ""
+            existing_record.preference = str(row.get(preference_col) or "").strip() if preference_col else ""
+            existing_record.alert_code = str(row.get(alert_code_col) or "").strip() if alert_code_col else ""
+            existing_record.membership_type = str(row.get(membership_type_col) or "").strip() if membership_type_col else ""
+            existing_record.membership_number = str(row.get(membership_number_col) or "").strip() if membership_number_col else ""
+            existing_record.guest_name = guest_name
+            existing_record.eta = eta
+            existing_record.nights = nights
+            if not is_protected:
+                existing_record.status = status
+            existing_record.updated_by = request.user
+            existing_record.updated_at = timezone.now()
+            existing_record.save()
+            created_or_updated += 1
+        else:
+            ArrivalRecord.objects.create(
             # Raw columns
             property_name=property_name,
             confirmation_number=confirmation_number,
@@ -298,8 +333,8 @@ def upload_arrivals(request):
             status=status,
             created_by=request.user,
             updated_by=request.user,
-        )
-        created_or_updated += 1
+            )
+            created_or_updated += 1
 
     messages.success(
         request,
