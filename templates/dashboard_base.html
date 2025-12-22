@@ -570,33 +570,34 @@
                     {% endif %}
                     {% if perms.accounts.view_hotelkit %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="repairsDropdown" role="button" data-bs-toggle="dropdown">Repairs Analytics</a>
+                        <a class="nav-link dropdown-toggle" href="#" id="hotelkitDropdown" role="button" data-bs-toggle="dropdown">Hotelkit Analytics</a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{% url 'repairs:repairs_dashboard' %}">Dashboard</a></li>
+                            <!-- Repairs Analytics -->
+                            <li><h6 class="dropdown-header">Repairs Analytics</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'repairs:repairs_dashboard' %}">Repairs Dashboard</a></li>
                             <li><a class="dropdown-item" href="{% url 'repairs:repairs_by_type' %}">Repairs by Type</a></li>
+                            <li><a class="dropdown-item" href="{% url 'repairs:daily_flash_report' %}">Repairs Daily Flash</a></li>
+                            <li><a class="dropdown-item" href="{% url 'repairs:weekly_trend_report' %}">Repairs Weekly Trends</a></li>
+                            <li><a class="dropdown-item" href="{% url 'repairs:monthly_root_cause_report' %}">Repairs Root Cause</a></li>
+
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'repairs:daily_flash_report' %}">Daily Flash</a></li>
-                            <li><a class="dropdown-item" href="{% url 'repairs:weekly_trend_report' %}">Weekly Trends</a></li>
-                            <li><a class="dropdown-item" href="{% url 'repairs:monthly_root_cause_report' %}">Root Cause</a></li>
-                        </ul>
-                    </li>
-                    {% endif %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="guestRequestsDropdown" role="button" data-bs-toggle="dropdown">Guest Requests</a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{% url 'guest_requests:dashboard' %}">Dashboard</a></li>
-                            <li><a class="dropdown-item" href="{% url 'guest_requests:upload' %}">Upload Data</a></li>
+
+                            <!-- Guest Requests -->
+                            <li><h6 class="dropdown-header">Guest Requests</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'guest_requests:dashboard' %}">Guest Requests Dashboard</a></li>
+                            <li><a class="dropdown-item" href="{% url 'guest_requests:upload' %}">Upload Guest Requests Data</a></li>
                             <li><a class="dropdown-item" href="{% url 'guest_requests:by_type' %}">Requests by Type</a></li>
-                            <li><a class="dropdown-item" href="{% url 'guest_requests:by_department' %}">By Department</a></li>
-                            <li><a class="dropdown-item" href="{% url 'guest_requests:by_priority' %}">By Priority</a></li>
+                            <li><a class="dropdown-item" href="{% url 'guest_requests:by_department' %}">Requests by Department</a></li>
+                            <li><a class="dropdown-item" href="{% url 'guest_requests:by_priority' %}">Requests by Priority</a></li>
                             <li><a class="dropdown-item" href="{% url 'guest_requests:delayed' %}">Delayed Requests</a></li>
                             <li><a class="dropdown-item" href="{% url 'guest_requests:monthly_summary' %}">Monthly Summary</a></li>
                             <li><a class="dropdown-item" href="{% url 'guest_requests:sla_compliance' %}">SLA Compliance</a></li>
                             <li><a class="dropdown-item" href="{% url 'guest_requests:heatmap' %}">Requests Heatmap</a></li>
-                            <li><a class="dropdown-item" href="{% url 'guest_requests:top_frequent' %}">Top Frequent</a></li>
+                            <li><a class="dropdown-item" href="{% url 'guest_requests:top_frequent' %}">Top Frequent Requests</a></li>
                             <li><a class="dropdown-item" href="{% url 'guest_requests:department_performance' %}">Department Performance</a></li>
                         </ul>
                     </li>
+                    {% endif %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="guestExperienceDropdown" role="button" data-bs-toggle="dropdown">Guest Experience</a>
                         <ul class="dropdown-menu">
