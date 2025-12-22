@@ -23,6 +23,7 @@ urlpatterns = [
     path("api/in-house/", views.in_house_api, name="in_house_api"),
     path("api/departures/", views.departures_api, name="departures_api"),
     path("api/courtesy-calls/", views.courtesy_calls_api, name="courtesy_calls_api"),
+    path("api/travel-agents/", views.travel_agents_api, name="travel_agents_api"),
     path("api/courtesy-calls/mark-done/", views.mark_courtesy_done, name="mark_courtesy_done"),
     path("api/dashboard/", views.dashboard_api, name="dashboard_api"),
     # Reports

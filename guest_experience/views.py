@@ -961,6 +961,7 @@ def courtesy_calls_api(request):
                 "confirmation_number": a.confirmation_number,
                 "phone": a.phone,
                 "country": a.country,
+                "travel_agent_name": a.travel_agent_name,
                 "arrival_date": a.arrival_date.isoformat() if a.arrival_date else None,
                 "departure_date": a.departure_date.isoformat() if a.departure_date else None,
                 "nights": a.nights,
@@ -982,6 +983,23 @@ def courtesy_calls_api(request):
         )
 
     return JsonResponse({"results": data})
+
+
+@login_required
+@permission_required("accounts.view_hotel_management", raise_exception=True)
+def travel_agents_api(request):
+    """
+    API endpoint to get all unique travel agents from the database.
+    Returns a list of all travel agent names, sorted alphabetically.
+    """
+    agents = (
+        ArrivalRecord.objects.exclude(travel_agent_name__isnull=True)
+        .exclude(travel_agent_name="")
+        .values_list("travel_agent_name", flat=True)
+        .order_by("travel_agent_name")
+        .distinct()
+    )
+    return JsonResponse({"agents": list(agents)})
 
 
 @login_required

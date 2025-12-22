@@ -362,27 +362,32 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function loadCourtesyCalls() {
         tbody.innerHTML = '<tr><td colspan="17" class="text-center py-4 text-muted">Loading courtesy calls...</td></tr>';
-        fetch("{% url 'guest_experience:courtesy_calls_api' %}")
+        
+        // Fetch travel agents separately from all database records
+        fetch("{% url 'guest_experience:travel_agents_api' %}")
             .then(response => response.json())
-            .then(data => {
-                allRows = data.results || [];
-                
-                // Populate travel agent dropdown
-                const agents = new Set();
-                allRows.forEach(item => {
-                    if (item.travel_agent_name) agents.add(item.travel_agent_name);
-                });
-                
+            .then(agentData => {
+                // Populate travel agent dropdown with ALL agents from database
                 const agentSelect = document.getElementById('courtesy-agent-filter');
                 const selectedAgent = agentSelect.value;
                 agentSelect.innerHTML = '<option value="">All Agents</option>';
-                Array.from(agents).sort().forEach(agent => {
+                (agentData.agents || []).forEach(agent => {
                     const option = document.createElement('option');
                     option.value = agent;
                     option.textContent = agent;
                     agentSelect.appendChild(option);
                 });
                 agentSelect.value = selectedAgent;
+            })
+            .catch(error => {
+                console.error('Error loading travel agents:', error);
+            });
+        
+        // Fetch courtesy calls data
+        fetch("{% url 'guest_experience:courtesy_calls_api' %}")
+            .then(response => response.json())
+            .then(data => {
+                allRows = data.results || [];
                 
                 // Set date filter to today
                 const today = new Date().toISOString().split('T')[0];
