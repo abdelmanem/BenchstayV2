@@ -171,6 +171,50 @@
     </div>
 </div>
 
+<!-- Bulk Action Warning Modal - Delete -->
+<div class="modal fade" id="bulkDeleteWarningModal" tabindex="-1" aria-labelledby="bulkDeleteWarningLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-danger-subtle">
+                <h5 class="modal-title" id="bulkDeleteWarningLabel"><i class="fas fa-exclamation-triangle me-2 text-danger"></i>Warning: Delete Records</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0"><strong>You are about to permanently delete <span id="delete-record-count">0</span> record(s).</strong></p>
+                <p class="text-danger mt-2 mb-0"><small>This action CANNOT be undone.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmBulkDeleteBtn">
+                    <i class="fas fa-trash-alt me-2"></i>Delete Records
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Action Warning Modal - Mark Departed -->
+<div class="modal fade" id="bulkMarkDepartedWarningModal" tabindex="-1" aria-labelledby="bulkMarkDepartedWarningLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-warning-subtle">
+                <h5 class="modal-title" id="bulkMarkDepartedWarningLabel"><i class="fas fa-exclamation-triangle me-2 text-warning"></i>Warning: Mark as Departed</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0"><strong>You are about to mark <span id="departed-record-count">0</span> record(s) as departed.</strong></p>
+                <p class="text-muted mt-2 mb-0"><small>This will remove them from the in-house list.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="confirmBulkMarkDepartedBtn">
+                    <i class="fas fa-sign-out-alt me-2"></i>Mark as Departed
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Change Room Modal -->
 <div class="modal fade" id="changeRoomModal" tabindex="-1" aria-labelledby="changeRoomModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -647,7 +691,8 @@ document.addEventListener('DOMContentLoaded', function () {
         deleteSelectedBtn.addEventListener('click', function(){
             const selected = Array.from(document.querySelectorAll('.inhouse-select:checked')).map(c=>c.dataset.confirmation).filter(Boolean);
             if(!selected.length) return;
-            if(!confirm('Delete selected records? This cannot be undone.')) return;
+            const message = '⚠️ WARNING: Delete Bulk Action\n\nYou are about to permanently delete ' + selected.length + ' record(s).\n\nThis action CANNOT be undone.\n\nDo you want to continue?';
+            if(!confirm(message)) return;
             const csrftoken = getCookie('csrftoken');
             fetch("{% url 'guest_experience:delete_arrivals' %}", {
                 method: 'POST',
@@ -668,7 +713,8 @@ document.addEventListener('DOMContentLoaded', function () {
         markDepartedSelectedBtn.addEventListener('click', function(){
             const selected = Array.from(document.querySelectorAll('.inhouse-select:checked')).map(c=>c.dataset.confirmation).filter(Boolean);
             if(!selected.length) return;
-            if(!confirm('Mark selected as departed?')) return;
+            const message = '⚠️ WARNING: Mark as Departed Bulk Action\n\nYou are about to mark ' + selected.length + ' record(s) as departed.\n\nDo you want to continue?';
+            if(!confirm(message)) return;
             const csrftoken = getCookie('csrftoken');
             // call mark_departed for each (sequential)
             (async function(){

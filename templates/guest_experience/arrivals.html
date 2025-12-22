@@ -1188,7 +1188,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (deleteButton) {
         deleteButton.addEventListener('click', () => {
             if (!selectedIds.size) return;
-            if (!confirm('Are you sure you want to delete the selected arrivals?')) {
+            const message = '⚠️ WARNING: Delete Bulk Action\n\nYou are about to permanently delete ' + selectedIds.size + ' record(s).\n\nThis action CANNOT be undone.\n\nDo you want to continue?';
+            if (!confirm(message)) {
                 return;
             }
             const csrftoken = getCookie('csrftoken');
@@ -1228,6 +1229,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (markInHouseButton) {
         markInHouseButton.addEventListener('click', () => {
             if (!selectedIds.size) return;
+            const message = '⚠️ WARNING: Mark as In-House Bulk Action\n\nYou are about to mark ' + selectedIds.size + ' record(s) as In-House.\n\nDo you want to continue?';
+            if (!confirm(message)) {
+                return;
+            }
             const csrftoken = getCookie('csrftoken');
             if (!csrftoken) {
                 alert('CSRF token not found. Please refresh the page.');
