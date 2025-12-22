@@ -13,6 +13,7 @@ import io
 from datetime import datetime, timedelta
 from .models import ArrivalRecord
 from django.db import models
+import logging
 
 try:
     import openpyxl
@@ -441,10 +442,17 @@ def edit_arrival(request, confirmation_number):
     GET: Returns JSON with record data
     POST: Updates the record
     """
-    try:
-        record = ArrivalRecord.objects.get(confirmation_number=confirmation_number)
-    except ArrivalRecord.DoesNotExist:
+    qs = ArrivalRecord.objects.filter(confirmation_number=confirmation_number)
+    count = qs.count()
+    if not qs.exists():
         return JsonResponse({"error": "Record not found"}, status=404)
+    if count > 1:
+        logging.warning(
+            "Multiple ArrivalRecords found for confirmation_number=%s (%d). Using most recently updated.",
+            confirmation_number,
+            count,
+        )
+    record = qs.order_by('-updated_at').first()
 
     if request.method == "GET":
         # Return record data for editing
@@ -671,10 +679,17 @@ def mark_departed(request):
     if not departure_method:
         return JsonResponse({"error": "departure_method is required"}, status=400)
 
-    try:
-        record = ArrivalRecord.objects.get(confirmation_number=confirmation_number)
-    except ArrivalRecord.DoesNotExist:
+    qs = ArrivalRecord.objects.filter(confirmation_number=confirmation_number)
+    count = qs.count()
+    if not qs.exists():
         return JsonResponse({"error": "Record not found"}, status=404)
+    if count > 1:
+        logging.warning(
+            "Multiple ArrivalRecords found for confirmation_number=%s (%d). Using most recently updated.",
+            confirmation_number,
+            count,
+        )
+    record = qs.order_by('-updated_at').first()
 
     now = timezone.now()
     record.status = "Departed"
@@ -714,10 +729,17 @@ def update_room(request):
     if not new_room:
         return JsonResponse({"error": "room is required"}, status=400)
 
-    try:
-        record = ArrivalRecord.objects.get(confirmation_number=confirmation_number)
-    except ArrivalRecord.DoesNotExist:
+    qs = ArrivalRecord.objects.filter(confirmation_number=confirmation_number)
+    count = qs.count()
+    if not qs.exists():
         return JsonResponse({"error": "Record not found"}, status=404)
+    if count > 1:
+        logging.warning(
+            "Multiple ArrivalRecords found for confirmation_number=%s (%d). Using most recently updated.",
+            confirmation_number,
+            count,
+        )
+    record = qs.order_by('-updated_at').first()
 
     record.room = new_room or None
     record.updated_by = request.user
@@ -986,10 +1008,17 @@ def mark_courtesy_done(request):
         if not confirmation_number or which not in {"first", "second"}:
             return JsonResponse({"error": "Invalid parameters"}, status=400)
 
-        try:
-            record = ArrivalRecord.objects.get(confirmation_number=confirmation_number)
-        except ArrivalRecord.DoesNotExist:
+        qs = ArrivalRecord.objects.filter(confirmation_number=confirmation_number)
+        count = qs.count()
+        if not qs.exists():
             return JsonResponse({"error": "Record not found"}, status=404)
+        if count > 1:
+            logging.warning(
+                "Multiple ArrivalRecords found for confirmation_number=%s (%d). Using most recently updated.",
+                confirmation_number,
+                count,
+            )
+        record = qs.order_by('-updated_at').first()
 
         now = timezone.now()
         if which == "first":
