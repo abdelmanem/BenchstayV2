@@ -472,6 +472,34 @@ document.addEventListener('DOMContentLoaded', function(){
             }
         });
     });
+    // Wire user action buttons to the shared form and add delete confirmation
+    document.querySelectorAll('.user-action-btn').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+            e.preventDefault();
+            var userId = btn.dataset.userId || '';
+            var action = btn.dataset.action || '';
+            var role = btn.dataset.role || '';
+
+            // Confirm destructive actions
+            if(action === 'delete_user'){
+                var ok = confirm('Are you sure you want to delete this user? This cannot be undone.');
+                if(!ok) return;
+            }
+
+            var form = document.getElementById('userActionForm');
+            if(!form) return;
+            var inputUser = form.querySelector('#userAction_user_id');
+            var inputAction = form.querySelector('#userAction_action');
+            var inputRole = form.querySelector('#userAction_role_name');
+            if(inputUser) inputUser.value = userId;
+            if(inputAction) inputAction.value = action;
+            if(inputRole) inputRole.value = role;
+
+            // disable button to prevent double submits
+            try{ btn.disabled = true; }catch(err){}
+            form.submit();
+        });
+    });
 });
 </script>
 {% endblock %}
