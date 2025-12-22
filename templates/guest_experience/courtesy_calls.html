@@ -62,22 +62,22 @@
             <table class="table table-hover align-middle">
                 <thead>
                     <tr>
-                        <th>Room</th>
-                        <th>Guest</th>
-                        <th>Phone</th>
-                        <th>Country</th>
-                        <th>Arrival</th>
-                        <th>Departure</th>
-                        <th>Nights</th>
-                        <th>In-House Since</th>
-                        <th>In-House By</th>
-                        <th>First Courtesy</th>
-                        <th>First Status</th>
-                        <th>First By</th>
+                        <th class="sortable cursor-pointer" data-sort="room">Room <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="guest_name">Guest <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="phone">Phone <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="country">Country <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="arrival_date">Arrival <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="departure_date">Departure <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="nights">Nights <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="in_house_since">In-House Since <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="in_house_by">In-House By <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="first_courtesy_due_at">First Courtesy <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="first_courtesy_status">First Status <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="first_courtesy_by">First By <span class="sort-indicator"></span></th>
                         <th>Action</th>
-                        <th>Second Courtesy</th>
-                        <th>Second Status</th>
-                        <th>Second By</th>
+                        <th class="sortable cursor-pointer" data-sort="second_courtesy_due_at">Second Courtesy <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="second_courtesy_status">Second Status <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="second_courtesy_by">Second By <span class="sort-indicator"></span></th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -181,6 +181,33 @@
 
 {% endblock %}
 
+{% block extra_css %}
+<style>
+    .sortable {
+        user-select: none;
+    }
+    
+    .sortable:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    
+    .sort-indicator {
+        font-size: 0.8em;
+        color: #999;
+        margin-left: 4px;
+    }
+    
+    .sort-indicator.active {
+        color: #0d6efd;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -188,6 +215,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('courtesy-search-input');
     const countLabel = document.getElementById('courtesy-count');
     let allRows = [];
+    
+    // Sorting state
+    let currentSortColumn = 'room';
+    let currentSortOrder = 'asc'; // 'asc' or 'desc'
 
     const outcomeModalEl = document.getElementById('courtesyOutcomeModal');
     const outcomeForm = document.getElementById('courtesyOutcomeForm');
@@ -250,6 +281,55 @@ document.addEventListener('DOMContentLoaded', function () {
         return cookieValue;
     }
 
+    function compareValues(a, b, column) {
+        // Handle null/undefined values
+        if (a == null && b == null) return 0;
+        if (a == null) return 1;
+        if (b == null) return -1;
+
+        // For numeric columns
+        if (column === 'nights') {
+            return parseFloat(a) - parseFloat(b);
+        }
+
+        // For date columns, parse ISO dates
+        if (column === 'arrival_date' || column === 'departure_date' || column === 'in_house_since' || column === 'first_courtesy_due_at' || column === 'second_courtesy_due_at') {
+            const dateA = new Date(a);
+            const dateB = new Date(b);
+            return dateA - dateB;
+        }
+
+        // For string columns, do case-insensitive comparison
+        const strA = String(a).toLowerCase();
+        const strB = String(b).toLowerCase();
+        return strA.localeCompare(strB);
+    }
+
+    function sortRows(rows, column, order) {
+        const sorted = [...rows];
+        sorted.sort((a, b) => {
+            const aVal = a[column];
+            const bVal = b[column];
+            const comparison = compareValues(aVal, bVal, column);
+            return order === 'asc' ? comparison : -comparison;
+        });
+        return sorted;
+    }
+
+    function updateSortIndicators(activeColumn) {
+        document.querySelectorAll('th.sortable .sort-indicator').forEach(indicator => {
+            indicator.classList.remove('active');
+            indicator.textContent = '';
+        });
+        
+        const activeHeader = document.querySelector(`th[data-sort="${activeColumn}"]`);
+        if (activeHeader) {
+            const indicator = activeHeader.querySelector('.sort-indicator');
+            indicator.classList.add('active');
+            indicator.textContent = currentSortOrder === 'asc' ? '▲' : '▼';
+        }
+    }
+
     function renderTable() {
         const q = (searchInput.value || '').toLowerCase().trim();
         const dateFilter = document.getElementById('courtesy-date-filter').value;
@@ -288,6 +368,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (countLabel) {
             countLabel.textContent = `${filtered.length} guests`;
         }
+
+        // Apply sorting
+        filtered = sortRows(filtered, currentSortColumn, currentSortOrder);
+        updateSortIndicators(currentSortColumn);
 
         if (!filtered.length) {
             tbody.innerHTML = '<tr><td colspan="17" class="text-center py-4 text-muted">No in-house guests found.</td></tr>';
@@ -497,6 +581,24 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
+
+    // Add click handlers for sortable column headers
+    document.querySelectorAll('th.sortable').forEach(header => {
+        header.addEventListener('click', () => {
+            const column = header.getAttribute('data-sort');
+            if (!column) return;
+
+            // Toggle sort order if clicking the same column
+            if (currentSortColumn === column) {
+                currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = column;
+                currentSortOrder = 'asc';
+            }
+
+            renderTable();
+        });
+    });
 
     loadCourtesyCalls();
 });
