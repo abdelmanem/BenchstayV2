@@ -186,13 +186,13 @@ def admin_settings(request):
             group.permissions.set(perms)
     except Exception:
         pass
-
-    # Get all users for user management section
-    users = User.objects.all()
     
     # Get or create system settings
     from .models import SystemSettings
     system_settings = SystemSettings.get_settings()
+    
+    # Get all users (will be refreshed after POST processing)
+    users = User.objects.all()
     
     # Get system information
     import platform
@@ -390,7 +390,10 @@ def admin_settings(request):
                 system_settings.save()
                 messages.success(request, 'System settings updated successfully')
             except Exception as e:
-                messages.error(request, f'Error updating system settings: {str(e)}')
+                messages.error(request, 'Error updating system settings: {str(e)}')
+    
+    # Refresh users list after POST processing so new users appear
+    users = User.objects.all()
     
     context = {
         'title': 'Admin Dashboard - Benchstay',
