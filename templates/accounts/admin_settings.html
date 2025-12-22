@@ -34,6 +34,9 @@
 /* allow action dropdowns to overflow the table wrapper and appear above rows */
 .table-responsive.user-management { overflow: visible; }
 .table-responsive.user-management .dropdown-menu { z-index: 2000; }
+/* ensure modals are above other elements when moved to body */
+.modal { z-index: 2050; }
+.modal-backdrop { z-index: 2040; }
 </style>
 <!-- Tab content -->
 <div class="tab-content">
@@ -458,5 +461,17 @@ function validateResetPasswordForm(form){
     }
     return true;
 }
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    // Move modals to body when shown so they aren't clipped by table containers
+    document.querySelectorAll('.modal').forEach(function(modal){
+        modal.addEventListener('show.bs.modal', function(){
+            if(modal.parentNode !== document.body){
+                document.body.appendChild(modal);
+            }
+        });
+    });
+});
 </script>
 {% endblock %}
