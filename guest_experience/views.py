@@ -1207,10 +1207,12 @@ def report_arrivals_departures(request):
         start_date = today - timedelta(days=7)
         end_date = today + timedelta(days=7)
     
-    # Build queryset
+    # Build queryset: include any record whose stay overlaps the date range
+    # i.e. arrival_date <= end_date AND (departure_date is null OR departure_date >= start_date)
     qs = ArrivalRecord.objects.filter(
-        Q(arrival_date__gte=start_date, arrival_date__lte=end_date) |
-        Q(departure_date__gte=start_date, departure_date__lte=end_date)
+        arrival_date__lte=end_date
+    ).filter(
+        Q(departure_date__isnull=True) | Q(departure_date__gte=start_date)
     )
     
     if property_filter:
