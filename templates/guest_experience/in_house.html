@@ -45,10 +45,24 @@
                     <option value="100">100</option>
                 </select>
             </div>
-            <div class="d-flex flex-column">
-                <label class="small text-muted mb-1">&nbsp;</label>
-                <div id="inhouse-count" class="small text-muted">0 rows</div>
-            </div>
+                <div class="d-flex flex-column">
+                    <label class="small text-muted mb-1">&nbsp;</label>
+                    <div id="inhouse-count" class="small text-muted">0 rows</div>
+                </div>
+                <div class="d-flex flex-column">
+                    <label class="small text-muted mb-1">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button id="inhouse-column-visibility-btn" class="btn btn-sm btn-outline-secondary" title="Show/Hide Columns">
+                            <i class="fas fa-columns me-1"></i>Columns
+                        </button>
+                        <button id="inhouse-delete-selected" class="btn btn-sm btn-outline-danger" disabled>
+                            <i class="fas fa-trash-alt me-1"></i>Delete Selected
+                        </button>
+                        <button id="inhouse-mark-departed-selected" class="btn btn-sm btn-outline-warning" disabled>
+                            <i class="fas fa-sign-out-alt me-1"></i>Mark Departed
+                        </button>
+                    </div>
+                </div>
         </div>
     </div>
     <div class="card-body">
@@ -56,6 +70,7 @@
             <table class="table performance-table mb-0">
                 <thead>
                     <tr>
+                        <th><input type="checkbox" id="inhouse-select-all"></th>
                         <th role="button" data-sort-key="room">Room</th>
                         <th role="button" data-sort-key="guest_name">Guest Name</th>
                         <th role="button" data-sort-key="confirmation_number">Confirmation #</th>
@@ -68,17 +83,90 @@
                         <th role="button" data-sort-key="status">Status</th>
                         <th role="button" data-sort-key="in_house_since">In-House Since</th>
                         <th role="button" data-sort-key="in_house_by">In-House By</th>
-                        <th>Actions</th>
+                        <th data-sort-key="actions">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="inhouse-body">
                     <tr>
-                        <td colspan="13" class="text-center py-4 text-muted">
+                        <td colspan="14" class="text-center py-4 text-muted">
                             Loading in-house guests...
                         </td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="inhouseColumnVisibilityModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-columns me-2"></i>Show/Hide Columns</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-check">
+                    <input class="form-check-input inhouse-column-toggle" type="checkbox" id="col-inhouse-select" data-column="select" checked disabled>
+                    <label class="form-check-label" for="col-inhouse-select">Select</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input inhouse-column-toggle" type="checkbox" id="col-room" data-column="room" checked>
+                    <label class="form-check-label" for="col-room">Room</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input inhouse-column-toggle" type="checkbox" id="col-guest_name" data-column="guest_name" checked>
+                    <label class="form-check-label" for="col-guest_name">Guest Name</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input inhouse-column-toggle" type="checkbox" id="col-confirmation_number" data-column="confirmation_number" checked>
+                    <label class="form-check-label" for="col-confirmation_number">Confirmation #</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input inhouse-column-toggle" type="checkbox" id="col-phone" data-column="phone" checked>
+                    <label class="form-check-label" for="col-phone">Phone</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input inhouse-column-toggle" type="checkbox" id="col-country" data-column="country" checked>
+                    <label class="form-check-label" for="col-country">Country</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input inhouse-column-toggle" type="checkbox" id="col-travel_agent_name" data-column="travel_agent_name" checked>
+                    <label class="form-check-label" for="col-travel_agent_name">Travel Agent</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input inhouse-column-toggle" type="checkbox" id="col-arrival_date" data-column="arrival_date" checked>
+                    <label class="form-check-label" for="col-arrival_date">Arrival</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input inhouse-column-toggle" type="checkbox" id="col-departure_date" data-column="departure_date" checked>
+                    <label class="form-check-label" for="col-departure_date">Departure</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input inhouse-column-toggle" type="checkbox" id="col-nights" data-column="nights" checked>
+                    <label class="form-check-label" for="col-nights">Nights</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input inhouse-column-toggle" type="checkbox" id="col-status" data-column="status" checked>
+                    <label class="form-check-label" for="col-status">Status</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input inhouse-column-toggle" type="checkbox" id="col-in_house_since" data-column="in_house_since" checked>
+                    <label class="form-check-label" for="col-in_house_since">In-House Since</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input inhouse-column-toggle" type="checkbox" id="col-in_house_by" data-column="in_house_by" checked>
+                    <label class="form-check-label" for="col-in_house_by">In-House By</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input inhouse-column-toggle" type="checkbox" id="col-actions" data-column="actions" checked>
+                    <label class="form-check-label" for="col-actions">Actions</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -264,13 +352,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (!pageItems.length) {
-            tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-muted">No in-house guests found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="14" class="text-center py-4 text-muted">No in-house guests found.</td></tr>';
             return;
         }
 
         pageItems.forEach(item => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
+                <td><input type="checkbox" class="inhouse-select" data-confirmation="${item.confirmation_number || ''}"></td>
                 <td>${item.room || '-'}</td>
                 <td>${item.guest_name || '-'}</td>
                 <td>${item.confirmation_number || '-'}</td>
@@ -304,10 +393,12 @@ document.addEventListener('DOMContentLoaded', function () {
             `;
             tbody.appendChild(tr);
         });
+        // Ensure column visibility is applied to newly rendered rows
+        try{ applyColumnVisibility(); }catch(e){}
     }
 
     function loadInHouse() {
-        tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-muted">Loading in-house guests...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="14" class="text-center py-4 text-muted">Loading in-house guests...</td></tr>';
         let dateVal = dateInput.value;
         if (!dateVal) {
             const today = new Date();
@@ -328,7 +419,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 renderTable();
             })
             .catch(() => {
-                tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-danger">Failed to load in-house guests.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="14" class="text-center py-4 text-danger">Failed to load in-house guests.</td></tr>';
             });
     }
 
@@ -475,6 +566,129 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Selection handling for bulk actions
+    const selectAllCheckbox = document.getElementById('inhouse-select-all');
+    const deleteSelectedBtn = document.getElementById('inhouse-delete-selected');
+    const markDepartedSelectedBtn = document.getElementById('inhouse-mark-departed-selected');
+
+    function updateSelectionButtons(){
+        const selected = Array.from(document.querySelectorAll('.inhouse-select:checked'));
+        const any = selected.length > 0;
+        if(deleteSelectedBtn) deleteSelectedBtn.disabled = !any;
+        if(markDepartedSelectedBtn) markDepartedSelectedBtn.disabled = !any;
+    }
+
+    // Delegate checkbox clicks
+    document.addEventListener('change', function(e){
+        if(e.target && e.target.classList && e.target.classList.contains('inhouse-select')){
+            updateSelectionButtons();
+            // keep select-all in sync
+            const total = document.querySelectorAll('.inhouse-select').length;
+            const checked = document.querySelectorAll('.inhouse-select:checked').length;
+            if(selectAllCheckbox) selectAllCheckbox.checked = (total>0 && total === checked);
+        }
+    });
+
+    if(selectAllCheckbox){
+        selectAllCheckbox.addEventListener('change', function(){
+            const checks = document.querySelectorAll('.inhouse-select');
+            checks.forEach(c => c.checked = selectAllCheckbox.checked);
+            updateSelectionButtons();
+        });
+    }
+
+    // Open column visibility modal
+    const colVisBtn = document.getElementById('inhouse-column-visibility-btn');
+    if(colVisBtn){
+        colVisBtn.addEventListener('click', function(){
+            const modal = new bootstrap.Modal(document.getElementById('inhouseColumnVisibilityModal'));
+            modal.show();
+        });
+    }
+
+    // Column toggle handling
+    function applyColumnVisibility(){
+        const headers = Array.from(document.querySelectorAll('table.performance-table thead th'));
+        const rows = Array.from(document.querySelectorAll('#inhouse-body tr'));
+
+        document.querySelectorAll('.inhouse-column-toggle').forEach(cb => {
+            const col = cb.dataset.column;
+            // find header index
+            let idx = -1;
+            if(col === 'select'){
+                idx = headers.findIndex(h => h.querySelector('#inhouse-select-all'));
+            } else {
+                idx = headers.findIndex(h => (h.getAttribute('data-sort-key') || '').toLowerCase() === col.toLowerCase());
+            }
+
+            if(idx === -1) return;
+
+            // toggle header
+            headers[idx].style.display = cb.checked ? '' : 'none';
+
+            // toggle body cells at same index
+            rows.forEach(row => {
+                const cells = Array.from(row.querySelectorAll('td'));
+                if(cells.length > idx){
+                    cells[idx].style.display = cb.checked ? '' : 'none';
+                }
+            });
+        });
+    }
+
+    document.querySelectorAll('.inhouse-column-toggle').forEach(cb => {
+        cb.addEventListener('change', function(){
+            applyColumnVisibility();
+        });
+    });
+
+    // Delete selected
+    if(deleteSelectedBtn){
+        deleteSelectedBtn.addEventListener('click', function(){
+            const selected = Array.from(document.querySelectorAll('.inhouse-select:checked')).map(c=>c.dataset.confirmation).filter(Boolean);
+            if(!selected.length) return;
+            if(!confirm('Delete selected records? This cannot be undone.')) return;
+            const csrftoken = getCookie('csrftoken');
+            fetch("{% url 'guest_experience:delete_arrivals' %}", {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ confirmation_numbers: selected })
+            }).then(r=>r.json()).then(data => {
+                loadInHouse();
+            }).catch(err=>{ console.error(err); alert('Failed to delete selected records.'); });
+        });
+    }
+
+    // Mark departed selected (bulk)
+    if(markDepartedSelectedBtn){
+        markDepartedSelectedBtn.addEventListener('click', function(){
+            const selected = Array.from(document.querySelectorAll('.inhouse-select:checked')).map(c=>c.dataset.confirmation).filter(Boolean);
+            if(!selected.length) return;
+            if(!confirm('Mark selected as departed?')) return;
+            const csrftoken = getCookie('csrftoken');
+            // call mark_departed for each (sequential)
+            (async function(){
+                for(const conf of selected){
+                    try{
+                        await fetch("{% url 'guest_experience:mark_departed' %}", {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': csrftoken
+                            },
+                            body: JSON.stringify({ confirmation_number: conf, departure_method: 'Bulk departure', departure_notes: 'Bulk marked departed', message_sent_to_guest: false })
+                        });
+                    }catch(e){ console.error('mark departed error', e); }
+                }
+                loadInHouse();
+            })();
+        });
+    }
     // Handle departure form submission
     const confirmDepartureBtn = document.getElementById('confirmDepartureBtn');
     if (confirmDepartureBtn) {
