@@ -1048,11 +1048,11 @@
 
             // Initialize sidebar state
             function initializeSidebar() {
-                // Check for saved sidebar state
-                const savedState = localStorage.getItem('sidebarCollapsed');
-                if (savedState === 'true' && !isMobile) {
-                    toggleSidebar(true, false);
-                }
+                // Keep sidebar expanded by default - do not load collapsed state
+                // Always start with sidebar open
+                sidebarCollapsed = false;
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.remove('sidebar-collapsed');
                 
                 // Set initial active state
                 setActiveNavLink();
@@ -1315,34 +1315,31 @@
                 });
             }
             
-            // Close submenus when clicking outside
+            // Close submenus only when clicking outside the sidebar
             document.addEventListener('click', function(e) {
-                if (!e.target.closest('.repairs-submenu') && !e.target.closest('#repairsMenuToggle')) {
+                // If click is outside the sidebar, close all submenus
+                if (!e.target.closest('.sidebar')) {
                     if (repairsSubmenu) {
                         repairsSubmenu.style.display = 'none';
                         if (repairsChevron) repairsChevron.style.transform = 'rotate(0deg)';
                         if (repairsMenuToggle) repairsMenuToggle.setAttribute('aria-expanded', 'false');
                     }
-                }
-                
-                if (!e.target.closest('.reports-submenu') && !e.target.closest('#reportsMenuToggle')) {
+                    
                     if (reportsSubmenu) {
                         reportsSubmenu.style.display = 'none';
                         if (reportsChevron) reportsChevron.style.transform = 'rotate(0deg)';
                         if (reportsMenuToggle) reportsMenuToggle.setAttribute('aria-expanded', 'false');
                     }
-                }
-                if (!e.target.closest('.guest-requests-submenu') && !e.target.closest('#guestRequestsMenuToggle')) {
+                    
                     if (guestSubmenu) {
                         guestSubmenu.style.display = 'none';
                         if (guestChevron) guestChevron.style.transform = 'rotate(0deg)';
                         if (guestMenuToggle) guestMenuToggle.setAttribute('aria-expanded', 'false');
                     }
-                }
-                const gxMenuToggle = document.getElementById('guestExperienceMenuToggle');
-                const gxSubmenu = document.getElementById('guestExperienceSubmenu');
-                const gxChevron = document.getElementById('guestExperienceChevron');
-                if (!e.target.closest('.guest-experience-submenu') && !e.target.closest('#guestExperienceMenuToggle')) {
+                    
+                    const gxMenuToggle = document.getElementById('guestExperienceMenuToggle');
+                    const gxSubmenu = document.getElementById('guestExperienceSubmenu');
+                    const gxChevron = document.getElementById('guestExperienceChevron');
                     if (gxSubmenu) {
                         gxSubmenu.style.display = 'none';
                         if (gxChevron) gxChevron.style.transform = 'rotate(0deg)';
