@@ -613,9 +613,6 @@
                             <li><a class="dropdown-item" href="{% url 'guest_experience:reports_index' %}">Reports</a></li>
                         </ul>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'accounts:help' %}">Help & Info</a>
-                    </li>
                     {% if perms.accounts.manage_users %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'accounts:admin_settings' %}">Users Portal</a>
@@ -632,7 +629,6 @@
                             {% if perms.accounts.manage_users %}
                             <li><a class="dropdown-item" href="{% url 'accounts:admin_settings' %}">Admin Settings</a></li>
                             {% endif %}
-                            <li><a class="dropdown-item" href="{% url 'accounts:help' %}">Help & Info</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">Logout</a></li>
                         </ul>
