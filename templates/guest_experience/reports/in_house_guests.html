@@ -71,6 +71,12 @@
                         <th>Nights In-House</th>
                         <th>Total Nights</th>
                         <th>Status</th>
+                        <th>Travel Agent</th>
+                        <th>VIP Code</th>
+                        <th>Rate</th>
+                        <th>Rate Code</th>
+                        <th>Membership Type</th>
+                        <th>Preference</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -96,10 +102,16 @@
                         <td>
                             <span class="badge bg-success">{{ record.status }}</span>
                         </td>
+                        <td>{{ record.travel_agent_name|default:"-" }}</td>
+                        <td>{{ record.vip_code|default:"-" }}</td>
+                        <td>{{ record.rate|default:"-" }}</td>
+                        <td>{{ record.rate_code|default:"-" }}</td>
+                        <td>{{ record.membership_type|default:"-" }}</td>
+                        <td>{{ record.preference|default:"-" }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center py-4 text-muted">No in-house guests found.</td>
+                        <td colspan="12" class="text-center py-4 text-muted">No in-house guests found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

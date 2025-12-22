@@ -103,6 +103,10 @@
                         <th>Second Call</th>
                         <th>Second Outcome</th>
                         <th>Notes</th>
+                        <th>Travel Agent</th>
+                        <th>VIP Code</th>
+                        <th>Rate</th>
+                        <th>Membership Type</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -150,6 +154,10 @@
                                 -
                             {% endif %}
                         </td>
+                        <td>{{ item.record.travel_agent_name|default:"-" }}</td>
+                        <td>{{ item.record.vip_code|default:"-" }}</td>
+                        <td>{{ item.record.rate|default:"-" }}</td>
+                        <td>{{ item.record.membership_type|default:"-" }}</td>
                     </tr>
                     {% empty %}
                     <tr>

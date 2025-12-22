@@ -81,6 +81,12 @@
                         <th>Departure Method</th>
                         <th>Message Sent</th>
                         <th>Notes</th>
+                        <th>Travel Agent</th>
+                        <th>VIP Code</th>
+                        <th>Rate</th>
+                        <th>Rate Code</th>
+                        <th>Membership Type</th>
+                        <th>Preference</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -111,10 +117,16 @@
                                 -
                             {% endif %}
                         </td>
+                        <td>{{ record.travel_agent_name|default:"-" }}</td>
+                        <td>{{ record.vip_code|default:"-" }}</td>
+                        <td>{{ record.rate|default:"-" }}</td>
+                        <td>{{ record.rate_code|default:"-" }}</td>
+                        <td>{{ record.membership_type|default:"-" }}</td>
+                        <td>{{ record.preference|default:"-" }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center py-4 text-muted">No departures found.</td>
+                        <td colspan="13" class="text-center py-4 text-muted">No departures found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
