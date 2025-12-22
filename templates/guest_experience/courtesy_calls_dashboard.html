@@ -29,6 +29,30 @@
         font-size: 2.5rem;
         opacity: 0.8;
     }
+    
+    /* Sortable table styles */
+    .sortable {
+        user-select: none;
+    }
+    
+    .sortable:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    
+    .sort-indicator {
+        font-size: 0.8em;
+        color: #999;
+        margin-left: 4px;
+    }
+    
+    .sort-indicator.active {
+        color: #0d6efd;
+        font-weight: bold;
+    }
 </style>
 {% endblock %}
 
@@ -171,18 +195,18 @@
             <table class="table table-hover align-middle">
                 <thead>
                     <tr>
-                        <th>Room</th>
-                        <th>Guest</th>
-                        <th>Phone</th>
-                        <th>Country</th>
-                        <th>In-House Since</th>
-                        <th>In-House By</th>
-                        <th>First Courtesy</th>
-                        <th>First Status</th>
-                        <th>First By</th>
-                        <th>Second Courtesy</th>
-                        <th>Second Status</th>
-                        <th>Second By</th>
+                        <th class="sortable cursor-pointer" data-sort="room">Room <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="guest_name">Guest <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="phone">Phone <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="country">Country <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="in_house_since">In-House Since <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="in_house_by">In-House By <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="first_courtesy_due_at">First Courtesy <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="first_courtesy_status">First Status <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="first_courtesy_by">First By <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="second_courtesy_due_at">Second Courtesy <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="second_courtesy_status">Second Status <span class="sort-indicator"></span></th>
+                        <th class="sortable cursor-pointer" data-sort="second_courtesy_by">Second By <span class="sort-indicator"></span></th>
                     </tr>
                 </thead>
                 <tbody id="courtesyDashboardBody">
@@ -220,6 +244,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const metricCompleted = document.getElementById('metric_completed');
 
     let allRows = [];
+    
+    // Sorting state
+    let currentSortColumn = 'room';
+    let currentSortOrder = 'asc'; // 'asc' or 'desc'
 
     function formatDateTime(isoString) {
         if (!isoString) return '-';
@@ -233,6 +261,50 @@ document.addEventListener('DOMContentLoaded', function () {
             hour: '2-digit',
             minute: '2-digit',
         });
+    }
+
+    function compareValues(a, b, column) {
+        // Handle null/undefined values
+        if (a == null && b == null) return 0;
+        if (a == null) return 1;
+        if (b == null) return -1;
+
+        // For date columns, parse ISO dates
+        if (column === 'in_house_since' || column === 'first_courtesy_due_at' || column === 'second_courtesy_due_at') {
+            const dateA = new Date(a);
+            const dateB = new Date(b);
+            return dateA - dateB;
+        }
+
+        // For string columns, do case-insensitive comparison
+        const strA = String(a).toLowerCase();
+        const strB = String(b).toLowerCase();
+        return strA.localeCompare(strB);
+    }
+
+    function sortRows(rows, column, order) {
+        const sorted = [...rows];
+        sorted.sort((a, b) => {
+            const aVal = a[column];
+            const bVal = b[column];
+            const comparison = compareValues(aVal, bVal, column);
+            return order === 'asc' ? comparison : -comparison;
+        });
+        return sorted;
+    }
+
+    function updateSortIndicators(activeColumn) {
+        document.querySelectorAll('th.sortable .sort-indicator').forEach(indicator => {
+            indicator.classList.remove('active');
+            indicator.textContent = '';
+        });
+        
+        const activeHeader = document.querySelector(`th[data-sort="${activeColumn}"]`);
+        if (activeHeader) {
+            const indicator = activeHeader.querySelector('.sort-indicator');
+            indicator.classList.add('active');
+            indicator.textContent = currentSortOrder === 'asc' ? '▲' : '▼';
+        }
     }
 
     function applyFiltersAndRender() {
@@ -286,6 +358,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (countLabel) {
             countLabel.textContent = `${total} guests`;
         }
+
+        // Apply sorting
+        filtered = sortRows(filtered, currentSortColumn, currentSortOrder);
+        updateSortIndicators(currentSortColumn);
 
         tbody.innerHTML = '';
         if (!filtered.length) {
@@ -354,6 +430,25 @@ document.addEventListener('DOMContentLoaded', function () {
             applyFiltersAndRender();
         });
     }
+
+    // Add click handlers for sortable headers
+    const sortableHeaders = document.querySelectorAll('th.sortable');
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', () => {
+            const columnName = header.getAttribute('data-sort');
+            
+            // If the same column is clicked, toggle the sort order
+            if (currentSortColumn === columnName) {
+                currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                // If a different column is clicked, set it as the current sort column and default to ascending
+                currentSortColumn = columnName;
+                currentSortOrder = 'asc';
+            }
+            
+            applyFiltersAndRender();
+        });
+    });
 
     loadData();
 });
