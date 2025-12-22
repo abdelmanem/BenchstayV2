@@ -284,6 +284,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             fetch("{% url 'guest_experience:mark_courtesy_done' %}", {
                 method: 'POST',
+                credentials: 'same-origin',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken
@@ -297,8 +298,14 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .then(response => {
                 if (!response.ok) {
-                    return response.json().then(err => {
-                        throw new Error(err.error || 'Failed to update courtesy call');
+                    return response.text().then(text => {
+                        // Try to parse JSON error from server, otherwise include raw text
+                        try {
+                            const parsed = JSON.parse(text);
+                            throw new Error(parsed.error || parsed.message || 'Failed to update courtesy call');
+                        } catch (e) {
+                            throw new Error(text || ('Request failed: ' + response.status));
+                        }
                     });
                 }
                 return response.json();

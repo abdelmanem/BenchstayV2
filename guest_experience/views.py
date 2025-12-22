@@ -4,6 +4,7 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+import logging
 from django.db.models import Count, Q, Avg, Min, Max
 from django.db.models.functions import TruncDate
 import json
@@ -977,37 +978,39 @@ def mark_courtesy_done(request):
     """
     try:
         payload = json.loads(request.body.decode("utf-8") or "{}")
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
+        confirmation_number = str(payload.get("confirmation_number") or "").strip()
+        which = str(payload.get("which") or "").strip().lower()
+        outcome = str(payload.get("outcome") or "").strip()
+        notes = str(payload.get("notes") or "").strip()
 
-    confirmation_number = str(payload.get("confirmation_number") or "").strip()
-    which = str(payload.get("which") or "").strip().lower()
-    outcome = str(payload.get("outcome") or "").strip()
-    notes = str(payload.get("notes") or "").strip()
-    if not confirmation_number or which not in {"first", "second"}:
-        return JsonResponse({"error": "Invalid parameters"}, status=400)
+        if not confirmation_number or which not in {"first", "second"}:
+            return JsonResponse({"error": "Invalid parameters"}, status=400)
 
-    try:
-        record = ArrivalRecord.objects.get(confirmation_number=confirmation_number)
-    except ArrivalRecord.DoesNotExist:
-        return JsonResponse({"error": "Record not found"}, status=404)
+        try:
+            record = ArrivalRecord.objects.get(confirmation_number=confirmation_number)
+        except ArrivalRecord.DoesNotExist:
+            return JsonResponse({"error": "Record not found"}, status=404)
 
-    now = timezone.now()
-    if which == "first":
-        record.first_courtesy_done_at = now
-        record.first_courtesy_by = request.user
-        record.first_courtesy_outcome = outcome
-        record.first_courtesy_notes = notes
-    else:
-        record.second_courtesy_done_at = now
-        record.second_courtesy_by = request.user
-        record.second_courtesy_outcome = outcome
-        record.second_courtesy_notes = notes
-    record.updated_by = request.user
-    record.updated_at = now
-    record.save()
+        now = timezone.now()
+        if which == "first":
+            record.first_courtesy_done_at = now
+            record.first_courtesy_by = request.user
+            record.first_courtesy_outcome = outcome
+            record.first_courtesy_notes = notes
+        else:
+            record.second_courtesy_done_at = now
+            record.second_courtesy_by = request.user
+            record.second_courtesy_outcome = outcome
+            record.second_courtesy_notes = notes
 
-    return JsonResponse({"success": True})
+        record.updated_by = request.user
+        record.updated_at = now
+        record.save()
+
+        return JsonResponse({"success": True})
+    except Exception as exc:
+        logging.exception("Error in mark_courtesy_done")
+        return JsonResponse({"error": str(exc)}, status=500)
 
 
 @login_required
