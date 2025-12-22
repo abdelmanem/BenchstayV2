@@ -598,7 +598,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Apply column visibility based on checkboxes
-    function applyColumnVisibility() {
+    function applyColumnVisibility(shouldSave = true) {
         columnToggleCheckboxes.forEach(checkbox => {
             const column = checkbox.dataset.column;
             const colIndex = columnHeaders[column];
@@ -618,7 +618,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             }
         });
-        saveColumnPreferences();
+        if (shouldSave) {
+            saveColumnPreferences();
+        }
     }
 
     // Reset to default columns
@@ -1020,6 +1022,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
             tbody.appendChild(tr);
         });
+
+        // Reapply column visibility after rendering new rows (without saving preferences)
+        setTimeout(() => applyColumnVisibility(false), 0);
     }
 
     // Handle edit form submission
