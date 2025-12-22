@@ -1060,6 +1060,7 @@ def report_arrivals_departures(request):
     end_date_str = request.GET.get('end_date', (today + timedelta(days=7)).isoformat())
     property_filter = request.GET.get('property', '')
     status_filter = request.GET.get('status', '')
+    travel_agent_filter = request.GET.get('travel_agent', '')
     
     try:
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
@@ -1078,6 +1079,8 @@ def report_arrivals_departures(request):
         qs = qs.filter(property_name__icontains=property_filter)
     if status_filter:
         qs = qs.filter(status__iexact=status_filter)
+    if travel_agent_filter:
+        qs = qs.filter(travel_agent_name__icontains=travel_agent_filter)
     
     records = qs.order_by('arrival_date', 'room')
     
@@ -1085,6 +1088,11 @@ def report_arrivals_departures(request):
     properties = ArrivalRecord.objects.exclude(property_name__isnull=True).exclude(
         property_name=''
     ).values_list('property_name', flat=True).distinct().order_by('property_name')
+    
+    # Get unique travel agents for filter dropdown
+    travel_agents = ArrivalRecord.objects.exclude(travel_agent_name__isnull=True).exclude(
+        travel_agent_name=''
+    ).values_list('travel_agent_name', flat=True).distinct().order_by('travel_agent_name')
     
     context = {
         "section": "guest_experience",
@@ -1095,7 +1103,9 @@ def report_arrivals_departures(request):
         "end_date": end_date.isoformat(),
         "property_filter": property_filter,
         "status_filter": status_filter,
+        "travel_agent_filter": travel_agent_filter,
         "properties": properties,
+        "travel_agents": travel_agents,
     }
     return render(request, "guest_experience/reports/arrivals_departures.html", context)
 
@@ -1964,6 +1974,7 @@ def export_arrivals_departures(request):
     end_date_str = request.GET.get('end_date', (today + timedelta(days=7)).isoformat())
     property_filter = request.GET.get('property', '')
     status_filter = request.GET.get('status', '')
+    travel_agent_filter = request.GET.get('travel_agent', '')
     
     try:
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
@@ -1981,6 +1992,8 @@ def export_arrivals_departures(request):
         qs = qs.filter(property_name__icontains=property_filter)
     if status_filter:
         qs = qs.filter(status__iexact=status_filter)
+    if travel_agent_filter:
+        qs = qs.filter(travel_agent_name__icontains=travel_agent_filter)
     
     records = qs.order_by('arrival_date', 'room')
     

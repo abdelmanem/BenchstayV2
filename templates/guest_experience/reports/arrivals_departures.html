@@ -21,15 +21,15 @@
     </div>
     <div class="card-body">
         <form method="get" class="row g-3">
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Start Date</label>
                 <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">End Date</label>
                 <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Property</label>
                 <select name="property" class="form-select">
                     <option value="">All Properties</option>
@@ -38,7 +38,7 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label">Status</label>
                 <select name="status" class="form-select">
                     <option value="">All Statuses</option>
@@ -46,6 +46,15 @@
                     <option value="In-House" {% if status_filter == "In-House" %}selected{% endif %}>In-House</option>
                     <option value="Departed" {% if status_filter == "Departed" %}selected{% endif %}>Departed</option>
                     <option value="Cancelled" {% if status_filter == "Cancelled" %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Travel Agent</label>
+                <select name="travel_agent" class="form-select">
+                    <option value="">All Travel Agents</option>
+                    {% for agent in travel_agents %}
+                    <option value="{{ agent }}" {% if travel_agent_filter == agent %}selected{% endif %}>{{ agent }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="col-md-12">
@@ -65,7 +74,7 @@
         <h5 class="card-title mb-0">Arrivals & Departures</h5>
         <div class="d-flex align-items-center gap-2">
             <span class="badge bg-primary">{{ records|length }} records</span>
-            <a href="{% url 'guest_experience:export_arrivals_departures' %}?start_date={{ start_date }}&end_date={{ end_date }}&property={{ property_filter }}&status={{ status_filter }}" class="btn btn-sm btn-success">
+            <a href="{% url 'guest_experience:export_arrivals_departures' %}?start_date={{ start_date }}&end_date={{ end_date }}&property={{ property_filter }}&status={{ status_filter }}&travel_agent={{ travel_agent_filter }}" class="btn btn-sm btn-success">
                 <i class="fas fa-file-excel me-1"></i>Export to Excel
             </a>
         </div>
