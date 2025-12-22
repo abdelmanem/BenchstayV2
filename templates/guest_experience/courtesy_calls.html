@@ -13,20 +13,47 @@
 </div>
 
 <div class="card">
-    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <div>
+    <div class="card-header">
+        <div class="mb-3">
             <h5 class="card-title mb-0">In-House Guests Courtesy Calls</h5>
             <small class="text-muted d-block">First courtesy call: within 15–30 minutes after the guest is marked In-House. Second courtesy call: next day for stays &gt; 1 night, before departure.</small>
-            <small class="text-muted">Use the “First Courtesy” and “Second Courtesy” times as your target call windows, then click “Mark Done” after each call.</small>
+            <small class="text-muted">Use the "First Courtesy" and "Second Courtesy" times as your target call windows, then click "Mark Done" after each call.</small>
         </div>
-        <div class="d-flex flex-wrap align-items-center gap-3">
-            <div class="d-flex flex-column">
-                <label class="small text-muted mb-1" for="courtesy-search-input">Search</label>
-                <input type="text" id="courtesy-search-input" class="form-control form-control-sm" placeholder="Search room, guest, country, phone">
+    </div>
+    
+    <!-- Filters Section -->
+    <div class="card-header border-top">
+        <div class="row g-3 align-items-end">
+            <div class="col-lg-2">
+                <label class="form-label small fw-bold mb-1">Date</label>
+                <input type="date" id="courtesy-date-filter" class="form-control form-control-sm">
             </div>
-            <div class="d-flex flex-column">
-                <label class="small text-muted mb-1">&nbsp;</label>
-                <div id="courtesy-count" class="small text-muted">0 guests</div>
+            <div class="col-lg-2">
+                <label class="form-label small fw-bold mb-1">Travel Agent</label>
+                <select id="courtesy-agent-filter" class="form-select form-select-sm">
+                    <option value="">All Agents</option>
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label small fw-bold mb-1">Search</label>
+                <input type="text" id="courtesy-search-input" class="form-control form-control-sm" placeholder="Room, guest, phone...">
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label small fw-bold mb-1">Rows per Page</label>
+                <select id="courtesy-rows-per-page" class="form-select form-select-sm">
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="all">All</option>
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label small fw-bold mb-1">&nbsp;</label>
+                <div id="courtesy-count" class="small text-muted d-block">0 guests</div>
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label small fw-bold mb-1">&nbsp;</label>
+                <button id="courtesy-reset-btn" class="btn btn-sm btn-outline-secondary w-100">Reset Filters</button>
             </div>
         </div>
     </div>
@@ -56,7 +83,7 @@
                 </thead>
                 <tbody id="courtesy-body">
                     <tr>
-                        <td colspan="16" class="text-center py-4 text-muted">
+                        <td colspan="17" class="text-center py-4 text-muted">
                             Loading courtesy calls...
                         </td>
                     </tr>
@@ -206,7 +233,9 @@ document.addEventListener('DOMContentLoaded', function () {
         
         const callTypeBadge = which === 'first' ? 'First Courtesy Call' : 'Second Courtesy Call';
         document.getElementById('courtesy-call-type').textContent = callTypeBadge;
-    }    function getCookie(name) {
+    }
+
+    function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
@@ -223,17 +252,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function renderTable() {
         const q = (searchInput.value || '').toLowerCase().trim();
+        const dateFilter = document.getElementById('courtesy-date-filter').value;
+        const agentFilter = (document.getElementById('courtesy-agent-filter').value || '').toLowerCase().trim();
+        const rowsPerPage = document.getElementById('courtesy-rows-per-page').value;
+        
         tbody.innerHTML = '';
 
         let filtered = allRows.filter(item => {
-            if (!q) return true;
-            const haystack = [
-                item.room,
-                item.guest_name,
-                item.phone,
-                item.country,
-            ].map(v => (v || '').toString().toLowerCase()).join(' ');
-            return haystack.includes(q);
+            // Search filter
+            if (q) {
+                const haystack = [
+                    item.room,
+                    item.guest_name,
+                    item.phone,
+                    item.country,
+                ].map(v => (v || '').toString().toLowerCase()).join(' ');
+                if (!haystack.includes(q)) return false;
+            }
+            
+            // Date filter
+            if (dateFilter) {
+                const itemDate = item.arrival_date ? item.arrival_date.split('T')[0] : '';
+                if (itemDate !== dateFilter) return false;
+            }
+            
+            // Travel agent filter
+            if (agentFilter) {
+                const itemAgent = (item.travel_agent_name || '').toLowerCase();
+                if (!itemAgent.includes(agentFilter)) return false;
+            }
+            
+            return true;
         });
 
         if (countLabel) {
@@ -241,11 +290,18 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (!filtered.length) {
-            tbody.innerHTML = '<tr><td colspan="16" class="text-center py-4 text-muted">No in-house guests found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="17" class="text-center py-4 text-muted">No in-house guests found.</td></tr>';
             return;
         }
 
-        filtered.forEach(item => {
+        // Pagination
+        let paginated = filtered;
+        if (rowsPerPage !== 'all') {
+            const limit = parseInt(rowsPerPage, 10);
+            paginated = filtered.slice(0, limit);
+        }
+
+        paginated.forEach(item => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${item.room || '-'}</td>
@@ -305,21 +361,71 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function loadCourtesyCalls() {
-        tbody.innerHTML = '<tr><td colspan="14" class="text-center py-4 text-muted">Loading courtesy calls...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="17" class="text-center py-4 text-muted">Loading courtesy calls...</td></tr>';
         fetch("{% url 'guest_experience:courtesy_calls_api' %}")
             .then(response => response.json())
             .then(data => {
                 allRows = data.results || [];
+                
+                // Populate travel agent dropdown
+                const agents = new Set();
+                allRows.forEach(item => {
+                    if (item.travel_agent_name) agents.add(item.travel_agent_name);
+                });
+                
+                const agentSelect = document.getElementById('courtesy-agent-filter');
+                const selectedAgent = agentSelect.value;
+                agentSelect.innerHTML = '<option value="">All Agents</option>';
+                Array.from(agents).sort().forEach(agent => {
+                    const option = document.createElement('option');
+                    option.value = agent;
+                    option.textContent = agent;
+                    agentSelect.appendChild(option);
+                });
+                agentSelect.value = selectedAgent;
+                
+                // Set date filter to today
+                const today = new Date().toISOString().split('T')[0];
+                const dateInput = document.getElementById('courtesy-date-filter');
+                if (!dateInput.value) {
+                    dateInput.value = today;
+                }
+                
                 renderTable();
             })
             .catch(error => {
                 console.error('Error loading courtesy calls:', error);
-                tbody.innerHTML = '<tr><td colspan="14" class="text-center py-4 text-danger">Failed to load courtesy calls.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="17" class="text-center py-4 text-danger">Failed to load courtesy calls.</td></tr>';
             });
     }
 
     if (searchInput) {
         searchInput.addEventListener('input', () => {
+            renderTable();
+        });
+    }
+    
+    const dateFilter = document.getElementById('courtesy-date-filter');
+    const agentFilter = document.getElementById('courtesy-agent-filter');
+    const rowsPerPage = document.getElementById('courtesy-rows-per-page');
+    const resetBtn = document.getElementById('courtesy-reset-btn');
+    
+    if (dateFilter) {
+        dateFilter.addEventListener('change', () => renderTable());
+    }
+    if (agentFilter) {
+        agentFilter.addEventListener('change', () => renderTable());
+    }
+    if (rowsPerPage) {
+        rowsPerPage.addEventListener('change', () => renderTable());
+    }
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            const today = new Date().toISOString().split('T')[0];
+            if (dateFilter) dateFilter.value = today;
+            if (agentFilter) agentFilter.value = '';
+            if (searchInput) searchInput.value = '';
+            if (rowsPerPage) rowsPerPage.value = '25';
             renderTable();
         });
     }
@@ -391,5 +497,3 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 {% endblock %}
-
-
