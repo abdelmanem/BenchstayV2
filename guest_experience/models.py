@@ -22,6 +22,16 @@ class ArrivalRecord(models.Model):
     arrival_date = models.DateField(null=True, blank=True)
     departure_date = models.DateField(null=True, blank=True)
     travel_agent_name = models.CharField(max_length=255, blank=True)
+    
+    # New fields for VIP and membership tracking
+    vip_code = models.CharField(max_length=100, blank=True)
+    rate = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    rate_code = models.CharField(max_length=100, blank=True)
+    last_room_number = models.CharField(max_length=20, blank=True)
+    preference = models.CharField(max_length=255, blank=True)
+    alert_code = models.CharField(max_length=100, blank=True)
+    membership_type = models.CharField(max_length=100, blank=True)
+    membership_number = models.CharField(max_length=100, blank=True)
 
     # Derived / display fields
     guest_name = models.CharField(max_length=255, blank=True)

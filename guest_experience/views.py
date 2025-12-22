@@ -174,6 +174,15 @@ def upload_arrivals(request):
     status_col = col("status")
     arrival_date_col = col("arrival date", "check in", "arrival")
     departure_date_col = col("departure date", "check out", "checkout", "departure")
+    travel_agent_col = col("travel agent name", "agent", "travel agent")
+    vip_code_col = col("vip code", "vip")
+    rate_col = col("rate")
+    rate_code_col = col("rate code")
+    last_room_col = col("last room number", "last room")
+    preference_col = col("preference")
+    alert_code_col = col("alert code", "alert")
+    membership_type_col = col("membership type", "membership")
+    membership_number_col = col("membership number", "membership #")
 
     # We must at least have arrival date; room number is optional
     if not arrival_date_col:
@@ -272,7 +281,16 @@ def upload_arrivals(request):
             country=country,
             arrival_date=arrival_date,
             departure_date=departure_date,
-            travel_agent_name=str(row.get(col("travel agent name", "agent", "travel agent")) or "").strip(),
+            travel_agent_name=str(row.get(travel_agent_col) or "").strip() if travel_agent_col else "",
+            # New VIP and membership fields
+            vip_code=str(row.get(vip_code_col) or "").strip() if vip_code_col else "",
+            rate=float(row.get(rate_col)) if rate_col and pd.notna(row.get(rate_col)) else None,
+            rate_code=str(row.get(rate_code_col) or "").strip() if rate_code_col else "",
+            last_room_number=str(row.get(last_room_col) or "").strip() if last_room_col else "",
+            preference=str(row.get(preference_col) or "").strip() if preference_col else "",
+            alert_code=str(row.get(alert_code_col) or "").strip() if alert_code_col else "",
+            membership_type=str(row.get(membership_type_col) or "").strip() if membership_type_col else "",
+            membership_number=str(row.get(membership_number_col) or "").strip() if membership_number_col else "",
             # Derived/display
             guest_name=guest_name,
             eta=eta,
@@ -366,6 +384,14 @@ def arrivals_api(request):
                 "arrival_date": a.arrival_date.isoformat() if a.arrival_date else None,
                 "departure_date": a.departure_date.isoformat() if a.departure_date else None,
                 "travel_agent_name": a.travel_agent_name,
+                "vip_code": a.vip_code,
+                "rate": float(a.rate) if a.rate else None,
+                "rate_code": a.rate_code,
+                "last_room_number": a.last_room_number,
+                "preference": a.preference,
+                "alert_code": a.alert_code,
+                "membership_type": a.membership_type,
+                "membership_number": a.membership_number,
             }
         )
     return JsonResponse({"results": data})
@@ -401,6 +427,14 @@ def edit_arrival(request, confirmation_number):
             "travel_agent_name": record.travel_agent_name or "",
             "status": record.status or "",
             "eta": record.eta or "",
+            "vip_code": record.vip_code or "",
+            "rate": str(record.rate) if record.rate else "",
+            "rate_code": record.rate_code or "",
+            "last_room_number": record.last_room_number or "",
+            "preference": record.preference or "",
+            "alert_code": record.alert_code or "",
+            "membership_type": record.membership_type or "",
+            "membership_number": record.membership_number or "",
         })
 
     elif request.method == "POST":
@@ -454,6 +488,25 @@ def edit_arrival(request, confirmation_number):
             record.status = payload["status"].strip()
         if "eta" in payload:
             record.eta = payload["eta"].strip()
+        if "vip_code" in payload:
+            record.vip_code = payload["vip_code"].strip()
+        if "rate" in payload:
+            try:
+                record.rate = float(payload["rate"]) if payload["rate"] else None
+            except (ValueError, TypeError):
+                pass
+        if "rate_code" in payload:
+            record.rate_code = payload["rate_code"].strip()
+        if "last_room_number" in payload:
+            record.last_room_number = payload["last_room_number"].strip()
+        if "preference" in payload:
+            record.preference = payload["preference"].strip()
+        if "alert_code" in payload:
+            record.alert_code = payload["alert_code"].strip()
+        if "membership_type" in payload:
+            record.membership_type = payload["membership_type"].strip()
+        if "membership_number" in payload:
+            record.membership_number = payload["membership_number"].strip()
 
         # Recalculate nights if dates changed
         if record.arrival_date and record.departure_date:

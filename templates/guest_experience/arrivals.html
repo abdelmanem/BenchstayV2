@@ -12,6 +12,11 @@
     .performance-table tbody tr.active-row {
         background-color: #bfdbfe !important; /* slightly darker blue when selected */
     }
+    
+    /* Column visibility */
+    .hidden-column {
+        display: none !important;
+    }
 </style>
 {% endblock %}
 
@@ -63,6 +68,9 @@
             <div class="d-flex flex-column">
                 <label class="small text-muted mb-1">&nbsp;</label>
                 <div class="d-flex gap-2">
+                    <button id="arrival-column-visibility-btn" class="btn btn-sm btn-outline-secondary" title="Show/Hide Columns">
+                        <i class="fas fa-columns me-1"></i>Columns
+                    </button>
                     <button id="arrival-delete-selected" class="btn btn-sm btn-outline-danger" disabled>
                         <i class="fas fa-trash-alt me-1"></i>Delete Selected
                     </button>
@@ -88,18 +96,118 @@
                         <th role="button" data-sort-key="arrival_date">Arrival</th>
                         <th role="button" data-sort-key="departure_date">Departure</th>
                         <th role="button" data-sort-key="nights">Nights</th>
+                        <th role="button" data-sort-key="vip_code">VIP Code</th>
+                        <th role="button" data-sort-key="rate">Rate</th>
+                        <th role="button" data-sort-key="rate_code">Rate Code</th>
+                        <th role="button" data-sort-key="last_room_number">Last Room</th>
+                        <th role="button" data-sort-key="preference">Preference</th>
+                        <th role="button" data-sort-key="alert_code">Alert Code</th>
+                        <th role="button" data-sort-key="membership_type">Membership Type</th>
+                        <th role="button" data-sort-key="membership_number">Membership #</th>
                         <th role="button" data-sort-key="status">Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="arrivals-body">
                     <tr>
-                        <td colspan="12" class="text-center py-4 text-muted">
+                        <td colspan="20" class="text-center py-4 text-muted">
                             Loading arrivals...
                         </td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="columnVisibilityModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-columns me-2"></i>Show/Hide Columns</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-room" data-column="room" checked>
+                    <label class="form-check-label" for="col-room">Room</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-guest_name" data-column="guest_name" checked>
+                    <label class="form-check-label" for="col-guest_name">Guest Name</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-confirmation_number" data-column="confirmation_number" checked>
+                    <label class="form-check-label" for="col-confirmation_number">Confirmation #</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-phone" data-column="phone" checked>
+                    <label class="form-check-label" for="col-phone">Phone</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-country" data-column="country" checked>
+                    <label class="form-check-label" for="col-country">Country</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-travel_agent_name" data-column="travel_agent_name" checked>
+                    <label class="form-check-label" for="col-travel_agent_name">Travel Agent</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-arrival_date" data-column="arrival_date" checked>
+                    <label class="form-check-label" for="col-arrival_date">Arrival</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-departure_date" data-column="departure_date" checked>
+                    <label class="form-check-label" for="col-departure_date">Departure</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-nights" data-column="nights" checked>
+                    <label class="form-check-label" for="col-nights">Nights</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-vip_code" data-column="vip_code" checked>
+                    <label class="form-check-label" for="col-vip_code">VIP Code</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-rate" data-column="rate" checked>
+                    <label class="form-check-label" for="col-rate">Rate</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-rate_code" data-column="rate_code">
+                    <label class="form-check-label" for="col-rate_code">Rate Code</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-last_room_number" data-column="last_room_number">
+                    <label class="form-check-label" for="col-last_room_number">Last Room</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-preference" data-column="preference">
+                    <label class="form-check-label" for="col-preference">Preference</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-alert_code" data-column="alert_code">
+                    <label class="form-check-label" for="col-alert_code">Alert Code</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-membership_type" data-column="membership_type">
+                    <label class="form-check-label" for="col-membership_type">Membership Type</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-membership_number" data-column="membership_number">
+                    <label class="form-check-label" for="col-membership_number">Membership #</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input column-toggle" type="checkbox" id="col-status" data-column="status" checked>
+                    <label class="form-check-label" for="col-status">Status</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-sm btn-primary" id="reset-columns-btn">
+                    <i class="fas fa-redo me-1"></i>Reset to Default
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -332,6 +440,46 @@
                             <label class="form-label">ETA</label>
                             <input type="text" class="form-control" id="edit-eta" name="eta" placeholder="e.g., 14:00">
                         </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">VIP Code</label>
+                            <input type="text" class="form-control" id="edit-vip-code" name="vip_code">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Rate</label>
+                            <input type="number" step="0.01" class="form-control" id="edit-rate" name="rate">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Rate Code</label>
+                            <input type="text" class="form-control" id="edit-rate-code" name="rate_code">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Last Room Number</label>
+                            <input type="text" class="form-control" id="edit-last-room" name="last_room_number">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Preference</label>
+                            <input type="text" class="form-control" id="edit-preference" name="preference">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Alert Code</label>
+                            <input type="text" class="form-control" id="edit-alert-code" name="alert_code">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Membership Type</label>
+                            <input type="text" class="form-control" id="edit-membership-type" name="membership_type">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Membership Number</label>
+                            <input type="text" class="form-control" id="edit-membership-number" name="membership_number">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -392,6 +540,135 @@ document.addEventListener('DOMContentLoaded', function () {
         if (markInHouseButton) markInHouseButton.disabled = disabled;
     }
 
+    // Column visibility management
+    const columnToggleCheckboxes = document.querySelectorAll('.column-toggle');
+    const columnVisibilityBtn = document.getElementById('arrival-column-visibility-btn');
+    const resetColumnsBtn = document.getElementById('reset-columns-btn');
+    const table = document.querySelector('.performance-table');
+
+    // Define column indices for hiding/showing
+    const columnHeaders = {
+        'room': 1,
+        'guest_name': 2,
+        'confirmation_number': 3,
+        'phone': 4,
+        'country': 5,
+        'travel_agent_name': 6,
+        'arrival_date': 7,
+        'departure_date': 8,
+        'nights': 9,
+        'vip_code': 10,
+        'rate': 11,
+        'rate_code': 12,
+        'last_room_number': 13,
+        'preference': 14,
+        'alert_code': 15,
+        'membership_type': 16,
+        'membership_number': 17,
+        'status': 18,
+        'actions': 19
+    };
+
+    // Load saved column preferences from localStorage
+    function loadColumnPreferences() {
+        const saved = localStorage.getItem('arrivalColumnPreferences');
+        if (saved) {
+            try {
+                const prefs = JSON.parse(saved);
+                columnToggleCheckboxes.forEach(checkbox => {
+                    const column = checkbox.dataset.column;
+                    if (prefs.hasOwnProperty(column)) {
+                        checkbox.checked = prefs[column];
+                    }
+                });
+                applyColumnVisibility();
+            } catch (e) {
+                console.error('Error loading column preferences:', e);
+            }
+        }
+    }
+
+    // Save column preferences to localStorage
+    function saveColumnPreferences() {
+        const prefs = {};
+        columnToggleCheckboxes.forEach(checkbox => {
+            prefs[checkbox.dataset.column] = checkbox.checked;
+        });
+        localStorage.setItem('arrivalColumnPreferences', JSON.stringify(prefs));
+    }
+
+    // Apply column visibility based on checkboxes
+    function applyColumnVisibility() {
+        columnToggleCheckboxes.forEach(checkbox => {
+            const column = checkbox.dataset.column;
+            const colIndex = columnHeaders[column];
+            if (colIndex !== undefined && table) {
+                // Hide/show header cells
+                const headerCells = table.querySelectorAll('thead th');
+                if (headerCells[colIndex]) {
+                    headerCells[colIndex].classList.toggle('hidden-column', !checkbox.checked);
+                }
+                // Hide/show data cells
+                const rows = table.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    if (cells[colIndex]) {
+                        cells[colIndex].classList.toggle('hidden-column', !checkbox.checked);
+                    }
+                });
+            }
+        });
+        saveColumnPreferences();
+    }
+
+    // Reset to default columns
+    function resetToDefaultColumns() {
+        const defaultColumns = {
+            'room': true,
+            'guest_name': true,
+            'confirmation_number': true,
+            'phone': true,
+            'country': true,
+            'travel_agent_name': true,
+            'arrival_date': true,
+            'departure_date': true,
+            'nights': true,
+            'vip_code': true,
+            'rate': true,
+            'rate_code': false,
+            'last_room_number': false,
+            'preference': false,
+            'alert_code': false,
+            'membership_type': false,
+            'membership_number': false,
+            'status': true
+        };
+        
+        columnToggleCheckboxes.forEach(checkbox => {
+            checkbox.checked = defaultColumns[checkbox.dataset.column] || false;
+        });
+        applyColumnVisibility();
+    }
+
+    // Event listeners for column visibility
+    if (columnVisibilityBtn) {
+        columnVisibilityBtn.addEventListener('click', () => {
+            const modal = new bootstrap.Modal(document.getElementById('columnVisibilityModal'));
+            modal.show();
+        });
+    }
+
+    if (resetColumnsBtn) {
+        resetColumnsBtn.addEventListener('click', resetToDefaultColumns);
+    }
+
+    columnToggleCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', applyColumnVisibility);
+    });
+
+    // Load preferences on page load
+    loadColumnPreferences();
+
     function renderTable() {
         const q = (searchInput.value || '').toLowerCase().trim();
         tbody.innerHTML = '';
@@ -406,6 +683,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 item.travel_agent_name,
                 item.country,
                 item.nationality,
+                item.vip_code,
+                item.rate_code,
+                item.last_room_number,
+                item.preference,
+                item.alert_code,
+                item.membership_type,
+                item.membership_number,
+                item.first_name,
+                item.last_name,
+                item.email,
             ].map(v => (v || '').toString().toLowerCase()).join(' ');
             return haystack.includes(q);
         });
@@ -459,7 +746,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (!pageItems.length) {
-            tbody.innerHTML = '<tr><td colspan="12" class="text-center py-4 text-muted">No arrivals found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="20" class="text-center py-4 text-muted">No arrivals found.</td></tr>';
             return;
         }
 
@@ -480,6 +767,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 <td>${item.arrival_date || '-'}</td>
                 <td>${item.departure_date || '-'}</td>
                 <td>${item.nights != null ? item.nights : '-'}</td>
+                <td>${item.vip_code || '-'}</td>
+                <td>${item.rate != null ? item.rate : '-'}</td>
+                <td>${item.rate_code || '-'}</td>
+                <td>${item.last_room_number || '-'}</td>
+                <td>${item.preference || '-'}</td>
+                <td>${item.alert_code || '-'}</td>
+                <td>${item.membership_type || '-'}</td>
+                <td>${item.membership_number || '-'}</td>
                 <td>${item.status || '-'}</td>
                 <td>
                     <div class="btn-group btn-group-sm" role="group">
@@ -703,6 +998,14 @@ document.addEventListener('DOMContentLoaded', function () {
                             document.getElementById('edit-departure-date').value = data.departure_date || '';
                             document.getElementById('edit-status').value = data.status || 'Expected';
                             document.getElementById('edit-eta').value = data.eta || '';
+                            document.getElementById('edit-vip-code').value = data.vip_code || '';
+                            document.getElementById('edit-rate').value = data.rate || '';
+                            document.getElementById('edit-rate-code').value = data.rate_code || '';
+                            document.getElementById('edit-last-room').value = data.last_room_number || '';
+                            document.getElementById('edit-preference').value = data.preference || '';
+                            document.getElementById('edit-alert-code').value = data.alert_code || '';
+                            document.getElementById('edit-membership-type').value = data.membership_type || '';
+                            document.getElementById('edit-membership-number').value = data.membership_number || '';
                             
                             // Show modal
                             const modal = new bootstrap.Modal(document.getElementById('editReservationModal'));
@@ -744,6 +1047,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 departure_date: document.getElementById('edit-departure-date').value,
                 status: document.getElementById('edit-status').value,
                 eta: document.getElementById('edit-eta').value.trim(),
+                vip_code: document.getElementById('edit-vip-code').value.trim(),
+                rate: document.getElementById('edit-rate').value.trim() ? parseFloat(document.getElementById('edit-rate').value) : null,
+                rate_code: document.getElementById('edit-rate-code').value.trim(),
+                last_room_number: document.getElementById('edit-last-room').value.trim(),
+                preference: document.getElementById('edit-preference').value.trim(),
+                alert_code: document.getElementById('edit-alert-code').value.trim(),
+                membership_type: document.getElementById('edit-membership-type').value.trim(),
+                membership_number: document.getElementById('edit-membership-number').value.trim(),
             };
 
             const csrftoken = getCookie('csrftoken');
