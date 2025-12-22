@@ -1259,6 +1259,7 @@ def report_courtesy_call_completion(request):
     start_date_str = request.GET.get('start_date', (today - timedelta(days=30)).isoformat())
     end_date_str = request.GET.get('end_date', today.isoformat())
     property_filter = request.GET.get('property', '')
+    status_filter = request.GET.get('status', '')
     courtesy_by_filter = request.GET.get('courtesy_by', '')
     
     try:
@@ -1268,14 +1269,17 @@ def report_courtesy_call_completion(request):
         start_date = today - timedelta(days=30)
         end_date = today
     
-    # Build queryset - guests who arrived in date range
+    # Build queryset - only in-house and departed guests
     qs = ArrivalRecord.objects.filter(
+        Q(status__iexact='In-House') | Q(status__iexact='in house') | Q(status__iexact='Departed'),
         arrival_date__gte=start_date,
         arrival_date__lte=end_date
     )
     
     if property_filter:
         qs = qs.filter(property_name__icontains=property_filter)
+    if status_filter:
+        qs = qs.filter(status__iexact=status_filter)
     if courtesy_by_filter:
         qs = qs.filter(
             Q(first_courtesy_by__username__icontains=courtesy_by_filter) |
@@ -1316,6 +1320,9 @@ def report_courtesy_call_completion(request):
         property_name=''
     ).values_list('property_name', flat=True).distinct().order_by('property_name')
     
+    # Get available statuses for in-house and departed guests
+    statuses = ['In-House', 'Departed']
+    
     from django.contrib.auth.models import User
     users = User.objects.filter(
         Q(arrival_records_first_courtesy__isnull=False) |
@@ -1330,8 +1337,10 @@ def report_courtesy_call_completion(request):
         "start_date": start_date.isoformat(),
         "end_date": end_date.isoformat(),
         "property_filter": property_filter,
+        "status_filter": status_filter,
         "courtesy_by_filter": courtesy_by_filter,
         "properties": properties,
+        "statuses": statuses,
         "users": users,
         "first_percentage": round(first_percentage, 1),
         "second_percentage": round(second_percentage, 1),
